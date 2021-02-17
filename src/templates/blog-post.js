@@ -11,6 +11,14 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
   const siteTitle = data.site.siteMetadata.title
   const { previous, next } = pageContext
 
+  const renderSoundCloudPlayer = () => {
+    if (post.frontmatter.soundcloud_id && post.frontmatter.soundcloud_link) {
+      return (
+        <iframe width="100%" height="300" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/987116422&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true"></iframe>   
+      )
+    }
+  };
+
   return (
     <Layout location={location} title={siteTitle}>
       <SEO
@@ -36,6 +44,8 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
           >
             {post.frontmatter.date}
           </p>
+
+          {renderSoundCloudPlayer()}
         </header>
         <section dangerouslySetInnerHTML={{ __html: post.html }} />
         <hr
@@ -95,6 +105,8 @@ export const pageQuery = graphql`
         title
         date(formatString: "MMMM DD, YYYY")
         description
+        soundcloud_id
+        soundcloud_link
       }
     }
   }
