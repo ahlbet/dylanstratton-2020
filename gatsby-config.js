@@ -1,6 +1,6 @@
 module.exports = {
   siteMetadata: {
-    title: 'The Gift Of',
+    title: 'Dylan Stratton',
     author: 'Dylan Stratton',
     description:
       'A personal blog written by Dylan Stratton - software developer && digital artist',
