@@ -50,10 +50,6 @@ const Bio = () => {
           borderRadius: `50%`,
         }}
       />
-      <p>
-        software developer based in Chicago, IL. site is under construction
-        lmao.
-      </p>
     </div>
   )
 }
