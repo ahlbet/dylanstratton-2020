@@ -1,6 +1,6 @@
 module.exports = {
   siteMetadata: {
-    title: 'Dylan Stratton',
+    title: 'degreesminutesseconds',
     author: 'Dylan Stratton',
     description:
       'A personal blog written by Dylan Stratton - software developer && digital artist',
@@ -38,6 +38,16 @@ module.exports = {
               wrapperStyle: `margin-bottom: 1.0725rem`,
             },
           },
+                {
+        resolve: 'gatsby-remark-audio',
+        options: {
+          preload: 'auto',
+          loop: false,
+          controls: true,
+          muted: false,
+          autoplay: false
+        }
+      },
           `gatsby-remark-prismjs`,
           `gatsby-remark-copy-linked-files`,
           `gatsby-remark-smartypants`,
@@ -59,8 +69,8 @@ module.exports = {
         name: `Gatsby Starter Blog`,
         short_name: `GatsbyJS`,
         start_url: `/`,
-        background_color: `#ffffff`,
-        theme_color: `#663399`,
+        background_color: `#1C1D21`,
+        theme_color: `#1C1D21`,
         display: `minimal-ui`,
         icon: `content/assets/favicon.png`,
       },
