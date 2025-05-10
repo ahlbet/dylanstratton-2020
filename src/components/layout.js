@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'gatsby'
-
+import { ThemeToggler } from 'gatsby-plugin-dark-mode'
+import '../utils/global.css'
 import { rhythm, scale } from '../utils/typography'
 
 const Layout = ({ location, title, children }) => {
@@ -20,7 +21,7 @@ const Layout = ({ location, title, children }) => {
           style={{
             boxShadow: `none`,
             textDecoration: `none`,
-            color: `inherit`,
+            color: '#6082B6'
           }}
           to={`/`}
         >
@@ -40,7 +41,7 @@ const Layout = ({ location, title, children }) => {
           style={{
             boxShadow: `none`,
             textDecoration: `none`,
-            color: `inherit`,
+            color: `#A7C7E7`,
           }}
           to={`/`}
         >
@@ -56,8 +57,24 @@ const Layout = ({ location, title, children }) => {
         marginRight: `auto`,
         maxWidth: rhythm(32),
         padding: `${rhythm(1.5)} ${rhythm(3 / 4)}`,
+        backgroundColor: 'var(--bg)',
+        color: 'var(--textNormal)',
+        transition: 'color 0.2s ease-out, background 0.2s ease-out',
       }}
     >
+      {/* TODO: implement pretty toggle button 
+      <ThemeToggler>
+        {({ theme, toggleTheme }) => (
+          <label>
+            <input
+              type="checkbox"
+              onChange={e => toggleTheme(e.target.checked ? 'dark' : 'light')}
+              checked={theme === 'dark'}
+            />{' '}
+            Dark mode
+          </label>
+        )}
+      </ThemeToggler> */}
       <header>{header}</header>
       <main>{children}</main>
       <footer>{new Date().getFullYear()}</footer>
