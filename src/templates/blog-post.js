@@ -63,11 +63,6 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
           {/* {renderSoundCloudPlayer()} */}
         </header>
         <section dangerouslySetInnerHTML={{ __html: post.html }} />
-        <hr
-          style={{
-            marginBottom: rhythm(1),
-          }}
-        />
         <footer>
           <Bio />
         </footer>
