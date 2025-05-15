@@ -14,9 +14,9 @@ const dir = path.join(process.cwd(), 'content', 'blog', name)
 const file = path.join(dir, `${name}.md`)
 
 // Path to your template file in ./content/blog/
-const templatePath = path.join(process.cwd(), 'content', 'blog', 'template.md')
+const templatePath = path.join(process.cwd(), 'src', 'template.md')
 const description = process.argv[3] || ''
-const date = `'${new Date().toISOString().slice(0, 10)}'`
+const date = new Date().toISOString().slice(0, 10)
 // Read template content from file
 let template
 try {
