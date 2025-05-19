@@ -13,10 +13,10 @@ if (!name) {
 
 // Checkout to a branch named after the 'name' variable (create if it doesn't exist)
 try {
-  execSync(`git flow feature start ${name}`, { stdio: 'inherit' })
-  console.log(`Checked out to branch 'feature/${name}'.`)
+  execSync(`git checkout -B ${name}`, { stdio: 'inherit' })
+  console.log(`Checked out to branch '${name}'.`)
 } catch (err) {
-  console.error(`Failed to checkout to branch 'feature/${name}':`, err.message)
+  console.error(`Failed to checkout to branch '${name}':`, err.message)
   process.exit(1)
 }
 
@@ -82,14 +82,8 @@ console.log(
 try {
   execSync(`git add .`, { stdio: 'inherit' })
   console.log(`Added changes to git.`)
-  execSync(`git commit -m "feat: ${name}"`, { stdio: 'inherit' })
+  execSync(`git commit -m "new-day: ${name}"`, { stdio: 'inherit' })
   console.log(`Committed changes to git.`)
-  execSync(`git flow feature finish ${name}`, { stdio: 'inherit' })
-  console.log(`Finished feature branch'feature/${name}'.`)
-  execSync(`git flow release start ${name}`, { stdio: 'inherit' })
-  console.log(`Started release branch.`)
-  execSync(`git flow release finish ${name}`, { stdio: 'inherit' })
-  console.log(`Finished release branch.`)
   execSync(`git push origin --tags`, { stdio: 'inherit' })
   console.log(`Pushed tags to origin.`)
   execSync(`git push origin`, { stdio: 'inherit' })
