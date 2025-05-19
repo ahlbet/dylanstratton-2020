@@ -2,11 +2,21 @@
 
 const fs = require('fs')
 const path = require('path')
+const { execSync } = require('child_process')
 
 const name = process.argv[2]
 
 if (!name) {
   console.log(`Usage: node ${path.basename(process.argv[1])} <name>`)
+  process.exit(1)
+}
+
+// Checkout to a branch named after the 'name' variable (create if it doesn't exist)
+try {
+  execSync(`git checkout -B ${name}`, { stdio: 'inherit' })
+  console.log(`Checked out to branch '${name}'.`)
+} catch (err) {
+  console.error(`Failed to checkout to branch '${name}':`, err.message)
   process.exit(1)
 }
 
@@ -31,6 +41,19 @@ const downloadsPath = path.join(
   'Downloads',
   `${name}.wav`
 )
+
+// Duplicate the original file before moving
+const backupPath = path.join(
+  process.env.HOME || process.env.USERPROFILE,
+  'Downloads',
+  `${name}-backup.wav`
+)
+
+if (fs.existsSync(downloadsPath)) {
+  fs.copyFileSync(downloadsPath, backupPath)
+  console.log(`Created backup at '${backupPath}'.`)
+}
+
 const destDir = path.join(process.cwd(), 'content', 'assets', 'music')
 const destPath = path.join(destDir, `${name}.wav`)
 
@@ -47,7 +70,7 @@ if (fs.existsSync(downloadsPath)) {
 template = template
   .replace(/\{name\}/g, name)
   .replace(/\{date\}/g, date)
-  .replace(/\{description\}/g, description)
+  .replace(/\{description\}/g, description.split('_').join(' '))
 
 fs.mkdirSync(dir, { recursive: true })
 fs.writeFileSync(file, template)
