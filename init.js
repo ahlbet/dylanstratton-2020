@@ -89,9 +89,6 @@ try {
   execSync(`git push origin ${name}`, { stdio: 'inherit' })
   console.log(`Pushed changes to origin.`)
 } catch (err) {
-  console.error(
-    `Failed to create or finish the feature/release branch:`,
-    err.message
-  )
+  console.error(`Failed to create or finish the release branch:`, err.message)
   process.exit(1)
 }
