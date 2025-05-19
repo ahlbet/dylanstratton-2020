@@ -84,9 +84,9 @@ try {
   console.log(`Added changes to git.`)
   execSync(`git commit -m "new-day: ${name}"`, { stdio: 'inherit' })
   console.log(`Committed changes to git.`)
-  execSync(`git push origin --tags`, { stdio: 'inherit' })
+  execSync(`git push origin ${name} --tags`, { stdio: 'inherit' })
   console.log(`Pushed tags to origin.`)
-  execSync(`git push origin`, { stdio: 'inherit' })
+  execSync(`git push origin ${name}`, { stdio: 'inherit' })
   console.log(`Pushed changes to origin.`)
 } catch (err) {
   console.error(
