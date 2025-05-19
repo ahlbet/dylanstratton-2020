@@ -78,3 +78,17 @@ fs.writeFileSync(file, template)
 console.log(
   `Created folder '${name}' and file '${name}/${name}.md' with template content.`
 )
+
+try {
+  execSync(`git add .`, { stdio: 'inherit' })
+  console.log(`Added changes to git.`)
+  execSync(`git commit -m "new-day: ${name}"`, { stdio: 'inherit' })
+  console.log(`Committed changes to git.`)
+  execSync(`git push origin ${name} --tags`, { stdio: 'inherit' })
+  console.log(`Pushed tags to origin.`)
+  execSync(`git push origin ${name}`, { stdio: 'inherit' })
+  console.log(`Pushed changes to origin.`)
+} catch (err) {
+  console.error(`Failed to create or finish the release branch:`, err.message)
+  process.exit(1)
+}
