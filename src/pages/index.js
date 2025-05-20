@@ -1,9 +1,9 @@
 import { Link, graphql } from 'gatsby'
 
-import Bio from '../components/bio'
-import Layout from '../components/layout'
+import Bio from '../components/bio/bio'
+import Layout from '../components/layout/layout'
 import React from 'react'
-import SEO from '../components/seo'
+import SEO from '../components/seo/seo'
 import { rhythm } from '../utils/typography'
 
 const BlogIndex = ({ data, location }) => {

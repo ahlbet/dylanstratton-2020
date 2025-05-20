@@ -1,10 +1,10 @@
 import React from 'react'
 import { Link, graphql } from 'gatsby'
 
-import Bio from '../components/bio'
-import Layout from '../components/layout'
-import SEO from '../components/seo'
-import { rhythm, scale } from '../utils/typography'
+import Bio from '../../components/bio/bio'
+import Layout from '../../components/layout/layout'
+import SEO from '../../components/seo/seo'
+import { rhythm, scale } from '../../utils/typography'
 import AudioPlayer from 'react-h5-audio-player'
 
 const BlogPostTemplate = ({ data, pageContext, location }) => {
