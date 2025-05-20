@@ -124,7 +124,7 @@ describe('init.js script', () => {
   // TODO: fix test
   test.skip('should handle missing template file', () => {
     // Then add the implementation that throws
-    fs.readFileSync.mockReturnValueOnce(() => {
+    fs.readFileSync.mockImplementationOnce(() => {
       throw new Error('File not found')
     })
 
