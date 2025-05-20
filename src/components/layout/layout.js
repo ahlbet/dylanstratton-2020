@@ -1,8 +1,8 @@
 import React from 'react'
 import { Link } from 'gatsby'
 import { ThemeToggler } from 'gatsby-plugin-dark-mode'
-import '../utils/global.css'
-import { rhythm, scale } from '../utils/typography'
+import '../../utils/global.css'
+import { rhythm, scale } from '../../utils/typography'
 
 const Layout = ({ location, title, children }) => {
   const rootPath = `${__PATH_PREFIX__}/`
@@ -21,7 +21,7 @@ const Layout = ({ location, title, children }) => {
           style={{
             boxShadow: `none`,
             textDecoration: `none`,
-            color: '#6082B6'
+            color: '#6082B6',
           }}
           to={`/`}
         >
