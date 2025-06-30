@@ -72,7 +72,7 @@ if (fs.existsSync(subfolderPath) && fs.statSync(subfolderPath).isDirectory()) {
       // Create unique filename with name prefix and index
       const fileExtension = path.extname(wavFile)
       const baseName = path.basename(wavFile, fileExtension)
-      const uniqueFileName = `${name}_${index + 1}_${baseName}${fileExtension}`
+      const uniqueFileName = `${name}-${index + 1}-${baseName}${fileExtension}`
       const destPath = path.join(destDir, uniqueFileName)
       fs.renameSync(sourcePath, destPath)
       movedFiles.push(uniqueFileName)
