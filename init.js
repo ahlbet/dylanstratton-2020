@@ -36,6 +36,7 @@ try {
   process.exit(1)
 }
 
+// Process template immediately after reading it
 const downloadsPath = path.join(
   process.env.HOME || process.env.USERPROFILE,
   'Downloads'
@@ -105,7 +106,7 @@ if (fs.existsSync(subfolderPath) && fs.statSync(subfolderPath).isDirectory()) {
   console.log(`Moved file from '${singleFilePath}' to '${destPath}'.`)
 } else {
   console.warn(
-    `No WAV files found. Neither subfolder '${name}' nor single file '${name}.wav}' exist in Downloads.`
+    `No WAV files found. Neither subfolder '${name}' nor single file '${name}.wav' exist in Downloads.`
   )
 }
 
@@ -144,16 +145,16 @@ console.log(
   `Created folder '${name}' and file '${name}/${name}.md' with template content.`
 )
 
-// try {
-//   execSync(`git add .`, { stdio: 'inherit' })
-//   console.log(`Added changes to git.`)
-//   execSync(`git commit -m "new-day: ${name}"`, { stdio: 'inherit' })
-//   console.log(`Committed changes to git.`)
-//   execSync(`git push origin ${name} --tags`, { stdio: 'inherit' })
-//   console.log(`Pushed tags to origin.`)
-//   execSync(`git push origin ${name}`, { stdio: 'inherit' })
-//   console.log(`Pushed changes to origin.`)
-// } catch (err) {
-//   console.error(`Failed to create or finish the release branch:`, err.message)
-//   process.exit(1)
-// }
+try {
+  execSync(`git add .`, { stdio: 'inherit' })
+  console.log(`Added changes to git.`)
+  execSync(`git commit -m "new-day: ${name}"`, { stdio: 'inherit' })
+  console.log(`Committed changes to git.`)
+  execSync(`git push origin ${name} --tags`, { stdio: 'inherit' })
+  console.log(`Pushed tags to origin.`)
+  execSync(`git push origin ${name}`, { stdio: 'inherit' })
+  console.log(`Pushed changes to origin.`)
+} catch (err) {
+  console.error(`Failed to create or finish the release branch:`, err.message)
+  process.exit(1)
+}
