@@ -45,7 +45,7 @@ const downloadsPath = path.join(
 const subfolderPath = path.join(downloadsPath, name)
 const singleFilePath = path.join(downloadsPath, `${name}.wav`)
 
-const destDir = path.join(process.cwd(), 'content', 'assets', 'music', name)
+const destDir = path.join(process.cwd(), 'content', 'assets', 'music')
 fs.mkdirSync(destDir, { recursive: true })
 
 let movedFiles = [] // Track which files were moved
@@ -66,14 +66,18 @@ if (fs.existsSync(subfolderPath) && fs.statSync(subfolderPath).isDirectory()) {
     fs.cpSync(subfolderPath, backupSubfolderPath, { recursive: true })
     console.log(`Created backup at '${backupSubfolderPath}'.`)
 
-    // Move all WAV files from subfolder to destDir
-    wavFiles.forEach((wavFile) => {
+    // Move all WAV files from subfolder to destDir with unique names
+    wavFiles.forEach((wavFile, index) => {
       const sourcePath = path.join(subfolderPath, wavFile)
-      const destPath = path.join(destDir, wavFile)
+      // Create unique filename with name prefix and index
+      const fileExtension = path.extname(wavFile)
+      const baseName = path.basename(wavFile, fileExtension)
+      const uniqueFileName = `${name}_${index + 1}_${baseName}${fileExtension}`
+      const destPath = path.join(destDir, uniqueFileName)
       fs.renameSync(sourcePath, destPath)
-      movedFiles.push(wavFile)
+      movedFiles.push(uniqueFileName)
       console.log(
-        `Moved file '${wavFile}' from '${sourcePath}' to '${destPath}'.`
+        `Moved file '${wavFile}' to '${uniqueFileName}' in '${destPath}'.`
       )
     })
 
@@ -101,7 +105,7 @@ if (fs.existsSync(subfolderPath) && fs.statSync(subfolderPath).isDirectory()) {
   console.log(`Moved file from '${singleFilePath}' to '${destPath}'.`)
 } else {
   console.warn(
-    `No WAV files found. Neither subfolder '${name}' nor single file '${name}.wav' exist in Downloads.`
+    `No WAV files found. Neither subfolder '${name}' nor single file '${name}.wav}' exist in Downloads.`
   )
 }
 
@@ -109,7 +113,7 @@ if (fs.existsSync(subfolderPath) && fs.statSync(subfolderPath).isDirectory()) {
 let audioFilesContent = ''
 if (movedFiles.length > 0) {
   audioFilesContent = movedFiles
-    .map((file) => `\`audio: ../../assets/music/${name}/${file}\``)
+    .map((file) => `\`audio: ../../assets/music/${file}\``)
     .join('\n\n')
 } else {
   // If no files were moved, check if there are existing files with the name pattern
@@ -121,7 +125,7 @@ if (movedFiles.length > 0) {
 
   if (existingFiles.length > 0) {
     audioFilesContent = existingFiles
-      .map((file) => `\`audio: ../../assets/music/${name}/${file}\``)
+      .map((file) => `\`audio: ../../assets/music/${file}\``)
       .join('\n\n')
   }
 }
