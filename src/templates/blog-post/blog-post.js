@@ -5,33 +5,11 @@ import Bio from '../../components/bio/bio'
 import Layout from '../../components/layout/layout'
 import SEO from '../../components/seo/seo'
 import { rhythm, scale } from '../../utils/typography'
-import AudioPlayer from 'react-h5-audio-player'
 
 const BlogPostTemplate = ({ data, pageContext, location }) => {
   const post = data.markdownRemark
   const siteTitle = data.site.siteMetadata.title
   const { previous, next } = pageContext
-
-  // const renderAudioPlayer = () => {
-  //   if (post.frontmatter.audio) {
-  //     return (
-  //     //  <div> {post.frontmatter.audio}</div>
-  //       // <AudioPlayer
-  //       //   autoPlay
-  //       //   src={post.frontmatter.audio}
-  //       //   onPlay={e => console.log('onPlay')}
-  //       // />
-  //     )
-  //   }
-  // }
-
-  // const renderSoundCloudPlayer = () => {
-  //   if (post.frontmatter.soundcloud_id && post.frontmatter.soundcloud_link) {
-  //     return (
-  //       <iframe width="100%" height="300" scrolling="no" frameborder="no" allow="autoplay" src={`https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/${post.frontmatter.soundcloud_id}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`}></iframe>
-  //     )
-  //   }
-  // };
 
   return (
     <Layout location={location} title={siteTitle}>
@@ -59,9 +37,6 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
           >
             {post.frontmatter.date}
           </p>
-
-          {/* {renderAudioPlayer()} */}
-          {/* {renderSoundCloudPlayer()} */}
         </header>
         <section dangerouslySetInnerHTML={{ __html: post.html }} />
         <footer>
