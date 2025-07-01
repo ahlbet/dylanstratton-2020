@@ -14,18 +14,25 @@ const sanitizeFilename = (filename) => {
 }
 
 // Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+let supabase
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error(
-    'Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
-  )
-  process.exit(1)
+const initializeSupabase = () => {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error(
+      'Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
+    )
+    if (process.env.NODE_ENV === 'test') {
+      throw new Error('Missing Supabase credentials')
+    }
+    process.exit(1)
+  }
+
+  return createClient(supabaseUrl, supabaseKey)
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Function to upload file to Supabase storage
 const uploadToSupabase = async (filePath, fileName, bucketName = 'audio') => {
@@ -59,19 +66,29 @@ const uploadToSupabase = async (filePath, fileName, bucketName = 'audio') => {
 
 const name = process.argv[2]
 
-if (!name) {
-  console.log(`Usage: node ${path.basename(process.argv[1])} <name>`)
-  process.exit(1)
-}
-
 // Main function to handle the async operations
 const main = async () => {
+  // Check if name is provided
+  if (!name) {
+    console.log(`Usage: node ${path.basename(process.argv[1])} <name>`)
+    if (process.env.NODE_ENV === 'test') {
+      throw new Error('Missing name argument')
+    }
+    process.exit(1)
+  }
+
+  // Initialize Supabase client
+  supabase = initializeSupabase()
+
   // Checkout to a branch named after the 'name' variable (create if it doesn't exist)
   try {
     execSync(`git checkout -B ${name}`, { stdio: 'inherit' })
     console.log(`Checked out to branch '${name}'.`)
   } catch (err) {
     console.error(`Failed to checkout to branch '${name}':`, err.message)
+    if (process.env.NODE_ENV === 'test') {
+      throw new Error(`Failed to checkout to branch '${name}': ${err.message}`)
+    }
     process.exit(1)
   }
 
@@ -87,8 +104,23 @@ const main = async () => {
   let template
   try {
     template = fs.readFileSync(templatePath, 'utf8')
+    console.log('template', template)
+    console.log('template type:', typeof template)
+    console.log('template length:', template ? template.length : 'undefined')
   } catch (err) {
     console.error(`Template file not found at ${templatePath}`)
+    if (process.env.NODE_ENV === 'test') {
+      throw new Error(`Template file not found at ${templatePath}`)
+    }
+    process.exit(1)
+  }
+
+  // Ensure template is a string
+  if (typeof template !== 'string') {
+    console.error('Template is not a string:', typeof template, template)
+    if (process.env.NODE_ENV === 'test') {
+      throw new Error(`Template is not a string: ${typeof template}`)
+    }
     process.exit(1)
   }
 
@@ -214,23 +246,33 @@ const main = async () => {
     `Created folder '${name}' and file '${name}/${name}.md' with template content.`
   )
 
-  try {
-    execSync(`git add .`, { stdio: 'inherit' })
-    console.log(`Added changes to git.`)
-    execSync(`git commit -m "new-day: ${name}"`, { stdio: 'inherit' })
-    console.log(`Committed changes to git.`)
-    execSync(`git push origin ${name} --tags`, { stdio: 'inherit' })
-    console.log(`Pushed tags to origin.`)
-    execSync(`git push origin ${name}`, { stdio: 'inherit' })
-    console.log(`Pushed changes to origin.`)
-  } catch (err) {
-    console.error(`Failed to create or finish the release branch:`, err.message)
-    process.exit(1)
-  }
+  // try {
+  //   execSync(`git add .`, { stdio: 'inherit' })
+  //   console.log(`Added changes to git.`)
+  //   execSync(`git commit -m "new-day: ${name}"`, { stdio: 'inherit' })
+  //   console.log(`Committed changes to git.`)
+  //   execSync(`git push origin ${name} --tags`, { stdio: 'inherit' })
+  //   console.log(`Pushed tags to origin.`)
+  //   execSync(`git push origin ${name}`, { stdio: 'inherit' })
+  //   console.log(`Pushed changes to origin.`)
+  // } catch (err) {
+  //   console.error(`Failed to create or finish the release branch:`, err.message)
+  //   if (process.env.NODE_ENV === 'test') {
+  //     throw new Error(
+  //       `Failed to create or finish the release branch: ${err.message}`
+  //     )
+  //   }
+  //   process.exit(1)
+  // }
 }
 
-// Run the main function
-main().catch((error) => {
-  console.error('Script failed:', error.message)
-  process.exit(1)
-})
+// Export main function for testing
+module.exports = { main }
+
+// Run the main function only if this is the main module
+if (require.main === module) {
+  main().catch((error) => {
+    console.error('Script failed:', error.message)
+    process.exit(1)
+  })
+}

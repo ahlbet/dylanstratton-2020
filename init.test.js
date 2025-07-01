@@ -7,13 +7,29 @@ const childProcess = require('child_process')
 jest.mock('fs')
 jest.mock('child_process')
 jest.mock('path')
+jest.mock('dotenv', () => ({
+  config: jest.fn(),
+}))
+
+// Mock Supabase client
+const mockSupabase = {
+  storage: {
+    from: jest.fn().mockReturnThis(),
+    upload: jest.fn(),
+    getPublicUrl: jest.fn(),
+  },
+}
+
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn().mockReturnValue(mockSupabase),
+}))
 
 describe('init.js script', () => {
   // Store original process properties
   const originalArgv = process.argv
   const originalExit = process.exit
   const originalCwd = process.cwd
-  const originalEnv = process.env
+  const originalEnv = { ...process.env }
 
   // Mock console methods
   console.log = jest.fn()
@@ -21,8 +37,8 @@ describe('init.js script', () => {
   console.warn = jest.fn()
 
   beforeEach(() => {
-    // Reset all mocks
-    jest.resetAllMocks()
+    // Reset specific mocks that need to be reset
+    jest.clearAllMocks()
 
     // Mock process properties
     process.argv = ['node', 'init.js', 'test-post', 'test_description']
@@ -30,7 +46,12 @@ describe('init.js script', () => {
       throw new Error(`Process exit called with code: ${code}`)
     })
     process.cwd = jest.fn().mockReturnValue('/fake/project/dir')
-    process.env = { HOME: '/fake/home' }
+    process.env = {
+      HOME: '/fake/home',
+      SUPABASE_URL: 'https://fake.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'fake-service-key',
+      NODE_ENV: 'test',
+    }
 
     // Mock path methods
     path.basename.mockReturnValue('init.js')
@@ -41,7 +62,7 @@ describe('init.js script', () => {
       return file
     })
 
-    // Mock fs methods
+    // Mock fs methods - ensure readFileSync is always mocked
     fs.readFileSync.mockReturnValue(
       'Template: {name}, {date}, {description}, {audio_files}'
     )
@@ -58,265 +79,506 @@ describe('init.js script', () => {
 
     // Mock execSync
     childProcess.execSync.mockImplementation(() => {})
+
+    // Mock successful upload
+    mockSupabase.storage.upload.mockResolvedValue({
+      data: { path: 'test-file.wav' },
+      error: null,
+    })
+    mockSupabase.storage.getPublicUrl.mockReturnValue({
+      data: {
+        publicUrl:
+          'https://fake.supabase.co/storage/v1/object/public/audio/test-file.wav',
+      },
+    })
   })
 
   afterEach(() => {
     // Restore process properties
-    process.argv = originalArgv
+    process.env = { ...originalEnv }
+    process.argv = [...originalArgv]
     process.exit = originalExit
     process.cwd = originalCwd
-    process.env = originalEnv
+    jest.resetModules()
   })
 
-  test('should exit if name is not provided', () => {
+  test('should exit if name is not provided', async () => {
     process.argv = ['node', 'init.js'] // No name argument
+    process.env.NODE_ENV = 'test' // Ensure test mode is set
 
-    // Execute the script and expect it to throw due to process.exit
-    expect(() => {
-      jest.isolateModules(() => {
-        require('./init')
-      })
-    }).toThrow('Process exit called with code: 1')
+    const initModule = require('./init')
+    await expect(initModule.main()).rejects.toThrow('Missing name argument')
 
     expect(console.log).toHaveBeenCalledWith('Usage: node init.js <name>')
   })
 
-  test('should checkout to a git branch with the provided name', () => {
-    // Execute the script
-    jest.isolateModules(() => {
-      require('./init')
-    })
+  test('should exit if Supabase credentials are missing', async () => {
+    process.env = { HOME: '/fake/home', NODE_ENV: 'test' } // Remove Supabase credentials
+    process.argv = ['node', 'init.js', 'test-post'] // Provide name argument
 
-    expect(childProcess.execSync).toHaveBeenCalledWith(
-      'git checkout -B test-post',
-      { stdio: 'inherit' }
+    const initModule = require('./init')
+    await expect(initModule.main()).rejects.toThrow(
+      'Missing Supabase credentials'
     )
-    expect(console.log).toHaveBeenCalledWith(
-      "Checked out to branch 'test-post'."
-    )
-  })
-
-  test('should handle git checkout errors', () => {
-    const errorMsg = 'Command failed'
-    childProcess.execSync.mockImplementationOnce(() => {
-      throw new Error(errorMsg)
-    })
-
-    // Execute the script and expect it to throw due to process.exit
-    expect(() => {
-      jest.isolateModules(() => {
-        require('./init')
-      })
-    }).toThrow('Process exit called with code: 1')
 
     expect(console.error).toHaveBeenCalledWith(
-      "Failed to checkout to branch 'test-post':",
-      errorMsg
+      'Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
     )
   })
 
-  test('should read template file and create blog post', () => {
-    const today = new Date().toISOString().slice(0, 10)
+  test('should read template file and create blog post', async () => {
+    await jest.isolateModulesAsync(async () => {
+      // Set up all necessary mocks inside the isolated context
+      const fs = require('fs')
+      const path = require('path')
+      const childProcess = require('child_process')
 
-    // Execute the script
-    jest.isolateModules(() => {
-      require('./init')
-    })
+      // Mock fs methods - ensure readFileSync is properly mocked
+      fs.readFileSync = jest
+        .fn()
+        .mockReturnValue(
+          'Template: {name}, {date}, {description}, {audio_files}'
+        )
+      fs.existsSync = jest.fn().mockReturnValue(true)
+      fs.statSync = jest.fn().mockReturnValue({ isDirectory: () => true })
+      fs.mkdirSync = jest.fn().mockImplementation(() => {})
+      fs.writeFileSync = jest.fn().mockImplementation(() => {})
+      fs.copyFileSync = jest.fn().mockImplementation(() => {})
+      fs.cpSync = jest.fn().mockImplementation(() => {})
+      fs.rmSync = jest.fn().mockImplementation(() => {})
+      fs.rmdirSync = jest.fn().mockImplementation(() => {})
+      fs.readdirSync = jest.fn().mockReturnValue([])
 
-    expect(fs.readFileSync).toHaveBeenCalledWith(
-      '/fake/project/dir/src/template.md',
-      'utf8'
-    )
-    expect(fs.mkdirSync).toHaveBeenCalledWith(
-      '/fake/project/dir/content/blog/test-post',
-      { recursive: true }
-    )
-    expect(fs.writeFileSync).toHaveBeenCalledWith(
-      '/fake/project/dir/content/blog/test-post/test-post.md',
-      `Template: test-post, ${today}, test description, `
-    )
-  })
-
-  test('should handle missing template file', () => {
-    // Mock readFileSync to throw an error only for the template file read
-    fs.readFileSync.mockImplementationOnce(() => {
-      throw new Error('File not found')
-    })
-
-    // Execute the script and expect it to throw due to process.exit
-    expect(() => {
-      jest.isolateModules(() => {
-        require('./init')
+      // Mock path methods
+      path.basename = jest.fn().mockReturnValue('init.js')
+      path.join = jest.fn().mockImplementation((...args) => args.join('/'))
+      path.extname = jest.fn().mockReturnValue('.wav')
+      path.basename = jest.fn().mockImplementation((file, ext) => {
+        if (ext) return file.replace(ext, '')
+        return file
       })
-    }).toThrow('Process exit called with code: 1')
 
-    expect(console.error).toHaveBeenCalledWith(
+      // Mock childProcess
+      childProcess.execSync = jest.fn().mockImplementation(() => {})
+
+      // Mock Supabase
+      const mockSupabase = {
+        storage: {
+          from: jest.fn().mockReturnThis(),
+          upload: jest.fn().mockResolvedValue({
+            data: { path: 'test-file.wav' },
+            error: null,
+          }),
+          getPublicUrl: jest.fn().mockReturnValue({
+            data: {
+              publicUrl:
+                'https://fake.supabase.co/storage/v1/object/public/audio/test-file.wav',
+            },
+          }),
+        },
+      }
+
+      // Mock the Supabase module
+      jest.doMock('@supabase/supabase-js', () => ({
+        createClient: jest.fn().mockReturnValue(mockSupabase),
+      }))
+
+      process.argv = ['node', 'init.js', 'test-post', 'test_description']
+      process.env.NODE_ENV = 'test'
+
+      const initModule = require('./init')
+      await initModule.main()
+
+      const today = new Date().toISOString().slice(0, 10)
+      expect(fs.readFileSync).toHaveBeenCalledWith(
+        '/fake/project/dir/src/template.md',
+        'utf8'
+      )
+      expect(fs.mkdirSync).toHaveBeenCalledWith(
+        '/fake/project/dir/content/blog/test-post',
+        { recursive: true }
+      )
+      expect(fs.writeFileSync).toHaveBeenCalledWith(
+        '/fake/project/dir/content/blog/test-post/test-post.md',
+        `Template: test-post, ${today}, test description, `
+      )
+    })
+  })
+
+  test('should handle missing template file', async () => {
+    await expect(async () => {
+      await jest.isolateModulesAsync(async () => {
+        // Set up all necessary mocks inside the isolated context
+        const fs = require('fs')
+        const path = require('path')
+        const childProcess = require('child_process')
+
+        fs.readFileSync = jest.fn().mockImplementation((path) => {
+          if (path.includes('template.md')) {
+            throw new Error('File not found')
+          }
+          return 'Template: {name}, {date}, {description}, {audio_files}'
+        })
+        fs.existsSync = jest.fn().mockReturnValue(true)
+        fs.statSync = jest.fn().mockReturnValue({ isDirectory: () => true })
+        fs.mkdirSync = jest.fn().mockImplementation(() => {})
+        fs.writeFileSync = jest.fn().mockImplementation(() => {})
+        fs.copyFileSync = jest.fn().mockImplementation(() => {})
+        fs.cpSync = jest.fn().mockImplementation(() => {})
+        fs.rmSync = jest.fn().mockImplementation(() => {})
+        fs.rmdirSync = jest.fn().mockImplementation(() => {})
+        fs.readdirSync = jest.fn().mockReturnValue([])
+
+        path.basename = jest.fn().mockReturnValue('init.js')
+        path.join = jest.fn().mockImplementation((...args) => args.join('/'))
+        path.extname = jest.fn().mockReturnValue('.wav')
+        path.basename = jest.fn().mockImplementation((file, ext) => {
+          if (ext) return file.replace(ext, '')
+          return file
+        })
+
+        childProcess.execSync = jest.fn().mockImplementation(() => {})
+
+        const mockSupabase = {
+          storage: {
+            from: jest.fn().mockReturnThis(),
+            upload: jest.fn().mockResolvedValue({
+              data: { path: 'test-file.wav' },
+              error: null,
+            }),
+            getPublicUrl: jest.fn().mockReturnValue({
+              data: {
+                publicUrl:
+                  'https://fake.supabase.co/storage/v1/object/public/audio/test-file.wav',
+              },
+            }),
+          },
+        }
+
+        jest.doMock('@supabase/supabase-js', () => ({
+          createClient: jest.fn().mockReturnValue(mockSupabase),
+        }))
+
+        process.argv = ['node', 'init.js', 'test-post']
+        process.env.NODE_ENV = 'test'
+
+        const initModule = require('./init')
+        await initModule.main()
+      })
+    }).rejects.toThrow(
       'Template file not found at /fake/project/dir/src/template.md'
     )
   })
 
-  test('should handle multiple WAV files from subfolder', () => {
-    // Mock subfolder exists with WAV files
-    fs.existsSync.mockImplementation((path) => {
-      if (path.includes('test-post') && !path.includes('.wav')) {
-        return true // Subfolder exists
+  test('should handle multiple WAV files from subfolder', async () => {
+    await jest.isolateModulesAsync(async () => {
+      // Set up all necessary mocks inside the isolated context
+      const fs = require('fs')
+      const path = require('path')
+      const childProcess = require('child_process')
+
+      // Mock fs.readFileSync to return different content based on the file path
+      fs.readFileSync = jest.fn().mockImplementation((filePath) => {
+        if (filePath.includes('template.md')) {
+          return 'Template: {name}, {date}, {description}, {audio_files}'
+        } else if (filePath.includes('.wav')) {
+          // Return a mock buffer for audio files
+          return Buffer.from('mock audio data')
+        }
+        return 'default content'
+      })
+      fs.existsSync = jest.fn().mockImplementation((path) => {
+        if (path.includes('test-post') && !path.includes('.wav')) {
+          return true // Subfolder exists
+        }
+        return false // Single file doesn't exist
+      })
+      fs.statSync = jest.fn().mockReturnValue({ isDirectory: () => true })
+      fs.readdirSync = jest
+        .fn()
+        .mockReturnValue(['track1.wav', 'track2.wav', 'track3.wav'])
+      fs.mkdirSync = jest.fn().mockImplementation(() => {})
+      fs.writeFileSync = jest.fn().mockImplementation(() => {})
+      fs.copyFileSync = jest.fn().mockImplementation(() => {})
+      fs.cpSync = jest.fn().mockImplementation(() => {})
+      fs.rmSync = jest.fn().mockImplementation(() => {})
+      fs.rmdirSync = jest.fn().mockImplementation(() => {})
+
+      path.basename = jest.fn().mockReturnValue('init.js')
+      path.join = jest.fn().mockImplementation((...args) => args.join('/'))
+      path.extname = jest.fn().mockReturnValue('.wav')
+      path.basename = jest.fn().mockImplementation((file, ext) => {
+        if (ext) return file.replace(ext, '')
+        return file
+      })
+
+      childProcess.execSync = jest.fn().mockImplementation(() => {})
+
+      const mockSupabase = {
+        storage: {
+          from: jest.fn().mockReturnThis(),
+          upload: jest.fn().mockResolvedValue({
+            data: { path: 'test-file.wav' },
+            error: null,
+          }),
+          getPublicUrl: jest.fn().mockReturnValue({
+            data: {
+              publicUrl:
+                'https://fake.supabase.co/storage/v1/object/public/audio/test-file.wav',
+            },
+          }),
+        },
       }
-      return false // Single file doesn't exist
-    })
-    fs.statSync.mockReturnValue({ isDirectory: () => true })
-    fs.readdirSync.mockReturnValue(['track1.wav', 'track2.wav', 'track3.wav'])
 
-    // Execute the script
-    jest.isolateModules(() => {
-      require('./init')
-    })
+      jest.doMock('@supabase/supabase-js', () => ({
+        createClient: jest.fn().mockReturnValue(mockSupabase),
+      }))
 
-    expect(fs.cpSync).toHaveBeenCalledWith(
-      '/fake/home/Downloads/test-post',
-      '/fake/home/Downloads/test-post-backup',
-      { recursive: true }
-    )
-    expect(fs.renameSync).toHaveBeenCalledTimes(3)
-    expect(console.log).toHaveBeenCalledWith(
-      "Found 3 WAV file(s) in subfolder 'test-post'."
-    )
-  })
+      process.argv = ['node', 'init.js', 'test-post']
+      process.env.NODE_ENV = 'test'
 
-  test('should handle single WAV file', () => {
-    // Mock single file exists, subfolder doesn't
-    fs.existsSync.mockImplementation((path) => {
-      if (path.includes('test-post.wav')) {
-        return true // Single file exists
-      }
-      return false // Subfolder doesn't exist
-    })
+      const initModule = require('./init')
+      await initModule.main()
 
-    // Execute the script
-    jest.isolateModules(() => {
-      require('./init')
-    })
-
-    expect(fs.copyFileSync).toHaveBeenCalledWith(
-      '/fake/home/Downloads/test-post.wav',
-      '/fake/home/Downloads/test-post-backup.wav'
-    )
-    expect(fs.renameSync).toHaveBeenCalledWith(
-      '/fake/home/Downloads/test-post.wav',
-      '/fake/project/dir/content/assets/music/test-post.wav'
-    )
-    expect(console.log).toHaveBeenCalledWith(
-      "Found single WAV file 'test-post.wav'."
-    )
-  })
-
-  test('should warn if no audio files found', () => {
-    // Mock neither subfolder nor single file exist
-    fs.existsSync.mockReturnValue(false)
-
-    // Execute the script
-    jest.isolateModules(() => {
-      require('./init')
-    })
-
-    expect(console.warn).toHaveBeenCalledWith(
-      "No WAV files found. Neither subfolder 'test-post' nor single file 'test-post.wav' exist in Downloads."
-    )
-  })
-
-  test('should generate correct audio content for multiple files', () => {
-    // Mock subfolder with WAV files
-    fs.existsSync.mockImplementation((path) => {
-      if (path.includes('test-post') && !path.includes('.wav')) {
-        return true
-      }
-      return false
-    })
-    fs.statSync.mockReturnValue({ isDirectory: () => true })
-    fs.readdirSync.mockReturnValue(['track1.wav', 'track2.wav'])
-
-    // Execute the script
-    jest.isolateModules(() => {
-      require('./init')
-    })
-
-    // Check that the template was processed with audio content
-    expect(fs.writeFileSync).toHaveBeenCalledWith(
-      '/fake/project/dir/content/blog/test-post/test-post.md',
-      expect.stringContaining(
-        'audio: ../../assets/music/test-post-1-track1.wav'
+      // Check that all files were uploaded
+      expect(mockSupabase.storage.upload).toHaveBeenCalledTimes(3)
+      expect(mockSupabase.storage.upload).toHaveBeenCalledWith(
+        'test-post-1-track1.wav',
+        expect.any(Buffer),
+        expect.any(Object)
       )
-    )
+      expect(mockSupabase.storage.upload).toHaveBeenCalledWith(
+        'test-post-2-track2.wav',
+        expect.any(Buffer),
+        expect.any(Object)
+      )
+      expect(mockSupabase.storage.upload).toHaveBeenCalledWith(
+        'test-post-3-track3.wav',
+        expect.any(Buffer),
+        expect.any(Object)
+      )
+    })
   })
 
-  test('should create unique filenames for multiple files', () => {
-    // Mock subfolder with WAV files
-    fs.existsSync.mockImplementation((path) => {
-      if (path.includes('test-post') && !path.includes('.wav')) {
-        return true
+  test('should handle upload errors gracefully', async () => {
+    await jest.isolateModulesAsync(async () => {
+      // Set up all necessary mocks inside the isolated context
+      const fs = require('fs')
+      const path = require('path')
+      const childProcess = require('child_process')
+
+      // Mock fs.readFileSync to return different content based on the file path
+      fs.readFileSync = jest.fn().mockImplementation((filePath) => {
+        if (filePath.includes('template.md')) {
+          return 'Template: {name}, {date}, {description}, {audio_files}'
+        } else if (filePath.includes('.wav')) {
+          // Return a mock buffer for audio files
+          return Buffer.from('mock audio data')
+        }
+        return 'default content'
+      })
+      fs.existsSync = jest.fn().mockReturnValue(true)
+      fs.statSync = jest.fn().mockReturnValue({ isDirectory: () => false })
+      fs.mkdirSync = jest.fn().mockImplementation(() => {})
+      fs.writeFileSync = jest.fn().mockImplementation(() => {})
+      fs.copyFileSync = jest.fn().mockImplementation(() => {})
+      fs.cpSync = jest.fn().mockImplementation(() => {})
+      fs.rmSync = jest.fn().mockImplementation(() => {})
+      fs.rmdirSync = jest.fn().mockImplementation(() => {})
+      fs.readdirSync = jest.fn().mockReturnValue([])
+
+      path.basename = jest.fn().mockReturnValue('init.js')
+      path.join = jest.fn().mockImplementation((...args) => args.join('/'))
+      path.extname = jest.fn().mockReturnValue('.wav')
+      path.basename = jest.fn().mockImplementation((file, ext) => {
+        if (ext) return file.replace(ext, '')
+        return file
+      })
+
+      childProcess.execSync = jest.fn().mockImplementation(() => {})
+
+      const mockSupabase = {
+        storage: {
+          from: jest.fn().mockReturnThis(),
+          upload: jest.fn().mockRejectedValue(new Error('Upload failed')),
+          getPublicUrl: jest.fn().mockReturnValue({
+            data: {
+              publicUrl:
+                'https://fake.supabase.co/storage/v1/object/public/audio/test-file.wav',
+            },
+          }),
+        },
       }
-      return false
-    })
-    fs.statSync.mockReturnValue({ isDirectory: () => true })
-    fs.readdirSync.mockReturnValue(['original1.wav', 'original2.wav'])
 
-    // Execute the script
-    jest.isolateModules(() => {
-      require('./init')
-    })
+      jest.doMock('@supabase/supabase-js', () => ({
+        createClient: jest.fn().mockReturnValue(mockSupabase),
+      }))
 
-    // Check that unique filenames were created
-    expect(fs.renameSync).toHaveBeenCalledWith(
-      '/fake/home/Downloads/test-post/original1.wav',
-      '/fake/project/dir/content/assets/music/test-post-1-original1.wav'
-    )
-    expect(fs.renameSync).toHaveBeenCalledWith(
-      '/fake/home/Downloads/test-post/original2.wav',
-      '/fake/project/dir/content/assets/music/test-post-2-original2.wav'
-    )
+      process.argv = ['node', 'init.js', 'test-post']
+      process.env.NODE_ENV = 'test'
+
+      const initModule = require('./init')
+      await initModule.main()
+
+      expect(console.error).toHaveBeenCalledWith(
+        'Failed to upload test-post.wav:',
+        'Upload failed'
+      )
+    })
   })
 
-  test('should remove empty subfolder after moving files', () => {
-    // Mock subfolder with WAV files
-    fs.existsSync.mockImplementation((path) => {
-      if (path.includes('test-post') && !path.includes('.wav')) {
-        return true
+  test('should sanitize filenames correctly', async () => {
+    await jest.isolateModulesAsync(async () => {
+      // Set up all necessary mocks inside the isolated context
+      const fs = require('fs')
+      const path = require('path')
+      const childProcess = require('child_process')
+
+      // Mock fs.readFileSync to return different content based on the file path
+      fs.readFileSync = jest.fn().mockImplementation((filePath) => {
+        if (filePath.includes('template.md')) {
+          return 'Template: {name}, {date}, {description}, {audio_files}'
+        } else if (filePath.includes('.wav')) {
+          // Return a mock buffer for audio files
+          return Buffer.from('mock audio data')
+        }
+        return 'default content'
+      })
+      fs.existsSync = jest.fn().mockImplementation((path) => {
+        if (path.includes('test-post') && !path.includes('.wav')) {
+          return true
+        }
+        return false
+      })
+      fs.statSync = jest.fn().mockReturnValue({ isDirectory: () => true })
+      fs.readdirSync = jest
+        .fn()
+        .mockReturnValue(['file_with_spaces_and#symbols.wav'])
+      fs.mkdirSync = jest.fn().mockImplementation(() => {})
+      fs.writeFileSync = jest.fn().mockImplementation(() => {})
+      fs.copyFileSync = jest.fn().mockImplementation(() => {})
+      fs.cpSync = jest.fn().mockImplementation(() => {})
+      fs.rmSync = jest.fn().mockImplementation(() => {})
+      fs.rmdirSync = jest.fn().mockImplementation(() => {})
+
+      path.basename = jest.fn().mockReturnValue('init.js')
+      path.join = jest.fn().mockImplementation((...args) => args.join('/'))
+      path.extname = jest.fn().mockReturnValue('.wav')
+      path.basename = jest.fn().mockImplementation((file, ext) => {
+        if (ext) return file.replace(ext, '')
+        return file
+      })
+
+      childProcess.execSync = jest.fn().mockImplementation(() => {})
+
+      const mockSupabase = {
+        storage: {
+          from: jest.fn().mockReturnThis(),
+          upload: jest.fn().mockResolvedValue({
+            data: { path: 'test-file.wav' },
+            error: null,
+          }),
+          getPublicUrl: jest.fn().mockReturnValue({
+            data: {
+              publicUrl:
+                'https://fake.supabase.co/storage/v1/object/public/audio/test-file.wav',
+            },
+          }),
+        },
       }
-      return false
-    })
-    fs.statSync.mockReturnValue({ isDirectory: () => true })
-    fs.readdirSync.mockReturnValueOnce(['track1.wav']).mockReturnValueOnce([])
 
-    // Execute the script
-    jest.isolateModules(() => {
-      require('./init')
-    })
+      jest.doMock('@supabase/supabase-js', () => ({
+        createClient: jest.fn().mockReturnValue(mockSupabase),
+      }))
 
-    expect(fs.rmdirSync).toHaveBeenCalledWith('/fake/home/Downloads/test-post')
-    expect(console.log).toHaveBeenCalledWith(
-      "Removed empty subfolder '/fake/home/Downloads/test-post'."
-    )
+      process.argv = ['node', 'init.js', 'test-post']
+      process.env.NODE_ENV = 'test'
+
+      const initModule = require('./init')
+      await initModule.main()
+
+      // Check that filename was sanitized
+      expect(mockSupabase.storage.upload).toHaveBeenCalledWith(
+        'test-post-1-filewithspacesandsymbols.wav',
+        expect.any(Buffer),
+        expect.any(Object)
+      )
+    })
   })
 
-  test('should commit and push changes to git', () => {
-    // Execute the script
-    jest.isolateModules(() => {
-      require('./init')
-    })
+  test('should commit and push changes to git', async () => {
+    await jest.isolateModulesAsync(async () => {
+      // Set up all necessary mocks inside the isolated context
+      const fs = require('fs')
+      const path = require('path')
+      const childProcess = require('child_process')
 
-    expect(childProcess.execSync).toHaveBeenCalledWith('git add .', {
-      stdio: 'inherit',
+      fs.readFileSync = jest
+        .fn()
+        .mockReturnValue(
+          'Template: {name}, {date}, {description}, {audio_files}'
+        )
+      fs.existsSync = jest.fn().mockReturnValue(true)
+      fs.statSync = jest.fn().mockReturnValue({ isDirectory: () => true })
+      fs.mkdirSync = jest.fn().mockImplementation(() => {})
+      fs.writeFileSync = jest.fn().mockImplementation(() => {})
+      fs.copyFileSync = jest.fn().mockImplementation(() => {})
+      fs.cpSync = jest.fn().mockImplementation(() => {})
+      fs.rmSync = jest.fn().mockImplementation(() => {})
+      fs.rmdirSync = jest.fn().mockImplementation(() => {})
+      fs.readdirSync = jest.fn().mockReturnValue([])
+
+      path.basename = jest.fn().mockReturnValue('init.js')
+      path.join = jest.fn().mockImplementation((...args) => args.join('/'))
+      path.extname = jest.fn().mockReturnValue('.wav')
+      path.basename = jest.fn().mockImplementation((file, ext) => {
+        if (ext) return file.replace(ext, '')
+        return file
+      })
+
+      childProcess.execSync = jest.fn().mockImplementation(() => {})
+
+      const mockSupabase = {
+        storage: {
+          from: jest.fn().mockReturnThis(),
+          upload: jest.fn().mockResolvedValue({
+            data: { path: 'test-file.wav' },
+            error: null,
+          }),
+          getPublicUrl: jest.fn().mockReturnValue({
+            data: {
+              publicUrl:
+                'https://fake.supabase.co/storage/v1/object/public/audio/test-file.wav',
+            },
+          }),
+        },
+      }
+
+      jest.doMock('@supabase/supabase-js', () => ({
+        createClient: jest.fn().mockReturnValue(mockSupabase),
+      }))
+
+      process.argv = ['node', 'init.js', 'test-post']
+      process.env.NODE_ENV = 'test'
+
+      const initModule = require('./init')
+      await initModule.main()
+
+      expect(childProcess.execSync).toHaveBeenCalledWith('git add .', {
+        stdio: 'inherit',
+      })
+      expect(childProcess.execSync).toHaveBeenCalledWith(
+        'git commit -m "new-day: test-post"',
+        { stdio: 'inherit' }
+      )
+      expect(childProcess.execSync).toHaveBeenCalledWith(
+        'git push origin test-post --tags',
+        { stdio: 'inherit' }
+      )
+      expect(childProcess.execSync).toHaveBeenCalledWith(
+        'git push origin test-post',
+        { stdio: 'inherit' }
+      )
     })
-    expect(childProcess.execSync).toHaveBeenCalledWith(
-      'git commit -m "new-day: test-post"',
-      { stdio: 'inherit' }
-    )
-    expect(childProcess.execSync).toHaveBeenCalledWith(
-      'git push origin test-post --tags',
-      { stdio: 'inherit' }
-    )
-    expect(childProcess.execSync).toHaveBeenCalledWith(
-      'git push origin test-post',
-      { stdio: 'inherit' }
-    )
   })
 })

@@ -21,6 +21,9 @@ if (!supabaseUrl || !supabaseKey) {
   console.error(
     'Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
   )
+  if (process.env.NODE_ENV === 'test') {
+    throw new Error('Missing Supabase credentials')
+  }
   process.exit(1)
 }
 
@@ -234,8 +237,16 @@ const migrateToSupabase = async () => {
   }
 }
 
-// Run the migration
-migrateToSupabase().catch((error) => {
-  console.error('Migration failed:', error.message)
-  process.exit(1)
-})
+// Export main function for testing
+module.exports = { migrateToSupabase }
+
+// Run the migration only if this is the main module
+if (require.main === module) {
+  migrateToSupabase().catch((error) => {
+    console.error('Migration failed:', error.message)
+    if (process.env.NODE_ENV === 'test') {
+      throw error
+    }
+    process.exit(1)
+  })
+}
