@@ -4,6 +4,11 @@ const fs = require('fs')
 const path = require('path')
 const { execSync } = require('child_process')
 
+// Function to strip special characters except hyphens
+const sanitizeFilename = (filename) => {
+  return filename.replace(/[^a-zA-Z0-9\-]/g, '')
+}
+
 const name = process.argv[2]
 
 if (!name) {
@@ -73,7 +78,8 @@ if (fs.existsSync(subfolderPath) && fs.statSync(subfolderPath).isDirectory()) {
       // Create unique filename with name prefix and index
       const fileExtension = path.extname(wavFile)
       const baseName = path.basename(wavFile, fileExtension)
-      const uniqueFileName = `${name}-${index + 1}-${baseName}${fileExtension}`
+      const sanitizedBaseName = sanitizeFilename(baseName)
+      const uniqueFileName = `${name}-${index + 1}-${sanitizedBaseName}${fileExtension}`
       const destPath = path.join(destDir, uniqueFileName)
       fs.renameSync(sourcePath, destPath)
       movedFiles.push(uniqueFileName)
