@@ -80,16 +80,39 @@ const main = async () => {
   // Initialize Supabase client
   supabase = initializeSupabase()
 
-  // Checkout to a branch named after the 'name' variable (create if it doesn't exist)
+  // Check if branch exists, then checkout or create it
   try {
-    execSync(`git checkout -B ${name}`, { stdio: 'inherit' })
-    console.log(`Checked out to branch '${name}'.`)
-  } catch (err) {
-    console.error(`Failed to checkout to branch '${name}':`, err.message)
-    if (process.env.NODE_ENV === 'test') {
-      throw new Error(`Failed to checkout to branch '${name}': ${err.message}`)
+    // Check if branch exists
+    const branchExists = execSync(
+      `git show-ref --verify --quiet refs/heads/${name}`,
+      { stdio: 'pipe' }
+    )
+    if (branchExists === 0) {
+      // Branch exists, just checkout to it
+      execSync(`git checkout ${name}`, { stdio: 'inherit' })
+      console.log(`Checked out to existing branch '${name}'.`)
+    } else {
+      // Branch doesn't exist, create and checkout to it
+      execSync(`git checkout -B ${name}`, { stdio: 'inherit' })
+      console.log(`Created and checked out to new branch '${name}'.`)
     }
-    process.exit(1)
+  } catch (err) {
+    // If the above command fails, it means the branch doesn't exist, so create it
+    try {
+      execSync(`git checkout -B ${name}`, { stdio: 'inherit' })
+      console.log(`Created and checked out to new branch '${name}'.`)
+    } catch (checkoutErr) {
+      console.error(
+        `Failed to checkout to branch '${name}':`,
+        checkoutErr.message
+      )
+      if (process.env.NODE_ENV === 'test') {
+        throw new Error(
+          `Failed to checkout to branch '${name}': ${checkoutErr.message}`
+        )
+      }
+      process.exit(1)
+    }
   }
 
   const dir = path.join(process.cwd(), 'content', 'blog', name)
@@ -246,23 +269,33 @@ const main = async () => {
     `Created folder '${name}' and file '${name}/${name}.md' with template content.`
   )
 
-  try {
-    execSync(`git add .`, { stdio: 'inherit' })
-    console.log(`Added changes to git.`)
-    execSync(`git commit -m "new-day: ${name}"`, { stdio: 'inherit' })
-    console.log(`Committed changes to git.`)
-    execSync(`git push origin ${name} --tags`, { stdio: 'inherit' })
-    console.log(`Pushed tags to origin.`)
-    execSync(`git push origin ${name}`, { stdio: 'inherit' })
-    console.log(`Pushed changes to origin.`)
-  } catch (err) {
-    console.error(`Failed to create or finish the release branch:`, err.message)
-    if (process.env.NODE_ENV === 'test') {
-      throw new Error(
-        `Failed to create or finish the release branch: ${err.message}`
+  // Only push to GitHub if at least one Supabase upload succeeded
+  if (movedFiles.length > 0) {
+    try {
+      execSync(`git add .`, { stdio: 'inherit' })
+      console.log(`Added changes to git.`)
+      execSync(`git commit -m "new-day: ${name}"`, { stdio: 'inherit' })
+      console.log(`Committed changes to git.`)
+      execSync(`git push origin ${name} --tags`, { stdio: 'inherit' })
+      console.log(`Pushed tags to origin.`)
+      execSync(`git push origin ${name}`, { stdio: 'inherit' })
+      console.log(`Pushed changes to origin.`)
+    } catch (err) {
+      console.error(
+        `Failed to create or finish the release branch:`,
+        err.message
       )
+      if (process.env.NODE_ENV === 'test') {
+        throw new Error(
+          `Failed to create or finish the release branch: ${err.message}`
+        )
+      }
+      process.exit(1)
     }
-    process.exit(1)
+  } else {
+    console.log(
+      `No audio files were uploaded to Supabase. Skipping git push to avoid incomplete commits.`
+    )
   }
 }
 
