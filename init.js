@@ -187,11 +187,13 @@ const main = async () => {
       for (let index = 0; index < wavFiles.length; index++) {
         const wavFile = wavFiles[index]
         const sourcePath = path.join(subfolderPath, wavFile)
-        // Create unique filename with name prefix and index
+        // Create unique filename with just the name and index, sanitized
         const fileExtension = path.extname(wavFile)
-        const baseName = path.basename(wavFile, fileExtension)
-        const sanitizedBaseName = sanitizeFilename(baseName)
-        const uniqueFileName = `${name}-${index + 1}-${sanitizedBaseName}${fileExtension}`
+        const sanitizedName = sanitizeFilename(name)
+        const uniqueFileName =
+          wavFiles.length === 1
+            ? `${sanitizedName}${fileExtension}`
+            : `${sanitizedName}-${index + 1}${fileExtension}`
 
         try {
           // Upload to Supabase instead of moving to local storage
@@ -225,9 +227,15 @@ const main = async () => {
 
     try {
       // Upload to Supabase instead of moving to local storage
-      const supabaseUrl = await uploadToSupabase(singleFilePath, `${name}.wav`)
-      movedFiles.push({ fileName: `${name}.wav`, url: supabaseUrl })
-      console.log(`Uploaded file '${name}.wav' to Supabase.`)
+      const sanitizedName = sanitizeFilename(name)
+      const supabaseUrl = await uploadToSupabase(
+        singleFilePath,
+        `${sanitizedName}.wav`
+      )
+      movedFiles.push({ fileName: `${sanitizedName}.wav`, url: supabaseUrl })
+      console.log(
+        `Uploaded file '${name}.wav' to Supabase as '${sanitizedName}.wav'.`
+      )
     } catch (error) {
       console.error(`Failed to upload ${name}.wav:`, error.message)
     }
