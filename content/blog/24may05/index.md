@@ -4,4 +4,4 @@ date: '2024-05-05'
 description: a tune
 ---
 
-`audio: ../../assets/music/24may5.wav`
+`audio: https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/audio/24may5.wav`

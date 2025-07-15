@@ -3,6 +3,8 @@ import { Link } from 'gatsby'
 import { ThemeToggler } from 'gatsby-plugin-dark-mode'
 import '../../utils/global.css'
 import { rhythm, scale } from '../../utils/typography'
+import { AudioProvider } from '../audio-context/audio-context'
+import StopAllButton from '../stop-all-button/stop-all-button'
 
 const Layout = ({ location, title, children }) => {
   const rootPath = `${__PATH_PREFIX__}/`
@@ -50,36 +52,61 @@ const Layout = ({ location, title, children }) => {
       </h3>
     )
   }
-  return (
-    <div
-      style={{
-        marginLeft: `auto`,
-        marginRight: `auto`,
-        maxWidth: rhythm(32),
-        padding: `${rhythm(1.5)} ${rhythm(3 / 4)}`,
-        backgroundColor: 'var(--bg)',
-        color: 'var(--textNormal)',
-        transition: 'color 0.2s ease-out, background 0.2s ease-out',
-      }}
-    >
-      {/* TODO: implement pretty toggle button 
-      <ThemeToggler>
-        {({ theme, toggleTheme }) => (
-          <label>
-            <input
-              type="checkbox"
-              onChange={e => toggleTheme(e.target.checked ? 'dark' : 'light')}
-              checked={theme === 'dark'}
-            />{' '}
-            Dark mode
-          </label>
-        )}
-      </ThemeToggler> */}
-      <header>{header}</header>
-      <main>{children}</main>
-      <footer>{new Date().getFullYear()}</footer>
-    </div>
-  )
+
+  try {
+    return (
+      <AudioProvider>
+        <div
+          style={{
+            marginLeft: `auto`,
+            marginRight: `auto`,
+            maxWidth: rhythm(32),
+            padding: `${rhythm(1.5)} ${rhythm(3 / 4)}`,
+            backgroundColor: 'var(--bg)',
+            color: 'var(--textNormal)',
+            transition: 'color 0.2s ease-out, background 0.2s ease-out',
+          }}
+        >
+          <StopAllButton />
+          {/* TODO: implement pretty toggle button 
+          <ThemeToggler>
+            {({ theme, toggleTheme }) => (
+              <label>
+                <input
+                  type="checkbox"
+                  onChange={e => toggleTheme(e.target.checked ? 'dark' : 'light')}
+                  checked={theme === 'dark'}
+                />{' '}
+                Dark mode
+              </label>
+            )}
+          </ThemeToggler> */}
+          <header>{header}</header>
+          <main>{children}</main>
+          <footer>{new Date().getFullYear()}</footer>
+        </div>
+      </AudioProvider>
+    )
+  } catch (error) {
+    console.error('Error rendering AudioProvider:', error)
+    return (
+      <div
+        style={{
+          marginLeft: `auto`,
+          marginRight: `auto`,
+          maxWidth: rhythm(32),
+          padding: `${rhythm(1.5)} ${rhythm(3 / 4)}`,
+          backgroundColor: 'var(--bg)',
+          color: 'var(--textNormal)',
+          transition: 'color 0.2s ease-out, background 0.2s ease-out',
+        }}
+      >
+        <header>{header}</header>
+        <main>{children}</main>
+        <footer>{new Date().getFullYear()}</footer>
+      </div>
+    )
+  }
 }
 
 export default Layout
