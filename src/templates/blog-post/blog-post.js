@@ -4,13 +4,13 @@ import { Link, graphql } from 'gatsby'
 import Bio from '../../components/bio/bio'
 import Layout from '../../components/layout/layout'
 import SEO from '../../components/seo/seo'
+import AudioPlayerRenderer from '../../components/audio-player-renderer/audio-player-renderer'
 import { rhythm, scale } from '../../utils/typography'
 
 const BlogPostTemplate = ({ data, pageContext, location }) => {
   const post = data.markdownRemark
   const siteTitle = data.site.siteMetadata.title
   const { previous, next } = pageContext
-
   return (
     <Layout location={location} title={siteTitle}>
       <SEO
@@ -38,7 +38,9 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
             {post.frontmatter.date}
           </p>
         </header>
-        <section dangerouslySetInnerHTML={{ __html: post.html }} />
+        <section>
+          <AudioPlayerRenderer htmlContent={post.html} />
+        </section>
         <footer>
           <Bio />
         </footer>
@@ -52,6 +54,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
             justifyContent: `space-between`,
             listStyle: `none`,
             padding: 0,
+            margin: 0,
           }}
         >
           <li>
