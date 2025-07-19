@@ -28,6 +28,12 @@ jest.mock('../components/seo/seo', () => ({ title }) => (
     SEO Component
   </div>
 ))
+
+// Mock the calendar component
+jest.mock('../components/calendar/calendar', () => () => (
+  <div data-testid="calendar">Calendar Component</div>
+))
+
 jest.mock('../utils/typography', () => ({
   rhythm: jest.fn().mockImplementation((n) => n * 16),
 }))
@@ -98,13 +104,20 @@ describe('BlogIndex', () => {
     expect(screen.getByTestId('bio')).toBeInTheDocument()
   })
 
-  test('renders correct number of blog posts', () => {
+  test('renders Calendar component', () => {
+    render(<BlogIndex data={mockData} location={mockLocation} />)
+    expect(screen.getByTestId('calendar')).toBeInTheDocument()
+  })
+
+  // Note: Blog posts are currently commented out in the actual page
+  // These tests are kept for when the posts are uncommented
+  test.skip('renders correct number of blog posts', () => {
     render(<BlogIndex data={mockData} location={mockLocation} />)
     const articles = screen.getAllByRole('article')
     expect(articles).toHaveLength(2)
   })
 
-  test('renders post titles with correct links', () => {
+  test.skip('renders post titles with correct links', () => {
     render(<BlogIndex data={mockData} location={mockLocation} />)
 
     const firstPostLink = screen.getByText('Test Post Title')
@@ -119,18 +132,18 @@ describe('BlogIndex', () => {
     )
   })
 
-  test('displays post dates', () => {
+  test.skip('displays post dates', () => {
     render(<BlogIndex data={mockData} location={mockLocation} />)
     expect(screen.getByText('January 1, 2020')).toBeInTheDocument()
     expect(screen.getByText('January 2, 2020')).toBeInTheDocument()
   })
 
-  test('renders post description when available', () => {
+  test.skip('renders post description when available', () => {
     render(<BlogIndex data={mockData} location={mockLocation} />)
     expect(screen.getByText('Test post description')).toBeInTheDocument()
   })
 
-  test('falls back to excerpt when description is not available', () => {
+  test.skip('falls back to excerpt when description is not available', () => {
     render(<BlogIndex data={mockData} location={mockLocation} />)
     expect(screen.getByText('Another excerpt')).toBeInTheDocument()
   })

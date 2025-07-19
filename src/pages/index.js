@@ -5,6 +5,7 @@ import Layout from '../components/layout/layout'
 import React from 'react'
 import SEO from '../components/seo/seo'
 import { rhythm } from '../utils/typography'
+import Calendar from '../components/calendar/calendar'
 
 const BlogIndex = ({ data, location }) => {
   const siteTitle = data.site.siteMetadata.title
@@ -14,7 +15,8 @@ const BlogIndex = ({ data, location }) => {
     <Layout location={location} title={siteTitle}>
       <SEO title="All posts" />
       <Bio />
-      {posts.map(({ node }) => {
+      <Calendar />
+      {/* {posts.map(({ node }) => {
         const title = node.frontmatter.title || node.fields.slug
         return (
           <article key={node.fields.slug}>
@@ -39,7 +41,7 @@ const BlogIndex = ({ data, location }) => {
             </section>
           </article>
         )
-      })}
+      })} */}
     </Layout>
   )
 }

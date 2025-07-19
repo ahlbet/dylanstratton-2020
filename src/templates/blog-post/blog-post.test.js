@@ -27,11 +27,29 @@ jest.mock('../../components/seo/seo', () => ({ title, description }) => (
   </div>
 ))
 
+// Mock the calendar components
+jest.mock('../../components/calendar/calendar', () => () => (
+  <div data-testid="calendar">Calendar Component</div>
+))
+jest.mock('../../components/calendar/calendar-toggle', () => () => (
+  <button data-testid="calendar-toggle">Toggle Calendar</button>
+))
+jest.mock('../../components/calendar/user-preferences-context', () => ({
+  useUserPreferences: () => ({
+    calendarVisible: false,
+    toggleCalendar: jest.fn(),
+    setCalendarVisible: jest.fn(),
+  }),
+}))
+
 // Mock the typography utils
 jest.mock('../../utils/typography', () => ({
   rhythm: jest.fn((n) => n * 10),
   scale: jest.fn(() => ({ fontSize: '0.8rem' })),
 }))
+
+// Mock CSS imports
+jest.mock('../../utils/audio-player.css', () => ({}), { virtual: true })
 
 describe('BlogPostTemplate', () => {
   const mockData = {
@@ -142,5 +160,17 @@ describe('BlogPostTemplate', () => {
 
     expect(screen.getByText('← Previous Post')).toBeInTheDocument()
     expect(screen.queryByText(/Next Post →/)).not.toBeInTheDocument()
+  })
+
+  test('renders calendar toggle button', () => {
+    render(
+      <BlogPostTemplate
+        data={mockData}
+        pageContext={mockPageContext}
+        location={mockLocation}
+      />
+    )
+
+    expect(screen.getByTestId('calendar-toggle')).toBeInTheDocument()
   })
 })

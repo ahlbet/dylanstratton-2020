@@ -4,12 +4,17 @@ import { Link, graphql } from 'gatsby'
 import Bio from '../../components/bio/bio'
 import Layout from '../../components/layout/layout'
 import SEO from '../../components/seo/seo'
+import Calendar from '../../components/calendar/calendar'
+import CalendarToggle from '../../components/calendar/calendar-toggle'
+import { useUserPreferences } from '../../components/calendar/user-preferences-context'
 import { rhythm, scale } from '../../utils/typography'
+import '../../utils/audio-player.css'
 
 const BlogPostTemplate = ({ data, pageContext, location }) => {
   const post = data.markdownRemark
   const siteTitle = data.site.siteMetadata.title
   const { previous, next } = pageContext
+  const { calendarVisible } = useUserPreferences()
 
   return (
     <Layout location={location} title={siteTitle}>
@@ -17,6 +22,9 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
         title={post.frontmatter.title}
         description={post.frontmatter.description || post.excerpt}
       />
+
+      {/* Calendar - Conditionally Rendered */}
+
       <article>
         <header>
           <h1
@@ -38,6 +46,17 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
             {post.frontmatter.date}
           </p>
         </header>
+        {/* Calendar Toggle Button */}
+        <div
+          style={{
+            marginBottom: '1rem',
+            // display: 'flex',
+            // justifyContent: 'center',
+          }}
+        >
+          <CalendarToggle />
+        </div>
+        {calendarVisible && <Calendar />}
         <section dangerouslySetInnerHTML={{ __html: post.html }} />
         <footer>
           <Bio />
@@ -91,6 +110,9 @@ export const pageQuery = graphql`
         title
         date(formatString: "MMMM DD, YYYY")
         description
+      }
+      fields {
+        slug
       }
     }
   }
