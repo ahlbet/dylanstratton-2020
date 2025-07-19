@@ -1,6 +1,8 @@
 import React from 'react'
 import Layout from '../components/layout/layout'
 import Calendar from '../components/calendar/calendar'
+import CalendarStatus from '../components/calendar/calendar-status'
+import { CalendarProvider } from '../components/calendar/calendar-context'
 import SEO from '../components/seo/seo'
 
 const CalendarTestPage = () => {
@@ -42,9 +44,12 @@ const CalendarTestPage = () => {
               '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           }}
         >
-          Minimal dark mode design
+          Minimal dark mode design with state persistence
         </p>
-        <Calendar />
+        <CalendarProvider>
+          <CalendarStatus />
+          <Calendar />
+        </CalendarProvider>
       </div>
     </Layout>
   )
