@@ -13,6 +13,9 @@ const sanitizeFilename = (filename) => {
   return filename.replace(/[^a-zA-Z0-9\-]/g, '')
 }
 
+// Import the transformDate function from utils
+const { transformDate } = require('./src/utils/date-utils')
+
 // Initialize Supabase client
 let supabase
 
@@ -121,7 +124,7 @@ const main = async () => {
   // Path to your template file in ./content/blog/
   const templatePath = path.join(process.cwd(), 'src', 'template.md')
   const description = process.argv[3] || ''
-  const date = new Date().toISOString().slice(0, 10)
+  const date = transformDate(name)
 
   // Read template content from file
   let template
@@ -307,7 +310,7 @@ const main = async () => {
   }
 }
 
-// Export main function for testing
+// Export functions for testing
 module.exports = { main }
 
 // Run the main function only if this is the main module

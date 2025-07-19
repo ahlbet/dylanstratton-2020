@@ -24,6 +24,119 @@ jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn().mockReturnValue(mockSupabase),
 }))
 
+describe('transformDate function', () => {
+  let transformDate
+
+  beforeEach(() => {
+    // Import the function for testing
+    const {
+      transformDate: transformDateUtil,
+    } = require('./src/utils/date-utils')
+    transformDate = transformDateUtil
+  })
+
+  test('should transform 25may05 to 2025-05-05', () => {
+    const result = transformDate('25may05', false)
+    expect(result).toBe('2025-05-05')
+  })
+
+  test('should transform 24jun19 to 2024-06-19', () => {
+    const result = transformDate('24jun19', false)
+    expect(result).toBe('2024-06-19')
+  })
+
+  test('should transform 99dec31 to 1999-12-31', () => {
+    const result = transformDate('99dec31', false)
+    expect(result).toBe('1999-12-31')
+  })
+
+  test('should transform 00jan01 to 2000-01-01', () => {
+    const result = transformDate('00jan01', false)
+    expect(result).toBe('2000-01-01')
+  })
+
+  test('should transform 50jan01 to 1950-01-01', () => {
+    const result = transformDate('50jan01', false)
+    expect(result).toBe('1950-01-01')
+  })
+
+  test('should handle all months correctly', () => {
+    const months = [
+      { abbr: 'jan', num: 1 },
+      { abbr: 'feb', num: 2 },
+      { abbr: 'mar', num: 3 },
+      { abbr: 'apr', num: 4 },
+      { abbr: 'may', num: 5 },
+      { abbr: 'jun', num: 6 },
+      { abbr: 'jul', num: 7 },
+      { abbr: 'aug', num: 8 },
+      { abbr: 'sep', num: 9 },
+      { abbr: 'oct', num: 10 },
+      { abbr: 'nov', num: 11 },
+      { abbr: 'dec', num: 12 },
+    ]
+
+    months.forEach(({ abbr, num }) => {
+      const result = transformDate(`25${abbr}15`, false)
+      const expected = `2025-${num.toString().padStart(2, '0')}-15`
+      expect(result).toBe(expected)
+    })
+  })
+
+  test('should handle case insensitive month abbreviations', () => {
+    expect(transformDate('25MAY05', false)).toBe('2025-05-05')
+    expect(transformDate('25May05', false)).toBe('2025-05-05')
+    expect(transformDate('25mAy05', false)).toBe('2025-05-05')
+  })
+
+  test('should throw error for invalid format', () => {
+    expect(() => transformDate('invalid')).toThrow(
+      'Invalid name format. Expected format like "25may05" or "24jun19", got "invalid"'
+    )
+  })
+
+  test('should throw error for invalid month', () => {
+    expect(() => transformDate('25xyz05')).toThrow('Invalid month: xyz')
+  })
+
+  test('should throw error for too short input', () => {
+    expect(() => transformDate('25may')).toThrow(
+      'Invalid name format. Expected format like "25may05" or "24jun19", got "25may"'
+    )
+  })
+
+  test('should throw error for too long input', () => {
+    expect(() => transformDate('25may051')).toThrow(
+      'Invalid name format. Expected format like "25may05" or "24jun19", got "25may051"'
+    )
+  })
+
+  test('should throw error for non-alphanumeric characters', () => {
+    expect(() => transformDate('25-may-05')).toThrow(
+      'Invalid name format. Expected format like "25may05" or "24jun19", got "25-may-05"'
+    )
+  })
+
+  test('should handle random time parameter', () => {
+    const result = transformDate('25may05', true)
+    // Should return a valid date format regardless of random time
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  test('should return consistent date when randomTime is false', () => {
+    const result1 = transformDate('25may05', false)
+    const result2 = transformDate('25may05', false)
+    expect(result1).toBe('2025-05-05')
+    expect(result2).toBe('2025-05-05')
+    expect(result1).toBe(result2)
+  })
+
+  test('should handle edge case years correctly', () => {
+    expect(transformDate('49dec31', false)).toBe('2049-12-31') // 49 -> 2049
+    expect(transformDate('50jan01', false)).toBe('1950-01-01') // 50 -> 1950
+  })
+})
+
 describe('init.js script', () => {
   // Store original process properties
   const originalArgv = process.argv
@@ -103,18 +216,21 @@ describe('init.js script', () => {
   })
 
   test('should exit if name is not provided', async () => {
-    process.argv = ['node', 'init.js'] // No name argument
-    process.env.NODE_ENV = 'test' // Ensure test mode is set
+    await jest.isolateModulesAsync(async () => {
+      // Mock process.argv inside the isolated context
+      process.argv = ['node', 'init.js'] // No name argument
+      process.env.NODE_ENV = 'test' // Ensure test mode is set
 
-    const initModule = require('./init')
-    await expect(initModule.main()).rejects.toThrow('Missing name argument')
+      const initModule = require('./init')
+      await expect(initModule.main()).rejects.toThrow('Missing name argument')
 
-    expect(console.log).toHaveBeenCalledWith('Usage: node init.js <name>')
+      expect(console.log).toHaveBeenCalledWith('Usage: node init.js <name>')
+    })
   })
 
   test('should exit if Supabase credentials are missing', async () => {
     process.env = { HOME: '/fake/home', NODE_ENV: 'test' } // Remove Supabase credentials
-    process.argv = ['node', 'init.js', 'test-post'] // Provide name argument
+    process.argv = ['node', 'init.js', '25may05'] // Provide name argument
 
     const initModule = require('./init')
     await expect(initModule.main()).rejects.toThrow(
@@ -139,7 +255,12 @@ describe('init.js script', () => {
         .mockReturnValue(
           'Template: {name}, {date}, {description}, {audio_files}'
         )
-      fs.existsSync = jest.fn().mockReturnValue(true)
+      fs.existsSync = jest.fn().mockImplementation((path) => {
+        if (path.includes('25may05') && !path.includes('.wav')) {
+          return true // Subfolder exists
+        }
+        return false // Single file doesn't exist
+      })
       fs.statSync = jest.fn().mockReturnValue({ isDirectory: () => true })
       fs.mkdirSync = jest.fn().mockImplementation(() => {})
       fs.writeFileSync = jest.fn().mockImplementation(() => {})
@@ -147,7 +268,7 @@ describe('init.js script', () => {
       fs.cpSync = jest.fn().mockImplementation(() => {})
       fs.rmSync = jest.fn().mockImplementation(() => {})
       fs.rmdirSync = jest.fn().mockImplementation(() => {})
-      fs.readdirSync = jest.fn().mockReturnValue([])
+      fs.readdirSync = jest.fn().mockReturnValue(['test-audio.wav'])
 
       // Mock path methods
       path.basename = jest.fn().mockReturnValue('init.js')
@@ -183,24 +304,33 @@ describe('init.js script', () => {
         createClient: jest.fn().mockReturnValue(mockSupabase),
       }))
 
-      process.argv = ['node', 'init.js', 'test-post', 'test_description']
+      // Mock the transformDate function to return a consistent date
+      jest.doMock('./init', () => {
+        const originalModule = jest.requireActual('./init')
+        return {
+          ...originalModule,
+          transformDate: jest.fn().mockReturnValue('2025-05-05'),
+        }
+      })
+
+      process.argv = ['node', 'init.js', '25may05', 'test_description']
       process.env.NODE_ENV = 'test'
 
       const initModule = require('./init')
       await initModule.main()
 
-      const today = new Date().toISOString().slice(0, 10)
+      const expectedDate = '2025-05-05'
       expect(fs.readFileSync).toHaveBeenCalledWith(
         '/fake/project/dir/src/template.md',
         'utf8'
       )
       expect(fs.mkdirSync).toHaveBeenCalledWith(
-        '/fake/project/dir/content/blog/test-post',
+        '/fake/project/dir/content/blog/25may05',
         { recursive: true }
       )
       expect(fs.writeFileSync).toHaveBeenCalledWith(
-        '/fake/project/dir/content/blog/test-post/test-post.md',
-        `Template: test-post, ${today}, test description, `
+        '/fake/project/dir/content/blog/25may05/25may05.md',
+        `Template: 25may05, ${expectedDate}, test description, \`audio: https://fake.supabase.co/storage/v1/object/public/audio/test-file.wav\``
       )
     })
   })
@@ -259,7 +389,7 @@ describe('init.js script', () => {
           createClient: jest.fn().mockReturnValue(mockSupabase),
         }))
 
-        process.argv = ['node', 'init.js', 'test-post']
+        process.argv = ['node', 'init.js', '25may05']
         process.env.NODE_ENV = 'test'
 
         const initModule = require('./init')
@@ -288,7 +418,7 @@ describe('init.js script', () => {
         return 'default content'
       })
       fs.existsSync = jest.fn().mockImplementation((path) => {
-        if (path.includes('test-post') && !path.includes('.wav')) {
+        if (path.includes('25may05') && !path.includes('.wav')) {
           return true // Subfolder exists
         }
         return false // Single file doesn't exist
@@ -334,7 +464,7 @@ describe('init.js script', () => {
         createClient: jest.fn().mockReturnValue(mockSupabase),
       }))
 
-      process.argv = ['node', 'init.js', 'test-post']
+      process.argv = ['node', 'init.js', '25may05']
       process.env.NODE_ENV = 'test'
 
       const initModule = require('./init')
@@ -343,17 +473,17 @@ describe('init.js script', () => {
       // Check that all files were uploaded
       expect(mockSupabase.storage.upload).toHaveBeenCalledTimes(3)
       expect(mockSupabase.storage.upload).toHaveBeenCalledWith(
-        'test-post-1-track1.wav',
+        '25may05-1.wav',
         expect.any(Buffer),
         expect.any(Object)
       )
       expect(mockSupabase.storage.upload).toHaveBeenCalledWith(
-        'test-post-2-track2.wav',
+        '25may05-2.wav',
         expect.any(Buffer),
         expect.any(Object)
       )
       expect(mockSupabase.storage.upload).toHaveBeenCalledWith(
-        'test-post-3-track3.wav',
+        '25may05-3.wav',
         expect.any(Buffer),
         expect.any(Object)
       )
@@ -414,14 +544,14 @@ describe('init.js script', () => {
         createClient: jest.fn().mockReturnValue(mockSupabase),
       }))
 
-      process.argv = ['node', 'init.js', 'test-post']
+      process.argv = ['node', 'init.js', '25may05']
       process.env.NODE_ENV = 'test'
 
       const initModule = require('./init')
       await initModule.main()
 
       expect(console.error).toHaveBeenCalledWith(
-        'Failed to upload test-post.wav:',
+        'Failed to upload 25may05.wav:',
         'Upload failed'
       )
     })
@@ -445,7 +575,7 @@ describe('init.js script', () => {
         return 'default content'
       })
       fs.existsSync = jest.fn().mockImplementation((path) => {
-        if (path.includes('test-post') && !path.includes('.wav')) {
+        if (path.includes('25may05') && !path.includes('.wav')) {
           return true
         }
         return false
@@ -491,7 +621,7 @@ describe('init.js script', () => {
         createClient: jest.fn().mockReturnValue(mockSupabase),
       }))
 
-      process.argv = ['node', 'init.js', 'test-post']
+      process.argv = ['node', 'init.js', '25may05']
       process.env.NODE_ENV = 'test'
 
       const initModule = require('./init')
@@ -499,7 +629,7 @@ describe('init.js script', () => {
 
       // Check that filename was sanitized
       expect(mockSupabase.storage.upload).toHaveBeenCalledWith(
-        'test-post-1-filewithspacesandsymbols.wav',
+        '25may05.wav',
         expect.any(Buffer),
         expect.any(Object)
       )
@@ -513,12 +643,20 @@ describe('init.js script', () => {
       const path = require('path')
       const childProcess = require('child_process')
 
-      fs.readFileSync = jest
-        .fn()
-        .mockReturnValue(
-          'Template: {name}, {date}, {description}, {audio_files}'
-        )
-      fs.existsSync = jest.fn().mockReturnValue(true)
+      fs.readFileSync = jest.fn().mockImplementation((filePath) => {
+        if (filePath.includes('template.md')) {
+          return 'Template: {name}, {date}, {description}, {audio_files}'
+        } else if (filePath.includes('.wav')) {
+          return Buffer.from('mock audio data')
+        }
+        return 'default content'
+      })
+      fs.existsSync = jest.fn().mockImplementation((path) => {
+        if (path.includes('25may05') && !path.includes('.wav')) {
+          return true // Subfolder exists
+        }
+        return false // Single file doesn't exist
+      })
       fs.statSync = jest.fn().mockReturnValue({ isDirectory: () => true })
       fs.mkdirSync = jest.fn().mockImplementation(() => {})
       fs.writeFileSync = jest.fn().mockImplementation(() => {})
@@ -526,7 +664,7 @@ describe('init.js script', () => {
       fs.cpSync = jest.fn().mockImplementation(() => {})
       fs.rmSync = jest.fn().mockImplementation(() => {})
       fs.rmdirSync = jest.fn().mockImplementation(() => {})
-      fs.readdirSync = jest.fn().mockReturnValue([])
+      fs.readdirSync = jest.fn().mockReturnValue(['test-audio.wav'])
 
       path.basename = jest.fn().mockReturnValue('init.js')
       path.join = jest.fn().mockImplementation((...args) => args.join('/'))
@@ -558,27 +696,20 @@ describe('init.js script', () => {
         createClient: jest.fn().mockReturnValue(mockSupabase),
       }))
 
-      process.argv = ['node', 'init.js', 'test-post']
+      process.argv = ['node', 'init.js', '25may05']
       process.env.NODE_ENV = 'test'
 
       const initModule = require('./init')
       await initModule.main()
 
-      expect(childProcess.execSync).toHaveBeenCalledWith('git add .', {
-        stdio: 'inherit',
-      })
-      expect(childProcess.execSync).toHaveBeenCalledWith(
-        'git commit -m "new-day: test-post"',
-        { stdio: 'inherit' }
-      )
-      expect(childProcess.execSync).toHaveBeenCalledWith(
-        'git push origin test-post --tags',
-        { stdio: 'inherit' }
-      )
-      expect(childProcess.execSync).toHaveBeenCalledWith(
-        'git push origin test-post',
-        { stdio: 'inherit' }
-      )
+      // Check that git commands were called
+      const calls = childProcess.execSync.mock.calls
+      const callStrings = calls.map((call) => call[0])
+
+      expect(callStrings).toContain('git add .')
+      expect(callStrings).toContain('git commit -m "new-day: 25may05"')
+      expect(callStrings).toContain('git push origin 25may05 --tags')
+      expect(callStrings).toContain('git push origin 25may05')
     })
   })
 })

@@ -1145,6 +1145,23 @@
     minimatch "^3.0.4"
     strip-json-comments "^3.1.1"
 
+"@fullcalendar/core@^6.1.18":
+  version "6.1.18"
+  resolved "https://registry.yarnpkg.com/@fullcalendar/core/-/core-6.1.18.tgz#772477215aa45c4cad0f45a83465a9c8095bd15a"
+  integrity sha512-cD7XtZIZZ87Cg2+itnpsONCsZ89VIfLLDZ22pQX4IQVWlpYUB3bcCf878DhWkqyEen6dhi5ePtBoqYgm5K+0fQ==
+  dependencies:
+    preact "~10.12.1"
+
+"@fullcalendar/daygrid@^6.1.18":
+  version "6.1.18"
+  resolved "https://registry.yarnpkg.com/@fullcalendar/daygrid/-/daygrid-6.1.18.tgz#49b4a237d0115b4695cd8593d0dfa36d81fa5ad4"
+  integrity sha512-s452Zle1SdMEzZDw+pDczm8m3JLIZzS9ANMThXTnqeqJewW1gqNFYas18aHypJSgF9Fh9rDJjTSUw04BpXB/Mg==
+
+"@fullcalendar/react@^6.1.18":
+  version "6.1.18"
+  resolved "https://registry.yarnpkg.com/@fullcalendar/react/-/react-6.1.18.tgz#6424d941dbc8aabdbf2db12c44c5e29a45daac11"
+  integrity sha512-Jwvb+T+/1yGZKe+UYXn0id022HJm0Fq2X/PGFvVh/QRYAI/6xPMRvJrwercBkToxf6LjqYXrDO+/NhRN6IDlmg==
+
 "@gatsbyjs/parcel-namer-relative-to-cwd@2.14.0":
   version "2.14.0"
   resolved "https://registry.yarnpkg.com/@gatsbyjs/parcel-namer-relative-to-cwd/-/parcel-namer-relative-to-cwd-2.14.0.tgz#46556c54c7c958528c1fdf9bda2a3d96886bdd2c"
@@ -10304,6 +10321,11 @@ postcss@^8.2.15, postcss@^8.2.9, postcss@^8.3.11, postcss@^8.4.24:
     nanoid "^3.3.11"
     picocolors "^1.1.1"
     source-map-js "^1.2.1"
+
+preact@~10.12.1:
+  version "10.12.1"
+  resolved "https://registry.yarnpkg.com/preact/-/preact-10.12.1.tgz#8f9cb5442f560e532729b7d23d42fd1161354a21"
+  integrity sha512-l8386ixSsBdbreOAkqtrwqHwdvR35ID8c3rKPa8lCWuO86dBi32QWHV4vfsZK1utLLFMvw+Z5Ad4XLkZzchscg==
 
 prebuild-install@^7.1.1:
   version "7.1.3"
