@@ -10,7 +10,9 @@
   "dependencies": {
     "@fullcalendar/core": "^6.1.18",
     "@fullcalendar/daygrid": "^6.1.18",
+    "@fullcalendar/list": "^6.1.18",
     "@fullcalendar/react": "^6.1.18",
+    "@fullcalendar/timegrid": "^6.1.18",
     "@supabase/supabase-js": "^2.50.2",
     "dotenv": "^17.0.1",
     "gatsby": "^5.14.3",
