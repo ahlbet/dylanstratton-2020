@@ -11,6 +11,7 @@ const USER_PREFERENCES_ACTIONS = {
 
 // Initial state
 const getInitialState = () => {
+  // Check if we're in a browser environment
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('userPreferences')
     if (saved) {
@@ -50,9 +51,13 @@ const userPreferencesReducer = (state, action) => {
       return state
   }
 
-  // Save to localStorage
+  // Save to localStorage only in browser environment
   if (typeof window !== 'undefined') {
-    localStorage.setItem('userPreferences', JSON.stringify(newState))
+    try {
+      localStorage.setItem('userPreferences', JSON.stringify(newState))
+    } catch (e) {
+      console.warn('Failed to save user preferences to localStorage:', e)
+    }
   }
 
   return newState
@@ -94,9 +99,22 @@ export const UserPreferencesProvider = ({ children }) => {
 export const useUserPreferences = () => {
   const context = useContext(UserPreferencesContext)
   if (!context) {
-    throw new Error(
-      'useUserPreferences must be used within a UserPreferencesProvider'
-    )
+    // Provide a fallback for SSR or when context is not available
+    return {
+      calendarVisible: false,
+      toggleCalendar: () => {
+        // No-op during SSR
+        if (typeof window !== 'undefined') {
+          console.warn('toggleCalendar called outside provider')
+        }
+      },
+      setCalendarVisible: () => {
+        // No-op during SSR
+        if (typeof window !== 'undefined') {
+          console.warn('setCalendarVisible called outside provider')
+        }
+      },
+    }
   }
   return context
 }
