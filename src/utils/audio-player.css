@@ -1,0 +1,10 @@
+/* Dark Mode HTML Audio Player - Simple Color Inversion */
+audio {
+  filter: invert(1) hue-rotate(180deg) !important;
+}
+
+/* Optional: Container for better spacing */
+.audio-player-container {
+  margin: 1.5rem 0 !important;
+  padding: 1rem !important;
+} 
