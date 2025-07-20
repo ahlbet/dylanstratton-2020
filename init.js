@@ -16,6 +16,9 @@ const sanitizeFilename = (filename) => {
 // Import the transformDate function from utils
 const { transformDate } = require('./src/utils/date-utils')
 
+// Import the Markov generator
+const { generateBlogPostText } = require('./src/utils/markov-generator')
+
 // Initialize Supabase client
 let supabase
 
@@ -266,12 +269,24 @@ const main = async () => {
     // }
   }
 
-  // Replace {name}, {date}, {description}, and {audio_files} in template
+  // Generate Markov chain text for the blog post
+  let markovText = ''
+  try {
+    console.log('Generating Markov chain text for blog post...')
+    markovText = await generateBlogPostText(name, 5)
+    console.log('Generated Markov text successfully')
+  } catch (error) {
+    console.error('Failed to generate Markov text:', error.message)
+    markovText = '> Generated text could not be created for this post.'
+  }
+
+  // Replace {name}, {date}, {description}, {audio_files}, and {markov_text} in template
   template = template
     .replace(/\{name\}/g, name)
     .replace(/\{date\}/g, date)
     .replace(/\{description\}/g, description.split('_').join(' '))
     .replace(/\{audio_files\}/g, audioFilesContent)
+    .replace(/\{markov_text\}/g, markovText)
 
   fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(file, template)
