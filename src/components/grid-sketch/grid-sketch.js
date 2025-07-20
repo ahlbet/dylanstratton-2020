@@ -58,7 +58,7 @@ const GridSketchSketch = (p) => {
 
     update() {
       if (
-        this.x > p.width - 2 * margin ||
+        this.x > p.width - margin ||
         this.y > p.height - margin ||
         this.x < margin ||
         this.y < margin
@@ -66,11 +66,6 @@ const GridSketchSketch = (p) => {
         this.x = this.startX
         this.y = this.startY
       }
-
-      // if (p.dist(this.x, this.y, p.width / 2, p.height / 2) > radius) {
-      //   this.x = p.width / 2;
-      //   this.y = p.height / 2;
-      // }
     }
 
     fade() {
@@ -91,8 +86,36 @@ const GridSketchSketch = (p) => {
   }
 
   p.setup = () => {
-    p.createCanvas(800, 600)
+    // Get the container width and use fixed height
+    const containerWidth = p.canvas ? p.canvas.parentElement.offsetWidth : 800
+    const canvasHeight = 400
+
+    p.createCanvas(containerWidth, canvasHeight)
     p.background(0)
+
+    // Update global variables to use full canvas dimensions
+    margin = 5 // Minimal margin
+    spacing = Math.max(10, containerWidth * 0.015) // Responsive spacing
+    radius = Math.min(containerWidth, canvasHeight) * 0.4 // Responsive radius
+
+    p.seed()
+  }
+
+  p.windowResized = () => {
+    // Resize canvas when window is resized
+    const containerWidth = p.canvas.parentElement.offsetWidth
+    const canvasHeight = 400
+
+    p.resizeCanvas(containerWidth, canvasHeight)
+    p.background(0)
+
+    // Update global variables for new canvas dimensions
+    margin = 5 // Minimal margin
+    spacing = Math.max(10, containerWidth * 0.015) // Responsive spacing
+    radius = Math.min(containerWidth, canvasHeight) * 0.4 // Responsive radius
+
+    // Re-seed particles for new canvas size
+    particles = []
     p.seed()
   }
 
@@ -110,24 +133,13 @@ const GridSketchSketch = (p) => {
   }
 
   p.seed = () => {
-    for (let i = margin + buff; i < p.width - 2 * margin - buff; i += spacing) {
-      for (let j = margin + buff; j < p.height - margin - buff; j += spacing) {
+    // Use full canvas dimensions with responsive spacing
+    for (let i = margin; i < p.width - margin; i += spacing) {
+      for (let j = margin; j < p.height - margin; j += spacing) {
         let particle = new Particle(i, j, 2, 256, i, j)
         particles.push(particle)
       }
     }
-
-    // for (let i = 0; i < num; i++) {
-    //   let particle = new Particle(
-    //     p.width / 2,
-    //     p.height / 2,
-    //     1,
-    //     256,
-    //     p.width / 2,
-    //     p.height / 2
-    //   );
-    //   particles.push(particle);
-    // }
   }
 }
 
