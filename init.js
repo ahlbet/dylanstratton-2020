@@ -124,7 +124,7 @@ const main = async () => {
   // Path to your template file in ./content/blog/
   const templatePath = path.join(process.cwd(), 'src', 'template.md')
   const description = process.argv[3] || ''
-  const date = transformDate(name)
+  const date = transformDate(name, true)
 
   // Read template content from file
   let template
