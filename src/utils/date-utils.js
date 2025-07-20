@@ -86,12 +86,9 @@ const isValidNameFormat = (name) => {
   return /^(\d{2})([a-z]{3})(\d{2})$/i.test(name)
 }
 
-// Export for both ES6 modules and CommonJS
+// Export for CommonJS (used by Node.js scripts)
 module.exports = {
   transformDate,
   getMonthAbbreviations,
   isValidNameFormat,
 }
-
-// Also export for ES6 modules
-export { transformDate, getMonthAbbreviations, isValidNameFormat }
