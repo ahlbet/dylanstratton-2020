@@ -7,6 +7,7 @@ import SEO from '../../components/seo/seo'
 import Calendar from '../../components/calendar/calendar'
 import CalendarToggle from '../../components/calendar/calendar-toggle'
 import { useUserPreferences } from '../../components/calendar/user-preferences-context'
+import GridSketch from '../../components/grid-sketch/grid-sketch'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
 
@@ -46,6 +47,21 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
             {post.frontmatter.date}
           </p>
         </header>
+
+        {/* Grid Sketch at the top of each blog post */}
+        <div
+          style={{
+            marginBottom: rhythm(2),
+            width: '100%',
+          }}
+        >
+          <GridSketch
+            style={{
+              width: '100%',
+              height: '400px',
+            }}
+          />
+        </div>
         {/* Calendar Toggle Button */}
         <div
           style={{

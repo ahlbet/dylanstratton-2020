@@ -20,3 +20,19 @@ body.dark {
   --hr: hsla(0, 0%, 100%, 0.2);
 }
 
+/* Markov text styling - white text for blockquotes */
+blockquote {
+  color: white;
+  font-style: italic;
+  border-left: 3px solid #DE3163;
+  margin: 1.5rem 0;
+  padding: 0.5rem 0 0.5rem 1rem;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Ensure blockquotes are white in both light and dark modes */
+body blockquote,
+body.dark blockquote {
+  color: white;
+}
+
