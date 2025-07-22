@@ -20,11 +20,21 @@ const findBlogPosts = (dir) => {
     const stat = fs.statSync(fullPath)
 
     if (stat.isDirectory()) {
-      // Check if this directory contains a markdown file with the same name
-      const potentialMdFile = path.join(fullPath, `${item}.md`)
-      if (fs.existsSync(potentialMdFile)) {
+      // Check for both naming patterns
+      const directoryNamedFile = path.join(fullPath, `${item}.md`)
+      const indexFile = path.join(fullPath, 'index.md')
+
+      let mdFile = null
+
+      if (fs.existsSync(directoryNamedFile)) {
+        mdFile = directoryNamedFile
+      } else if (fs.existsSync(indexFile)) {
+        mdFile = indexFile
+      }
+
+      if (mdFile) {
         posts.push({
-          path: potentialMdFile,
+          path: mdFile,
           name: item,
           directory: fullPath,
         })
