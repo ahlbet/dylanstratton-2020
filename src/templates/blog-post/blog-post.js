@@ -7,11 +7,18 @@ import SEO from '../../components/seo/seo'
 import Calendar from '../../components/calendar/calendar'
 import CalendarToggle from '../../components/calendar/calendar-toggle'
 import { useUserPreferences } from '../../components/calendar/user-preferences-context'
-import AudioReactiveGridSketch from '../../components/audio-reactive-grid-sketch/audio-reactive-grid-sketch'
 import GridSketch from '../../components/grid-sketch/grid-sketch'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
-import { position } from 'p5'
+// Removed: import { position } from 'p5' - this was causing SSR issues
+
+// Lazy load the audio reactive grid sketch to prevent SSR issues
+const AudioReactiveGridSketch = React.lazy(
+  () =>
+    import(
+      '../../components/audio-reactive-grid-sketch/audio-reactive-grid-sketch'
+    )
+)
 
 const BlogPostTemplate = ({ data, pageContext, location }) => {
   const post = data.markdownRemark
@@ -49,8 +56,8 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
       />
 
       {/* Calendar - Conditionally Rendered */}
-      <div style={{ position: 'relative', height: '100%', width: '100%' }}>
-        <div style={{ zIndex: 2 }}>
+      <div style={{}}>
+        <div style={{}}>
           <article>
             <header>
               <h1
@@ -98,6 +105,28 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                 </ul>
               </nav>
             </header>
+
+            {typeof window !== 'undefined' && (
+              <React.Suspense
+                fallback={
+                  <div
+                    style={
+                      {
+                        // width: '100%',
+                        // height: '100%',
+                        // position: 'fixed',
+                        // top: 0,
+                        // left: 0,
+                        // zIndex: -1,
+                        // backgroundColor: '#000',
+                      }
+                    }
+                  />
+                }
+              >
+                <AudioReactiveGridSketch markovText={markovText} style={{}} />
+              </React.Suspense>
+            )}
 
             {/* <div
           style={{
@@ -164,17 +193,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
             // position: 'relative',
           }}
         > */}
-        <AudioReactiveGridSketch
-          markovText={markovText}
-          style={{
-            width: '100%',
-            height: '100%',
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            zIndex: -1,
-          }}
-        />
+
         {/* </div> */}
       </div>
     </Layout>

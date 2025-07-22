@@ -8,7 +8,7 @@ module.exports = {
   },
   testPathIgnorePatterns: [`node_modules`, `\\.cache`, `<rootDir>.*/public`],
   transformIgnorePatterns: [
-    `node_modules/(?!(gatsby|gatsby-script|gatsby-link)/)`,
+    `node_modules/(?!(gatsby|gatsby-script|gatsby-link|p5)/)`,
   ],
   globals: {
     __PATH_PREFIX__: ``,
