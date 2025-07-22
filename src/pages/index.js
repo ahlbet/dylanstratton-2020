@@ -6,6 +6,10 @@ import React from 'react'
 import SEO from '../components/seo/seo'
 import { rhythm } from '../utils/typography'
 import Calendar from '../components/calendar/calendar'
+import AudioReactiveGridSketch from '../components/audio-reactive-grid-sketch/audio-reactive-grid-sketch'
+import GridSketch from '../components/grid-sketch/grid-sketch'
+
+const markovText = 'Hello, world!'
 
 const BlogIndex = ({ data, location }) => {
   const siteTitle = data.site.siteMetadata.title
@@ -42,6 +46,16 @@ const BlogIndex = ({ data, location }) => {
           </article>
         )
       })}
+      <GridSketch
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          zIndex: -1,
+        }}
+      />
     </Layout>
   )
 }

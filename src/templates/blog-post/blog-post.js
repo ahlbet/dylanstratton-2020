@@ -11,6 +11,7 @@ import AudioReactiveGridSketch from '../../components/audio-reactive-grid-sketch
 import GridSketch from '../../components/grid-sketch/grid-sketch'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
+import { position } from 'p5'
 
 const BlogPostTemplate = ({ data, pageContext, location }) => {
   const post = data.markdownRemark
@@ -48,27 +49,86 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
       />
 
       {/* Calendar - Conditionally Rendered */}
+      <div style={{ position: 'relative', height: '100%', width: '100%' }}>
+        <div style={{ zIndex: 2 }}>
+          <article>
+            <header>
+              <h1
+                style={{
+                  marginTop: rhythm(1),
+                  marginBottom: 0,
+                  color: '#DE3163',
+                }}
+              >
+                {post.frontmatter.title}
+              </h1>
+              <p
+                style={{
+                  ...scale(-1 / 5),
+                  display: `block`,
+                  marginBottom: rhythm(1),
+                }}
+              >
+                {post.frontmatter.date}
+              </p>
+              <nav>
+                <ul
+                  style={{
+                    display: `flex`,
+                    flexWrap: `wrap`,
+                    justifyContent: `space-between`,
+                    listStyle: `none`,
+                    padding: 0,
+                  }}
+                >
+                  <li>
+                    {previous && (
+                      <Link to={previous.fields.slug} rel="prev">
+                        ← {previous.frontmatter.title}
+                      </Link>
+                    )}
+                  </li>
+                  <li>
+                    {next && (
+                      <Link to={next.fields.slug} rel="next">
+                        {next.frontmatter.title} →
+                      </Link>
+                    )}
+                  </li>
+                </ul>
+              </nav>
+            </header>
 
-      <article>
-        <header>
-          <h1
+            {/* <div
+          style={{
+            marginBottom: rhythm(2),
+            width: '100%',
+          }}
+        >
+          <GridSketch
             style={{
-              marginTop: rhythm(1),
-              marginBottom: 0,
-              color: '#DE3163',
+              width: '100%',
+              height: '400px',
             }}
-          >
-            {post.frontmatter.title}
-          </h1>
-          <p
-            style={{
-              ...scale(-1 / 5),
-              display: `block`,
-              marginBottom: rhythm(1),
-            }}
-          >
-            {post.frontmatter.date}
-          </p>
+          />
+        </div> */}
+            {/* Calendar Toggle Button */}
+            <div
+              style={{
+                marginBottom: '1rem',
+                // display: 'flex',
+                // justifyContent: 'center',
+              }}
+            >
+              <CalendarToggle />
+            </div>
+            {calendarVisible && <Calendar />}
+            <section dangerouslySetInnerHTML={{ __html: post.html }} />
+            <footer>
+              <Bio />
+            </footer>
+          </article>
+
           <nav>
             <ul
               style={{
@@ -95,80 +155,28 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
               </li>
             </ul>
           </nav>
-        </header>
-
-        {/* Audio-Reactive Grid Sketch at the top of each blog post */}
-        <div
-          style={{
-            marginBottom: rhythm(2),
-            width: '100%',
-          }}
-        >
-          <AudioReactiveGridSketch
-            markovText={markovText}
-            style={{
-              width: '100%',
-              height: '400px',
-            }}
-          />
         </div>
-
+        {/* Audio-Reactive Grid Sketch at the top of each blog post */}
         {/* <div
           style={{
             marginBottom: rhythm(2),
             width: '100%',
+            // position: 'relative',
           }}
-        >
-          <GridSketch
-            style={{
-              width: '100%',
-              height: '400px',
-            }}
-          />
-        </div> */}
-        {/* Calendar Toggle Button */}
-        <div
+        > */}
+        <AudioReactiveGridSketch
+          markovText={markovText}
           style={{
-            marginBottom: '1rem',
-            // display: 'flex',
-            // justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            zIndex: -1,
           }}
-        >
-          <CalendarToggle />
-        </div>
-        {calendarVisible && <Calendar />}
-        <section dangerouslySetInnerHTML={{ __html: post.html }} />
-        <footer>
-          <Bio />
-        </footer>
-      </article>
-
-      <nav>
-        <ul
-          style={{
-            display: `flex`,
-            flexWrap: `wrap`,
-            justifyContent: `space-between`,
-            listStyle: `none`,
-            padding: 0,
-          }}
-        >
-          <li>
-            {previous && (
-              <Link to={previous.fields.slug} rel="prev">
-                ← {previous.frontmatter.title}
-              </Link>
-            )}
-          </li>
-          <li>
-            {next && (
-              <Link to={next.fields.slug} rel="next">
-                {next.frontmatter.title} →
-              </Link>
-            )}
-          </li>
-        </ul>
-      </nav>
+        />
+        {/* </div> */}
+      </div>
     </Layout>
   )
 }

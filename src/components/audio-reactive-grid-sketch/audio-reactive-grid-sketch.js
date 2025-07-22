@@ -5,7 +5,7 @@ import P5Sketch from '../p5-sketch/p5-sketch'
 const AudioReactiveGridSketchFunction = (p, markovText = '') => {
   // Global variables
   let particles = []
-  let margin = 50
+  let margin = 25
   let spacing = 30
   let radius = 300
   let num = 2000
@@ -80,12 +80,12 @@ const AudioReactiveGridSketchFunction = (p, markovText = '') => {
   }
 
   // Global sketch parameters influenced by Markov text - moderate impact
-  const globalSpeedMultiplier = 0.6 + (markovSeed % 100) / 50 // 0.6 to 2.6 (moderate range)
+  const globalSpeedMultiplier = 0.8 + (markovSeed % 100) / 50 // 0.6 to 2.6 (moderate range)
   const globalColorIntensity = 0.5 + (markovSeed % 100) / 50 // 0.5 to 2.5 (moderate range)
   const globalParticleInteraction = 0.3 + (markovSeed % 150) / 30 // 0.3 to 5.3 (moderate range)
-  const globalParticleSize = 0.7 + (markovSeed % 75) / 25 // 0.7 to 3.7 (moderate size variation)
+  const globalParticleSize = 0.2 + (markovSeed % 75) / 25 // 0.7 to 3.7 (moderate size variation)
   const globalParticleBirthRate = 0.5 + (markovSeed % 100) / 50 // 0.5 to 2.5 (birth rate variation)
-  const globalGravityStrength = 0.8 + (markovSeed % 100) / 50 // 0.8 to 2.8 (gravity strength variation)
+  const globalGravityStrength = 0.8 + (markovSeed % 100) / 10 // 0.8 to 2.8 (gravity strength variation)
   const primaryHue = markovSeed % 360 // Primary hue for this blog post (0-359)
   const globalSwirlStrength = 0.3 + (markovSeed % 100) / 100 // 0.3 to 1.3 (swirl strength variation)
   const globalSwirlDirection = markovSeed % 2 === 0 ? 1 : -1 // Clockwise or counter-clockwise
@@ -120,7 +120,7 @@ const AudioReactiveGridSketchFunction = (p, markovText = '') => {
       this.seed = seed
       this.baseMov = 0.8 + (seed % 150) / 60 // Movement speed varies moderately by seed (slightly reduced)
       this.mov = this.baseMov
-      this.slow = 20 + (seed % 200) / 2 // Noise scale varies moderately by seed
+      this.slow = 10 + (seed % 200) / 2 // Noise scale varies moderately by seed
       this.fadeRate = 0.2 + (seed % 100) / 100 // Fade rate varies moderately by seed
       this.isFading = true
 
@@ -147,7 +147,7 @@ const AudioReactiveGridSketchFunction = (p, markovText = '') => {
       let timeHue = (p.frameCount * this.colorSpeed) % 360
       let audioHue = normalizedLevel * 60 * globalColorIntensity // Very small range for subtle variation
       let hueVariation =
-        ((timeHue * 0.2 + audioHue * 0.3 + this.colorOffset * 30) % 60) - 30 // -30 to +30 degrees
+        ((timeHue * 0.2 + audioHue * 0.5 + this.colorOffset * 30) % 30) - 10 // -30 to +30 degrees
       let hue = (primaryHue + hueVariation + 360) % 360
 
       // HSV to RGB conversion for primary hue with limited variation
@@ -188,7 +188,7 @@ const AudioReactiveGridSketchFunction = (p, markovText = '') => {
       b = Math.min(255, Math.max(0, b + m))
 
       // Moderate radius variation based on audio and global particle size
-      let audioRadius = (this.r + normalizedLevel * 2.5) * globalParticleSize
+      let audioRadius = (this.r + normalizedLevel * 2.0) * globalParticleSize
       p.fill(r, g, b, this.op * 0.5) // Full opacity for visibility on white background
       p.ellipse(this.x, this.y, audioRadius)
     }
@@ -230,7 +230,7 @@ const AudioReactiveGridSketchFunction = (p, markovText = '') => {
       }
 
       let t = p.frameCount / 100.0
-      let wonkV = 10000
+      let wonkV = 100
 
       // Calculate gravitational attraction to all gravity points
       let gravityX = 0
@@ -379,7 +379,7 @@ const AudioReactiveGridSketchFunction = (p, markovText = '') => {
       let normalizedAvg = avgLevel / 255
 
       // Adjust fade rate based on audio - make it extremely dramatic
-      let audioFadeRate = this.fadeRate * (1 + normalizedAvg * 10) // 1x to 11x fade rate
+      let audioFadeRate = this.fadeRate * (1 + normalizedAvg * 3) // 1x to 11x fade rate
 
       if (this.isFading) {
         this.op -= audioFadeRate
@@ -588,7 +588,7 @@ const AudioReactiveGridSketchFunction = (p, markovText = '') => {
     const containerWidth = p.canvas ? p.canvas.parentElement.offsetWidth : 800
     const canvasHeight = 400
 
-    p.createCanvas(containerWidth, canvasHeight)
+    p.createCanvas(p.windowWidth, p.windowHeight)
     p.background(0)
 
     // Update global variables to use full canvas dimensions
@@ -610,7 +610,7 @@ const AudioReactiveGridSketchFunction = (p, markovText = '') => {
     const containerWidth = p.canvas.parentElement.offsetWidth
     const canvasHeight = 400
 
-    p.resizeCanvas(containerWidth, canvasHeight)
+    p.resizeCanvas(p.windowWidth, p.windowHeight)
     p.background(0)
 
     // Update global variables for new canvas dimensions
@@ -656,6 +656,15 @@ const AudioReactiveGridSketchFunction = (p, markovText = '') => {
       // Create unique seed for each particle
       let particleSeed = (markovSeed + particleIndex * 123) % 10000
 
+      // choose random gravity point
+      let randomGravityPoint = Math.floor(
+        Math.random() * gravitationalPoints.length
+      )
+      let randomGravityPointX = gravitationalPoints[randomGravityPoint].x
+      let randomGravityPointY = gravitationalPoints[randomGravityPoint].y
+
+      // pull particles toward random gravity point
+
       // Use Markov seed to influence random positioning
       let randomSeed1 = (particleSeed * 456) % 10000
       let randomSeed2 = (particleSeed * 789) % 10000
@@ -665,7 +674,7 @@ const AudioReactiveGridSketchFunction = (p, markovText = '') => {
       let startY = margin + (randomSeed2 / 10000) * (p.height - 2 * margin)
 
       // Add some clustering variation based on Markov seed
-      let clusteringFactor = (markovSeed % 100) / 100 // 0 to 1 clustering intensity
+      let clusteringFactor = (markovSeed % 100) / 50 // 0 to 1 clustering intensity
       if (clusteringFactor > 0.5) {
         // Create some clustering by adjusting positions
         let clusterCenterX =
@@ -678,9 +687,14 @@ const AudioReactiveGridSketchFunction = (p, markovText = '') => {
         let maxDistance = Math.sqrt(p.width ** 2 + p.height ** 2) / 2
 
         // Pull particles toward cluster center
-        let pullStrength = (clusteringFactor - 0.5) * 2 // 0 to 1 pull strength
-        startX = startX + (clusterCenterX - startX) * pullStrength * 0.3
-        startY = startY + (clusterCenterY - startY) * pullStrength * 0.3
+        // let pullStrength = (clusteringFactor - 0.5) * 8 // 0 to 1 pull strength
+
+        let pullStrength = (clusteringFactor - 0.5) * 1 // 0 to 1 pull strength
+        startX = startX + (randomGravityPointX - startX) * pullStrength * 0.6
+        startY = startY + (randomGravityPointY - startY) * pullStrength * 2
+
+        startX = startX + (clusterCenterX - startX) * pullStrength * 0.6
+        startY = startY + (clusterCenterY - startY) * pullStrength * 2
       }
 
       // Ensure particles stay within bounds
