@@ -7,6 +7,7 @@ import SEO from '../../components/seo/seo'
 import Calendar from '../../components/calendar/calendar'
 import CalendarToggle from '../../components/calendar/calendar-toggle'
 import { useUserPreferences } from '../../components/calendar/user-preferences-context'
+import AudioReactiveGridSketch from '../../components/audio-reactive-grid-sketch/audio-reactive-grid-sketch'
 import GridSketch from '../../components/grid-sketch/grid-sketch'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
@@ -16,6 +17,28 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
   const siteTitle = data.site.siteMetadata.title
   const { previous, next } = pageContext
   const { calendarVisible } = useUserPreferences()
+
+  // Extract Markov text from the post content
+  const extractMarkovText = (html) => {
+    // Find all blockquote elements in the HTML
+    const blockquoteRegex = /<blockquote[^>]*>(.*?)<\/blockquote>/gs
+    const matches = html.match(blockquoteRegex)
+
+    if (!matches) return ''
+
+    // Extract text content from blockquotes and join them
+    const markovText = matches
+      .map((blockquote) => {
+        // Remove HTML tags and get just the text
+        return blockquote.replace(/<[^>]*>/g, '').trim()
+      })
+      .filter((text) => text.length > 0)
+      .join(' ')
+
+    return markovText
+  }
+
+  const markovText = extractMarkovText(post.html)
 
   return (
     <Layout location={location} title={siteTitle}>
@@ -46,10 +69,51 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
           >
             {post.frontmatter.date}
           </p>
+          <nav>
+            <ul
+              style={{
+                display: `flex`,
+                flexWrap: `wrap`,
+                justifyContent: `space-between`,
+                listStyle: `none`,
+                padding: 0,
+              }}
+            >
+              <li>
+                {previous && (
+                  <Link to={previous.fields.slug} rel="prev">
+                    ← {previous.frontmatter.title}
+                  </Link>
+                )}
+              </li>
+              <li>
+                {next && (
+                  <Link to={next.fields.slug} rel="next">
+                    {next.frontmatter.title} →
+                  </Link>
+                )}
+              </li>
+            </ul>
+          </nav>
         </header>
 
-        {/* Grid Sketch at the top of each blog post */}
+        {/* Audio-Reactive Grid Sketch at the top of each blog post */}
         <div
+          style={{
+            marginBottom: rhythm(2),
+            width: '100%',
+          }}
+        >
+          <AudioReactiveGridSketch
+            markovText={markovText}
+            style={{
+              width: '100%',
+              height: '400px',
+            }}
+          />
+        </div>
+
+        {/* <div
           style={{
             marginBottom: rhythm(2),
             width: '100%',
@@ -61,7 +125,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
               height: '400px',
             }}
           />
-        </div>
+        </div> */}
         {/* Calendar Toggle Button */}
         <div
           style={{
