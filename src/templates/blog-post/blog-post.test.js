@@ -128,8 +128,8 @@ describe('BlogPostTemplate', () => {
       />
     )
 
-    expect(screen.getByText('← Previous Post')).toBeInTheDocument()
-    expect(screen.getByText('Next Post →')).toBeInTheDocument()
+    expect(screen.getAllByText('← Previous Post')).toHaveLength(2)
+    expect(screen.getAllByText('Next Post →')).toHaveLength(2)
   })
 
   test('does not render previous link when there is no previous post', () => {
@@ -144,7 +144,7 @@ describe('BlogPostTemplate', () => {
     )
 
     expect(screen.queryByText(/← Previous Post/)).not.toBeInTheDocument()
-    expect(screen.getByText('Next Post →')).toBeInTheDocument()
+    expect(screen.getAllByText('Next Post →')).toHaveLength(2)
   })
 
   test('does not render next link when there is no next post', () => {
@@ -158,7 +158,7 @@ describe('BlogPostTemplate', () => {
       />
     )
 
-    expect(screen.getByText('← Previous Post')).toBeInTheDocument()
+    expect(screen.getAllByText('← Previous Post')).toHaveLength(2)
     expect(screen.queryByText(/Next Post →/)).not.toBeInTheDocument()
   })
 

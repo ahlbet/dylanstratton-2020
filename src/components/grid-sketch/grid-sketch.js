@@ -6,7 +6,7 @@ const GridSketchSketch = (p) => {
   // Global variables converted to local scope
   let particles = []
   let margin = 50
-  let spacing = 30
+  let spacing = 100
   let buff = 5
   let radius = 300
   let num = 2000
@@ -87,32 +87,32 @@ const GridSketchSketch = (p) => {
 
   p.setup = () => {
     // Get the container width and use fixed height
-    const containerWidth = p.canvas ? p.canvas.parentElement.offsetWidth : 800
-    const canvasHeight = 400
+    // const containerWidth = p.canvas ? p.canvas.parentElement.offsetWidth : 800
+    // const canvasHeight = 400
 
-    p.createCanvas(containerWidth, canvasHeight)
+    p.createCanvas(p.windowWidth, p.windowHeight)
     p.background(0)
 
     // Update global variables to use full canvas dimensions
     margin = 5 // Minimal margin
-    spacing = Math.max(10, containerWidth * 0.015) // Responsive spacing
-    radius = Math.min(containerWidth, canvasHeight) * 0.4 // Responsive radius
+    // spacing = Math.max(10, p.windowWidth * 0.015) // Responsive spacing
+    radius = Math.min(p.windowWidth, p.windowHeight) * 0.4 // Responsive radius
 
     p.seed()
   }
 
   p.windowResized = () => {
     // Resize canvas when window is resized
-    const containerWidth = p.canvas.parentElement.offsetWidth
-    const canvasHeight = 400
+    // const containerWidth = p.canvas.parentElement.offsetWidth
+    // const canvasHeight = 400
 
-    p.resizeCanvas(containerWidth, canvasHeight)
+    p.resizeCanvas(p.windowWidth, p.windowHeight)
     p.background(0)
 
     // Update global variables for new canvas dimensions
     margin = 5 // Minimal margin
-    spacing = Math.max(10, containerWidth * 0.015) // Responsive spacing
-    radius = Math.min(containerWidth, canvasHeight) * 0.4 // Responsive radius
+    spacing = Math.max(10, p.windowWidth * 0.015) // Responsive spacing
+    radius = Math.min(p.windowWidth, p.windowHeight) * 0.4 // Responsive radius
 
     // Re-seed particles for new canvas size
     particles = []
