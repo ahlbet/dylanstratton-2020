@@ -308,69 +308,44 @@ const createAudioReactiveGridSketch =
         let audioLevel = audioLevel1 * (1 - blend) + audioLevel2 * blend
         let normalizedLevel = audioLevel / 255
 
-        // Primary hue-based color system - expanded color range
-        let timeHue = (p.frameCount * this.colorSpeed) % 360
-        let audioHue = normalizedLevel * 120 * globalColorIntensity // Expanded range for more variation
-        let hueVariation =
-          ((timeHue * 0.3 + audioHue * 0.7 + this.colorOffset * 90) % 120) - 60 // -60 to +60 degrees (120 degree range)
-        let hue = (primaryHue + hueVariation + 360) % 360
+        // Simplified color system - direct RGB calculation
+        let colorTime = p.frameCount * this.colorSpeed * 0.01
+        let audioColor = normalizedLevel * 100 * globalColorIntensity
 
-        // HSV to RGB conversion for primary hue with limited variation
-        let h = hue / 60
-        let c = 200 // Fixed chroma for consistent brightness
-        let x = c * (1 - Math.abs((h % 2) - 1))
-        let m = 55 // Fixed lightness offset
+        // Create color variation based on primary hue with simple math
+        let colorShift = (colorTime + audioColor + this.colorOffset * 50) % 360
+        let baseHue = (primaryHue + colorShift) % 360
 
+        // Simple RGB generation based on hue ranges
         let r, g, b
-        if (h < 1) {
-          r = c
-          g = x
-          b = 0
-        } else if (h < 2) {
-          r = x
-          g = c
-          b = 0
-        } else if (h < 3) {
-          r = 0
-          g = c
-          b = x
-        } else if (h < 4) {
-          r = 0
-          g = x
-          b = c
-        } else if (h < 5) {
-          r = x
-          g = 0
-          b = c
+        if (baseHue < 60) {
+          r = 255
+          g = Math.floor(baseHue * 4.25)
+          b = 50
+        } else if (baseHue < 120) {
+          r = Math.floor(255 - (baseHue - 60) * 4.25)
+          g = 255
+          b = 50
+        } else if (baseHue < 180) {
+          r = 50
+          g = 255
+          b = Math.floor((baseHue - 120) * 4.25)
+        } else if (baseHue < 240) {
+          r = 50
+          g = Math.floor(255 - (baseHue - 180) * 4.25)
+          b = 255
+        } else if (baseHue < 300) {
+          r = Math.floor((baseHue - 240) * 4.25)
+          g = 50
+          b = 255
         } else {
-          r = c
-          g = 0
-          b = x
+          r = 255
+          g = 50
+          b = Math.floor(255 - (baseHue - 300) * 4.25)
         }
 
-        r = Math.min(255, Math.max(0, r + m))
-        g = Math.min(255, Math.max(0, g + m))
-        b = Math.min(255, Math.max(0, b + m))
-
-        // Distance-based radius scaling: smaller at center, larger at edges
-        let canvasCenterX = p.width / 2
-        let canvasCenterY = p.height / 2
-        let distanceFromCenter = p.dist(
-          this.x,
-          this.y,
-          canvasCenterX,
-          canvasCenterY
-        )
-        let maxDistanceFromCenter = p.dist(0, 0, canvasCenterX, canvasCenterY)
-        let normalizedDistance = Math.min(
-          1,
-          distanceFromCenter / maxDistanceFromCenter
-        ) // 0 at center, 1 at edges
-        let distanceScale = 0.3 + normalizedDistance * 1.2 // 0.3 at center, 1.5 at edges
-
-        // Moderate radius variation based on audio, distance, and global particle size
-        let audioRadius =
-          (this.r + normalizedLevel * 3.0) * globalParticleSize * distanceScale
+        // Simple radius variation based on audio and global particle size
+        let audioRadius = (this.r + normalizedLevel * 2.0) * globalParticleSize
         p.fill(r, g, b, this.op * 0.5) // Full opacity for visibility on white background
         p.ellipse(this.x, this.y, audioRadius)
       }
@@ -415,80 +390,14 @@ const createAudioReactiveGridSketch =
         let t = p.frameCount / 100.0
         let wonkV = 30 // Reduced from 100 to decrease noise randomness
 
-        // Calculate gravitational attraction to all gravity points
-        let gravityX = 0
-        let gravityY = 0
-        let totalGravityStrength = 0
-
-        for (let gravityPoint of gravitationalPoints) {
-          let distance = p.dist(this.x, this.y, gravityPoint.x, gravityPoint.y)
-          let maxDistance = 200 // Maximum distance for gravity effect
-
-          if (distance < maxDistance) {
-            // Calculate gravitational force (inverse square law)
-            let force =
-              (gravityPoint.strength * globalGravityStrength) /
-              (distance * distance + 1)
-
-            // Calculate direction to gravity point
-            let dirX = (gravityPoint.x - this.x) / distance
-            let dirY = (gravityPoint.y - this.y) / distance
-
-            gravityX += dirX * force
-            gravityY += dirY * force
-            totalGravityStrength += force
-          }
-        }
-
         // Adjust movement based on audio level - particles move independently
         let audioMultiplier = 1 + normalizedLevel * 1.75 // 1x to 2.25x movement based on individual audio level
         this.mov = this.baseMov * audioMultiplier * globalSpeedMultiplier
 
-        // Apply gravitational force
-        if (totalGravityStrength > 0) {
-          gravityX /= totalGravityStrength
-          gravityY /= totalGravityStrength
-
-          // Add gravitational movement (further reduced strength)
-          this.x += gravityX * this.mov * 0.05
-          this.y += gravityY * this.mov * 0.05
-        }
-
-        // Apply dynamic global swirl force
-        let canvasCenterX = p.width / 2
-        let canvasCenterY = p.height / 2
-        let distanceFromCenter = p.dist(
-          this.x,
-          this.y,
-          canvasCenterX,
-          canvasCenterY
-        )
-        let maxDistance = p.dist(0, 0, canvasCenterX, canvasCenterY)
-
-        // Dynamic swirl direction and strength based on time (simplified)
-        let time = p.frameCount * 0.005 * globalSwirlSpeed
-        let dynamicDirection = Math.sin(time) > 0 ? 1 : -1
-        let dynamicStrength =
-          globalSwirlStrength * (0.7 + Math.sin(time * 0.3) * 0.3)
-
-        // Calculate swirl direction (perpendicular to radius)
-        let dx = this.x - canvasCenterX
-        let dy = this.y - canvasCenterY
-        let swirlX = -dy * dynamicDirection // Perpendicular vector
-        let swirlY = dx * dynamicDirection
-
-        // Normalize and apply swirl force
-        let swirlLength = Math.sqrt(swirlX * swirlX + swirlY * swirlY)
-        if (swirlLength > 0) {
-          swirlX /= swirlLength
-          swirlY /= swirlLength
-
-          // Swirl strength decreases with distance from center
-          let swirlIntensity =
-            dynamicStrength * (1 - distanceFromCenter / maxDistance)
-          this.x += swirlX * this.mov * swirlIntensity * 0.2
-          this.y += swirlY * this.mov * swirlIntensity * 0.2
-        }
+        // Simple directional movement based on audio (much more efficient)
+        let audioDirection = (this.seed + p.frameCount * 0.01) % (Math.PI * 2)
+        this.x += Math.cos(audioDirection) * this.mov * normalizedLevel * 0.1
+        this.y += Math.sin(audioDirection) * this.mov * normalizedLevel * 0.1
 
         // Add subtle noise-based movement for organic feel (reduced randomness)
         let wonkX = p.map(p.sin(this.startX * i), -1, 1, -wonkV, wonkV)
@@ -509,23 +418,17 @@ const createAudioReactiveGridSketch =
           this.mov * 0.08
         )
 
-        // Gentle center attraction - slowly draw particles toward center
-        let centerAttractionStrength = 0.0005 // Ultra-gentle pull
-        let centerX = p.width / 2
-        let centerY = p.height / 2
-        let directionToCenterX = centerX - this.x
-        let directionToCenterY = centerY - this.y
-        let distanceToCenter = Math.sqrt(
-          directionToCenterX * directionToCenterX +
-            directionToCenterY * directionToCenterY
-        )
+        // Gentle center attraction - only every 10 frames for performance
+        if (p.frameCount % 10 === 0) {
+          let centerAttractionStrength = 0.0005 // Ultra-gentle pull
+          let centerX = p.width / 2
+          let centerY = p.height / 2
+          let directionToCenterX = centerX - this.x
+          let directionToCenterY = centerY - this.y
 
-        if (distanceToCenter > 0) {
-          // Normalize direction and apply gentle force
-          let normalizedX = directionToCenterX / distanceToCenter
-          let normalizedY = directionToCenterY / distanceToCenter
-          this.x += normalizedX * centerAttractionStrength * distanceToCenter
-          this.y += normalizedY * centerAttractionStrength * distanceToCenter
+          // Simple attraction without expensive distance calculation
+          this.x += directionToCenterX * centerAttractionStrength
+          this.y += directionToCenterY * centerAttractionStrength
         }
       }
 
@@ -794,9 +697,6 @@ const createAudioReactiveGridSketch =
       // Generate TatsSketch-based particle positions
       tatShapePositions = generateTatShapePositions()
 
-      // Create gravitational points
-      createGravitationalPoints()
-
       // Setup audio analysis
       setupAudioAnalysis()
 
@@ -830,9 +730,6 @@ const createAudioReactiveGridSketch =
     p.draw = () => {
       // Get current audio data
       const audioData = getAudioData()
-
-      // Update gravity points positions
-      updateGravityPoints()
 
       // Birth and kill particles based on audio
       // birthParticles(audioData)
