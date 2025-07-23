@@ -41,6 +41,12 @@
   background-color: #1a1a1a;
   border: 1px solid #333;
   border-radius: 8px;
+  font-family: 'Montserrat', sans-serif !important;
+}
+
+/* Force Montserrat font for all react-list-player elements */
+.blog-audio-player * {
+  font-family: 'Montserrat', sans-serif !important;
 }
 
 .blog-audio-player .list-header {
@@ -55,6 +61,7 @@
 .blog-audio-player .track {
   color: #fff;
   border-bottom: 1px solid #333;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .blog-audio-player .track:hover {
@@ -76,6 +83,7 @@
 
 .blog-audio-player .controller-panel {
   background-color: rgba(42, 42, 42, 0.9);
+  font-family: 'Montserrat', sans-serif;
 }
 
 .blog-audio-player .btn {
@@ -92,4 +100,16 @@
 
 .blog-audio-player .text.number {
   color: #ccc;
+}
+
+/* Additional font overrides for specific elements */
+.blog-audio-player span,
+.blog-audio-player div,
+.blog-audio-player p,
+.blog-audio-player button,
+.blog-audio-player .track-title,
+.blog-audio-player .track-artist,
+.blog-audio-player .track-duration,
+.blog-audio-player .text {
+  font-family: 'Montserrat', sans-serif !important;
 } 

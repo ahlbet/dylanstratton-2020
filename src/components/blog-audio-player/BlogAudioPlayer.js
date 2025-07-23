@@ -583,6 +583,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate }) => {
             borderRadius: '6px',
             fontSize: '12px',
             fontWeight: '500',
+            fontFamily: 'Montserrat, sans-serif',
             cursor: isDownloadingZip ? 'not-allowed' : 'pointer',
             transition: 'all 0.2s ease',
             boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
