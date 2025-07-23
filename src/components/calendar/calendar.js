@@ -21,7 +21,6 @@ const CalendarComponent = () => {
             frontmatter {
               title
               date
-              description
             }
             fields {
               slug
