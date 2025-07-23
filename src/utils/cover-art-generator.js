@@ -15,13 +15,7 @@ class CoverArtGenerator {
     // Tat sketch parameters scaled for cover art - 4x4 grid
     this.border = Math.floor(size * 0.15) // ~375px for 2500px canvas
     this.spacing = Math.floor(size * 0.23) // ~575px for 2500px canvas
-    this.shapes = [
-      'horizontalLine',
-      'verticalLine',
-      'circle',
-      'triangle',
-      'square',
-    ]
+    this.shapes = ['horizontalLine', 'verticalLine', 'circle', 'bezier']
 
     // Seeded random number generator
     this.randomSeed = seed
@@ -58,7 +52,7 @@ class CoverArtGenerator {
 
     // Set drawing properties
     this.ctx.strokeStyle = '#000000'
-    this.ctx.lineWidth = Math.floor(this.size * 0.001) // ~2.5px for 2500px canvas
+    this.ctx.lineWidth = Math.floor(this.size * 0.004) // ~10px for 2500px canvas
     this.ctx.lineCap = 'round'
     this.ctx.lineJoin = 'round'
   }
@@ -82,13 +76,13 @@ class CoverArtGenerator {
   }
 
   drawTats() {
-    const tats = this.generateTats()
+    // Create a single centered Tat instead of a grid
+    const centerX = this.size / 2
+    const centerY = this.size / 2
+    const tat = new Tat(centerX, centerY, this)
 
-    // Draw each Tat
-    tats.forEach((tat) => {
-      tat.chooseShapes()
-      tat.show()
-    })
+    tat.chooseShapes()
+    tat.show()
   }
 
   generateCoverArt() {
@@ -103,9 +97,9 @@ class Tat {
     this.y = y
     this.generator = generator
     this.ctx = generator.ctx
-    this.typesCount = generator.randomInt(1, 5) // 1-5 shape types
+    this.typesCount = generator.randomInt(2, 5) // 2-5 shape types (cleaner compositions)
     this.shapes = []
-    this.n = 2 // Number of repetitions
+    this.n = 6 // Even more repetitions for complex layering
   }
 
   chooseShapes() {
@@ -115,35 +109,79 @@ class Tat {
   }
 
   show() {
-    // Draw shapes for this Tat
-    this.shapes.forEach((shapeType) => {
+    // Start at the center and chain shapes together in a connected flow
+    let currentPoint = { x: this.x, y: this.y }
+
+    // Draw multiple shapes with connected endpoints
+    this.shapes.forEach((shapeType, index) => {
+      const baseRadius = this.generator.size * 0.25 // 25% of canvas size as base
       const radius = this.generator.random(
-        this.generator.spacing / 4,
-        this.generator.spacing / 2
+        baseRadius * 0.5, // 50% to 120% of base radius (12.5% to 30% of canvas)
+        baseRadius * 1.2
       )
       const repetitions = this.generator.randomInt(0, this.n - 1)
 
+      // Draw shape starting at current point and get its endpoint
+      let endpoint = currentPoint
+
       switch (shapeType) {
         case 'horizontalLine':
-          this.drawHorizontalLine(this.x, this.y, radius, repetitions)
+          endpoint = this.drawConnectedHorizontalLine(
+            currentPoint.x,
+            currentPoint.y,
+            radius,
+            repetitions
+          )
           break
         case 'verticalLine':
-          this.drawVerticalLine(this.x, this.y, radius, repetitions)
+          endpoint = this.drawConnectedVerticalLine(
+            currentPoint.x,
+            currentPoint.y,
+            radius,
+            repetitions
+          )
           break
         case 'circle':
-          this.drawCircle(this.x, this.y, radius, repetitions)
+          endpoint = this.drawConnectedCircle(
+            currentPoint.x,
+            currentPoint.y,
+            radius * 0.25,
+            repetitions
+          )
           break
         case 'triangle':
-          this.drawTriangle(this.x, this.y, radius, repetitions)
+          endpoint = this.drawConnectedTriangle(
+            currentPoint.x,
+            currentPoint.y,
+            radius,
+            repetitions
+          )
           break
         case 'square':
-          this.drawSquare(this.x, this.y, radius, repetitions)
+          endpoint = this.drawConnectedSquare(
+            currentPoint.x,
+            currentPoint.y,
+            radius,
+            repetitions
+          )
+          break
+        case 'bezier':
+          endpoint = this.drawConnectedBezier(
+            currentPoint.x,
+            currentPoint.y,
+            radius,
+            repetitions
+          )
           break
       }
+
+      // Next shape starts where this one ended
+      currentPoint = endpoint
     })
   }
 
-  drawHorizontalLine(x, y, r, n) {
+  // Connected drawing methods that return endpoints for chaining
+  drawConnectedHorizontalLine(x, y, r, n) {
     // Draw additional lines with shifts
     for (let i = 0; i < n; i++) {
       if (this.repeatAndShift()) {
@@ -153,9 +191,12 @@ class Tat {
     }
     // Draw main line
     this.drawLine(x - r / 2, y, x + r / 2, y)
+
+    // Return right endpoint of the line
+    return { x: x + r / 2, y: y }
   }
 
-  drawVerticalLine(x, y, r, n) {
+  drawConnectedVerticalLine(x, y, r, n) {
     // Draw additional lines with shifts
     for (let i = 0; i < n; i++) {
       if (this.repeatAndShift()) {
@@ -165,9 +206,12 @@ class Tat {
     }
     // Draw main line
     this.drawLine(x, y - r / 2, x, y + r / 2)
+
+    // Return bottom endpoint of the line
+    return { x: x, y: y + r / 2 }
   }
 
-  drawCircle(x, y, r, n) {
+  drawConnectedCircle(x, y, r, n) {
     // Draw additional circles with shifts
     for (let i = 0; i < n; i++) {
       if (this.repeatAndShift()) {
@@ -180,9 +224,16 @@ class Tat {
     }
     // Draw main circle
     this.drawCircleShape(x, y, r)
+
+    // Return a point on the circle's circumference
+    const angle = this.generator.random(0, Math.PI * 2)
+    return {
+      x: x + Math.cos(angle) * (r / 2),
+      y: y + Math.sin(angle) * (r / 2),
+    }
   }
 
-  drawTriangle(x, y, r, n) {
+  drawConnectedTriangle(x, y, r, n) {
     // Draw additional triangles with shifts
     for (let i = 0; i < n; i++) {
       if (this.repeatAndShift()) {
@@ -195,9 +246,16 @@ class Tat {
     }
     // Draw main triangle
     this.drawTriangleShape(x, y, r)
+
+    // Return one of the triangle's vertices
+    const angle = this.generator.random(0, Math.PI * 2)
+    return {
+      x: x + Math.cos(angle) * (r / 2),
+      y: y + Math.sin(angle) * (r / 2),
+    }
   }
 
-  drawSquare(x, y, r, n) {
+  drawConnectedSquare(x, y, r, n) {
     // Draw additional squares with shifts
     for (let i = 0; i < n; i++) {
       if (this.repeatAndShift()) {
@@ -210,6 +268,30 @@ class Tat {
     }
     // Draw main square
     this.drawSquareShape(x, y, r)
+
+    // Return one of the square's corners
+    const corners = [
+      { x: x + r / 2, y: y + r / 2 },
+      { x: x - r / 2, y: y + r / 2 },
+      { x: x - r / 2, y: y - r / 2 },
+      { x: x + r / 2, y: y - r / 2 },
+    ]
+    return this.generator.randomChoice(corners)
+  }
+
+  drawConnectedBezier(x, y, r, n) {
+    // Draw additional bezier curves with shifts
+    for (let i = 0; i < n; i++) {
+      if (this.repeatAndShift()) {
+        let xShift = this.generator.noise(x, y, n) * (r / 3)
+        let yShift = this.generator.noise(x, y, n) * (r / 3)
+        if (this.generator.random() < 0.5) xShift = -xShift
+        if (this.generator.random() < 0.5) yShift = -yShift
+        this.drawBezierShape(x + xShift, y + yShift, r)
+      }
+    }
+    // Draw main bezier curve and return its endpoint
+    return this.drawConnectedBezierShape(x, y, r)
   }
 
   // Helper drawing methods
@@ -240,6 +322,66 @@ class Tat {
     this.ctx.beginPath()
     this.ctx.rect(x - r / 2, y - r / 2, r, r)
     this.ctx.stroke()
+  }
+
+  drawBezierShape(x, y, r) {
+    // Generate random bezier curve points within the radius
+    const angle1 = this.generator.random(0, Math.PI * 2)
+    const angle2 = this.generator.random(0, Math.PI * 2)
+
+    // Start and end points on circle boundary
+    const startX = x + Math.cos(angle1) * (r / 2)
+    const startY = y + Math.sin(angle1) * (r / 2)
+    const endX = x + Math.cos(angle2) * (r / 2)
+    const endY = y + Math.sin(angle2) * (r / 2)
+
+    // Control points - create interesting curves
+    const cp1Distance = this.generator.random(r * 0.3, r * 0.8)
+    const cp2Distance = this.generator.random(r * 0.3, r * 0.8)
+    const cp1Angle = this.generator.random(0, Math.PI * 2)
+    const cp2Angle = this.generator.random(0, Math.PI * 2)
+
+    const cp1X = x + Math.cos(cp1Angle) * cp1Distance
+    const cp1Y = y + Math.sin(cp1Angle) * cp1Distance
+    const cp2X = x + Math.cos(cp2Angle) * cp2Distance
+    const cp2Y = y + Math.sin(cp2Angle) * cp2Distance
+
+    // Draw the bezier curve
+    this.ctx.beginPath()
+    this.ctx.moveTo(startX, startY)
+    this.ctx.bezierCurveTo(cp1X, cp1Y, cp2X, cp2Y, endX, endY)
+    this.ctx.stroke()
+  }
+
+  drawConnectedBezierShape(x, y, r) {
+    // Start point is the current position (where previous shape ended)
+    const startX = x
+    const startY = y
+
+    // Generate end point at distance r from start
+    const endAngle = this.generator.random(0, Math.PI * 2)
+    const endX = x + Math.cos(endAngle) * r
+    const endY = y + Math.sin(endAngle) * r
+
+    // Control points - create interesting curves
+    const cp1Distance = this.generator.random(r * 0.3, r * 0.8)
+    const cp2Distance = this.generator.random(r * 0.3, r * 0.8)
+    const cp1Angle = this.generator.random(0, Math.PI * 2)
+    const cp2Angle = this.generator.random(0, Math.PI * 2)
+
+    const cp1X = x + Math.cos(cp1Angle) * cp1Distance
+    const cp1Y = y + Math.sin(cp1Angle) * cp1Distance
+    const cp2X = x + Math.cos(cp2Angle) * cp2Distance
+    const cp2Y = y + Math.sin(cp2Angle) * cp2Distance
+
+    // Draw the bezier curve
+    this.ctx.beginPath()
+    this.ctx.moveTo(startX, startY)
+    this.ctx.bezierCurveTo(cp1X, cp1Y, cp2X, cp2Y, endX, endY)
+    this.ctx.stroke()
+
+    // Return the endpoint for chaining
+    return { x: endX, y: endY }
   }
 
   repeatAndShift() {

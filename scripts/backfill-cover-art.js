@@ -99,25 +99,10 @@ async function uploadCoverArt(postName, coverArtBuffer) {
 }
 
 /**
- * Creates a backup of the file
- */
-function createBackup(filePath, backupDir) {
-  if (!fs.existsSync(backupDir)) {
-    fs.mkdirSync(backupDir, { recursive: true })
-  }
-
-  const fileName = path.basename(filePath)
-  const backupPath = path.join(backupDir, fileName)
-  fs.copyFileSync(filePath, backupPath)
-
-  return backupPath
-}
-
-/**
  * Processes a single blog post
  */
 async function processBlogPost(postDir, options = {}) {
-  const { dryRun = false, createBackups = true } = options
+  const { dryRun = false, force = false } = options
 
   // Find the markdown file
   const markdownFiles = fs
@@ -143,8 +128,8 @@ async function processBlogPost(postDir, options = {}) {
     const content = fs.readFileSync(filePath, 'utf8')
     const { frontmatter, body } = parseFrontmatter(content)
 
-    // Check if cover art already exists
-    if (frontmatter.cover_art && frontmatter.cover_art.trim()) {
+    // Check if cover art already exists (unless force is enabled)
+    if (frontmatter.cover_art && frontmatter.cover_art.trim() && !force) {
       console.log(`⏭️  ${postName}: Already has cover art, skipping`)
       return { success: false, reason: 'Already has cover art' }
     }
@@ -166,14 +151,6 @@ async function processBlogPost(postDir, options = {}) {
     const coverArtUrl = await uploadCoverArt(postName, coverArtBuffer)
     console.log(`   Uploaded to: ${coverArtUrl.split('?')[0]}`)
 
-    // Create backup if requested
-    if (createBackups) {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-      const backupDir = `backup-cover-art-${timestamp}`
-      const backupPath = createBackup(filePath, backupDir)
-      console.log(`   Backup created: ${backupPath}`)
-    }
-
     // Update frontmatter
     frontmatter.cover_art = coverArtUrl
 
@@ -193,7 +170,7 @@ async function processBlogPost(postDir, options = {}) {
  * Main function to backfill all blog posts
  */
 async function backfillCoverArt(options = {}) {
-  const { dryRun = false, createBackups = true, filter = '' } = options
+  const { dryRun = false, filter = '' } = options
 
   console.log('🎨 Cover Art Backfill Script')
   console.log('=============================\n')
@@ -236,7 +213,10 @@ async function backfillCoverArt(options = {}) {
 
     console.log(`[${i + 1}/${postDirs.length}] Processing ${postName}...`)
 
-    const result = await processBlogPost(postDir, { dryRun, createBackups })
+    const result = await processBlogPost(postDir, {
+      dryRun,
+      force: options.force,
+    })
     results.details.push({ postName, ...result })
 
     if (result.success) {
@@ -320,7 +300,7 @@ Usage: node scripts/backfill-cover-art.js [options]
 
 Options:
   --dry-run      Preview what would be changed without making changes
-  --no-backup    Skip creating backup files (not recommended)
+  --force        Regenerate cover art even if it already exists
   --filter=TEXT  Only process posts containing TEXT in their name
   --help         Show this help message
 
@@ -328,14 +308,16 @@ Examples:
   # Preview what would be processed (recommended first step)
   node scripts/backfill-cover-art.js --dry-run
 
-  # Backfill all posts with cover art (creates backups)
+  # Backfill all posts with cover art
   node scripts/backfill-cover-art.js
+
+  # Regenerate all cover art with new generation logic
+  node scripts/backfill-cover-art.js --force
 
   # Process only posts from July 2025
   node scripts/backfill-cover-art.js --filter=25jul
 
-  # Process without creating backups (not recommended)
-  node scripts/backfill-cover-art.js --no-backup
+
 
 Environment Variables Required:
   SUPABASE_URL              - Your Supabase project URL
@@ -345,7 +327,7 @@ Features:
   ✅ Generates deterministic cover art using post names
   ✅ Uploads to Supabase cover-art bucket
   ✅ Updates blog post frontmatter with cover_art URLs
-  ✅ Creates automatic backups with timestamps
+  
   ✅ Dry-run mode to preview changes
   ✅ Smart skipping of posts that already have cover art
   ✅ Batch processing with delays to be gentle on Supabase
@@ -365,7 +347,7 @@ async function main() {
 
   const options = {
     dryRun: args.includes('--dry-run'),
-    createBackups: !args.includes('--no-backup'),
+    force: args.includes('--force'),
     filter:
       args.find((arg) => arg.startsWith('--filter='))?.split('=')[1] || '',
   }

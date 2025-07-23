@@ -37,7 +37,7 @@
   order: 4;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .blog-layout-container {
     flex-direction: column;
     gap: 1rem;

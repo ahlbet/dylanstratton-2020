@@ -16,6 +16,7 @@
     "@supabase/supabase-js": "^2.50.2",
     "canvas": "^3.1.2",
     "dotenv": "^17.0.1",
+    "express": "^5.1.0",
     "gatsby": "^5.14.3",
     "gatsby-plugin-dark-mode": "^1.1.2",
     "gatsby-plugin-feed": "^5.14.0",
