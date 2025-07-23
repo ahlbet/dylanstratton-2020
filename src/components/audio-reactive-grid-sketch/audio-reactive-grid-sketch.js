@@ -17,6 +17,7 @@ const createAudioReactiveGridSketch =
     let spacing = 30
     let radius = 300
     let num = 2000
+    let tatShapePositions = [] // Will store positions generated from TatsSketch logic
 
     // Generate a seed from Markov text to influence sketch behavior
     const generateSeedFromText = (text) => {
@@ -30,6 +31,162 @@ const createAudioReactiveGridSketch =
     }
 
     const markovSeed = generateSeedFromText(markovText)
+
+    // TatsSketch shape generation logic adapted for particle positions - single Tat per blog post
+    const generateTatShapePositions = () => {
+      const shapes = [
+        'horizontalLine',
+        'verticalLine',
+        'circle',
+        'triangle',
+        'square',
+      ]
+
+      const positions = []
+
+      // Generate one central Tat position based on markov seed
+      const centerX = p.width / 2 + ((markovSeed % 200) - 100) // Slight offset from center
+      const centerY = p.height / 2 + (((markovSeed * 7) % 200) - 100) // Slight offset from center
+
+      // Each Tat has 1-5 shape types based on markov seed
+      const typesCount = Math.floor(markovSeed % 5) + 1
+
+      for (let i = 0; i < typesCount; i++) {
+        const shapeIndex = Math.floor(
+          (markovSeed * (i + 1) * 123) % shapes.length
+        )
+        const shapeType = shapes[shapeIndex]
+
+        // Generate positions based on shape type with full canvas dimensions
+        const shapePositions = generateShapePositions(
+          centerX,
+          centerY,
+          shapeType,
+          { width: p.width, height: p.height }, // Pass full canvas dimensions
+          markovSeed * (i + 1)
+        )
+        positions.push(...shapePositions)
+      }
+
+      return positions
+    }
+
+    // Generate particle positions for each shape type
+    const generateShapePositions = (
+      centerX,
+      centerY,
+      shapeType,
+      canvasDimensions,
+      shapeSeed
+    ) => {
+      const positions = []
+      const numParticles = 25 + (shapeSeed % 8) // 30-37 particles per shape
+      const { width, height } = canvasDimensions
+      const insetMargin = margin + 30 // Additional inset to prevent particles from getting stuck at edges
+
+      switch (shapeType) {
+        case 'horizontalLine':
+          for (let i = 0; i < numParticles; i++) {
+            const t = i / (numParticles - 1) // 0 to 1
+            const x = insetMargin + t * (width - 2 * insetMargin) // Inset width span
+            const y = centerY + (((shapeSeed * i) % 40) - 20) // Vertical variation
+            positions.push({ x, y })
+          }
+          break
+
+        case 'verticalLine':
+          for (let i = 0; i < numParticles; i++) {
+            const t = i / (numParticles - 1) // 0 to 1
+            const x = centerX + (((shapeSeed * i) % 40) - 20) // Horizontal variation
+            const y = insetMargin + t * (height - 2 * insetMargin) // Inset height span
+            positions.push({ x, y })
+          }
+          break
+
+        case 'circle':
+          for (let i = 0; i < numParticles; i++) {
+            const angle = (i / numParticles) * Math.PI * 2
+            // Use ellipse with inset margins
+            const radiusX = (width - 2 * insetMargin) / 2
+            const radiusY = (height - 2 * insetMargin) / 2
+            const x =
+              centerX +
+              Math.cos(angle) * radiusX * (0.8 + ((shapeSeed * i) % 40) / 100)
+            const y =
+              centerY +
+              Math.sin(angle) * radiusY * (0.8 + ((shapeSeed * i) % 40) / 100)
+            positions.push({ x, y })
+          }
+          break
+
+        case 'triangle':
+          for (let i = 0; i < numParticles; i++) {
+            // Three vertices of triangle with inset margins
+            const vertices = [
+              { x: centerX, y: insetMargin }, // top
+              { x: insetMargin, y: height - insetMargin }, // bottom left
+              { x: width - insetMargin, y: height - insetMargin }, // bottom right
+            ]
+
+            if (i < 3) {
+              // Place particles at vertices
+              positions.push(vertices[i])
+            } else {
+              // Place particles along edges
+              const edgeIndex = (i - 3) % 3
+              const t = ((shapeSeed * i) % 100) / 100 // Random position along edge
+              const start = vertices[edgeIndex]
+              const end = vertices[(edgeIndex + 1) % 3]
+              const x = start.x + (end.x - start.x) * t
+              const y = start.y + (end.y - start.y) * t
+              positions.push({ x, y })
+            }
+          }
+          break
+
+        case 'square':
+          for (let i = 0; i < numParticles; i++) {
+            if (i < 4) {
+              // Place particles at corners with inset margins
+              const corners = [
+                { x: insetMargin, y: insetMargin }, // top left
+                { x: width - insetMargin, y: insetMargin }, // top right
+                { x: width - insetMargin, y: height - insetMargin }, // bottom right
+                { x: insetMargin, y: height - insetMargin }, // bottom left
+              ]
+              positions.push(corners[i])
+            } else {
+              // Place particles along edges
+              const side = (i - 4) % 4
+              const t = ((shapeSeed * i) % 100) / 100
+
+              let x, y
+              switch (side) {
+                case 0: // top edge
+                  x = insetMargin + t * (width - 2 * insetMargin)
+                  y = insetMargin
+                  break
+                case 1: // right edge
+                  x = width - insetMargin
+                  y = insetMargin + t * (height - 2 * insetMargin)
+                  break
+                case 2: // bottom edge
+                  x = width - insetMargin - t * (width - 2 * insetMargin)
+                  y = height - insetMargin
+                  break
+                case 3: // left edge
+                  x = insetMargin
+                  y = height - insetMargin - t * (height - 2 * insetMargin)
+                  break
+              }
+              positions.push({ x, y })
+            }
+          }
+          break
+      }
+
+      return positions
+    }
 
     // Function to create gravitational points
     const createGravitationalPoints = () => {
@@ -88,14 +245,14 @@ const createAudioReactiveGridSketch =
     }
 
     // Global sketch parameters influenced by Markov text - moderate impact
-    const globalSpeedMultiplier = 0.8 + (markovSeed % 100) / 50 // 0.6 to 2.6 (moderate range)
+    const globalSpeedMultiplier = 4 + (markovSeed % 100) / 50 // 0.6 to 2.6 (moderate range)
     const globalColorIntensity = 0.5 + (markovSeed % 100) / 50 // 0.5 to 2.5 (moderate range)
     const globalParticleInteraction = 0.3 + (markovSeed % 150) / 30 // 0.3 to 5.3 (moderate range)
     const globalParticleSize = 0.2 + (markovSeed % 75) / 25 // 0.7 to 3.7 (moderate size variation)
     const globalParticleBirthRate = 0.5 + (markovSeed % 100) / 50 // 0.5 to 2.5 (birth rate variation)
-    const globalGravityStrength = 0.8 + (markovSeed % 100) / 10 // 0.8 to 2.8 (gravity strength variation)
+    const globalGravityStrength = 0.08 + (markovSeed % 100) / 10 // 0.8 to 2.8 (gravity strength variation)
     const primaryHue = markovSeed % 360 // Primary hue for this blog post (0-359)
-    const globalSwirlStrength = 0.3 + (markovSeed % 100) / 100 // 0.3 to 1.3 (swirl strength variation)
+    const globalSwirlStrength = 0.01 + (markovSeed % 100) / 100 // 0.3 to 1.3 (swirl strength variation)
     const globalSwirlDirection = markovSeed % 2 === 0 ? 1 : -1 // Clockwise or counter-clockwise
     const globalSwirlSpeed = 0.5 + (markovSeed % 100) / 100 // 0.5 to 1.5 (swirl change speed)
 
@@ -151,11 +308,11 @@ const createAudioReactiveGridSketch =
         let audioLevel = audioLevel1 * (1 - blend) + audioLevel2 * blend
         let normalizedLevel = audioLevel / 255
 
-        // Primary hue-based color system - restricted to primary hue variations
+        // Primary hue-based color system - expanded color range
         let timeHue = (p.frameCount * this.colorSpeed) % 360
-        let audioHue = normalizedLevel * 60 * globalColorIntensity // Very small range for subtle variation
+        let audioHue = normalizedLevel * 120 * globalColorIntensity // Expanded range for more variation
         let hueVariation =
-          ((timeHue * 0.2 + audioHue * 0.5 + this.colorOffset * 30) % 30) - 10 // -30 to +30 degrees
+          ((timeHue * 0.3 + audioHue * 0.7 + this.colorOffset * 90) % 120) - 60 // -60 to +60 degrees (120 degree range)
         let hue = (primaryHue + hueVariation + 360) % 360
 
         // HSV to RGB conversion for primary hue with limited variation
@@ -195,8 +352,25 @@ const createAudioReactiveGridSketch =
         g = Math.min(255, Math.max(0, g + m))
         b = Math.min(255, Math.max(0, b + m))
 
-        // Moderate radius variation based on audio and global particle size
-        let audioRadius = (this.r + normalizedLevel * 2.0) * globalParticleSize
+        // Distance-based radius scaling: smaller at center, larger at edges
+        let canvasCenterX = p.width / 2
+        let canvasCenterY = p.height / 2
+        let distanceFromCenter = p.dist(
+          this.x,
+          this.y,
+          canvasCenterX,
+          canvasCenterY
+        )
+        let maxDistanceFromCenter = p.dist(0, 0, canvasCenterX, canvasCenterY)
+        let normalizedDistance = Math.min(
+          1,
+          distanceFromCenter / maxDistanceFromCenter
+        ) // 0 at center, 1 at edges
+        let distanceScale = 0.3 + normalizedDistance * 1.2 // 0.3 at center, 1.5 at edges
+
+        // Moderate radius variation based on audio, distance, and global particle size
+        let audioRadius =
+          (this.r + normalizedLevel * 3.0) * globalParticleSize * distanceScale
         p.fill(r, g, b, this.op * 0.5) // Full opacity for visibility on white background
         p.ellipse(this.x, this.y, audioRadius)
       }
@@ -239,7 +413,7 @@ const createAudioReactiveGridSketch =
         }
 
         let t = p.frameCount / 100.0
-        let wonkV = 100
+        let wonkV = 30 // Reduced from 100 to decrease noise randomness
 
         // Calculate gravitational attraction to all gravity points
         let gravityX = 0
@@ -266,46 +440,8 @@ const createAudioReactiveGridSketch =
           }
         }
 
-        // Calculate influence from nearby particles
-        let neighborInfluence = 0
-        let neighborCount = 0
-        const influenceRadius = 30 * globalParticleInteraction // Distance for particle interaction
-
-        for (let j = 0; j < allParticles.length; j++) {
-          if (i === j) continue // Skip self
-
-          let otherParticle = allParticles[j]
-          let distance = p.dist(
-            this.x,
-            this.y,
-            otherParticle.x,
-            otherParticle.y
-          )
-
-          if (distance < influenceRadius) {
-            // Calculate influence based on distance and other particle's audio level
-            let influence = (influenceRadius - distance) / influenceRadius
-            let otherAudioIndex = Math.floor(
-              p.map(j, 0, allParticles.length, 0, audioData.length - 1)
-            )
-            let otherAudioLevel = audioData[otherAudioIndex] || 0
-            let otherNormalizedLevel = otherAudioLevel / 255
-
-            neighborInfluence += influence * otherNormalizedLevel
-            neighborCount++
-          }
-        }
-
-        // Average neighbor influence
-        if (neighborCount > 0) {
-          neighborInfluence /= neighborCount
-        }
-
-        // Combine local audio with neighbor influence
-        let combinedLevel = (normalizedLevel + neighborInfluence) / 2
-
-        // Adjust movement based on combined audio and neighbor influence - moderate impact
-        let audioMultiplier = 1 + combinedLevel * 1.25 // 1x to 2.25x movement for moderate effect
+        // Adjust movement based on audio level - particles move independently
+        let audioMultiplier = 1 + normalizedLevel * 1.75 // 1x to 2.25x movement based on individual audio level
         this.mov = this.baseMov * audioMultiplier * globalSpeedMultiplier
 
         // Apply gravitational force
@@ -354,7 +490,7 @@ const createAudioReactiveGridSketch =
           this.y += swirlY * this.mov * swirlIntensity * 0.2
         }
 
-        // Add some noise-based movement for organic feel
+        // Add subtle noise-based movement for organic feel (reduced randomness)
         let wonkX = p.map(p.sin(this.startX * i), -1, 1, -wonkV, wonkV)
         let wonkY = p.map(p.cos(this.startY * i), -1, 1, -wonkV, wonkV)
 
@@ -362,16 +498,35 @@ const createAudioReactiveGridSketch =
           p.noise(wonkX / this.slow, t, i),
           0,
           1,
-          -this.mov * 0.3,
-          this.mov * 0.3
+          -this.mov * 0.08,
+          this.mov * 0.08
         )
         this.y += p.map(
           p.noise(t, i, wonkY / this.slow),
           0,
           1,
-          -this.mov * 0.3,
-          this.mov * 0.3
+          -this.mov * 0.08,
+          this.mov * 0.08
         )
+
+        // Gentle center attraction - slowly draw particles toward center
+        let centerAttractionStrength = 0.0005 // Ultra-gentle pull
+        let centerX = p.width / 2
+        let centerY = p.height / 2
+        let directionToCenterX = centerX - this.x
+        let directionToCenterY = centerY - this.y
+        let distanceToCenter = Math.sqrt(
+          directionToCenterX * directionToCenterX +
+            directionToCenterY * directionToCenterY
+        )
+
+        if (distanceToCenter > 0) {
+          // Normalize direction and apply gentle force
+          let normalizedX = directionToCenterX / distanceToCenter
+          let normalizedY = directionToCenterY / distanceToCenter
+          this.x += normalizedX * centerAttractionStrength * distanceToCenter
+          this.y += normalizedY * centerAttractionStrength * distanceToCenter
+        }
       }
 
       update() {
@@ -393,7 +548,7 @@ const createAudioReactiveGridSketch =
         let normalizedAvg = avgLevel / 255
 
         // Adjust fade rate based on audio - make it extremely dramatic
-        let audioFadeRate = this.fadeRate * (1 + normalizedAvg * 3) // 1x to 11x fade rate
+        let audioFadeRate = this.fadeRate * (1 + normalizedAvg * 1.1) // 1x to 11x fade rate
 
         if (this.isFading) {
           this.op -= audioFadeRate
@@ -405,7 +560,9 @@ const createAudioReactiveGridSketch =
           this.isFading = true
         }
 
-        if (this.op < 0) {
+        if (this.op < 50) {
+          // Don't let particles become completely invisible - maintain minimum opacity
+          this.op = 50
           this.isFading = false
         }
       }
@@ -489,16 +646,35 @@ const createAudioReactiveGridSketch =
       const birthAttempts = Math.floor(birthRate * 5) + 1 // 1 to 6+ attempts based on audio
 
       for (let attempt = 0; attempt < birthAttempts; attempt++) {
-        if (Math.random() < birthRate) {
-          // Random position within canvas bounds
-          const x = margin + Math.random() * (p.width - 2 * margin)
-          const y = margin + Math.random() * (p.height - 2 * margin)
+        if (Math.random() < birthRate && tatShapePositions.length > 0) {
+          // Choose a random TatsSketch position instead of completely random position
+          const randomTatPosition =
+            tatShapePositions[
+              Math.floor(Math.random() * tatShapePositions.length)
+            ]
+
+          // Add small variation to avoid exact overlap
+          const variation = 8 // Small random offset
+          const x = randomTatPosition.x + (Math.random() - 0.5) * variation
+          const y = randomTatPosition.y + (Math.random() - 0.5) * variation
+
+          // Ensure position stays within canvas bounds
+          const clampedX = Math.max(margin, Math.min(p.width - margin, x))
+          const clampedY = Math.max(margin, Math.min(p.height - margin, y))
 
           // Create unique seed for new particle
           const particleSeed = (markovSeed + Math.random() * 10000) % 10000
 
-          // Create new particle with high initial opacity
-          const newParticle = new Particle(x, y, 0.15, 256, x, y, particleSeed)
+          // Create new particle with high initial opacity using TatsSketch position
+          const newParticle = new Particle(
+            clampedX,
+            clampedY,
+            0.15,
+            256,
+            clampedX,
+            clampedY,
+            particleSeed
+          )
           particles.push(newParticle)
         }
       }
@@ -519,15 +695,15 @@ const createAudioReactiveGridSketch =
       const weightedAudioLevel = (lowFreqAudio * 3 + highFreqAudio * 1) / 4
       const normalizedAudioLevel = weightedAudioLevel / 255
 
-      // Kill rate based on audio intensity (inverse relationship - more audio = less killing) - much more sensitive
-      const killRate = (1 - normalizedAudioLevel) * 0.3 // Much higher kill rate
+      // Kill rate based on audio intensity (inverse relationship - more audio = less killing) - much gentler
+      const killRate = (1 - normalizedAudioLevel) * 0.05 // Much lower kill rate for longer particle life
 
-      // Multiple kill attempts per frame for more dramatic effect
-      const killAttempts = Math.floor(killRate * 3) + 1 // 1 to 4+ attempts based on audio
+      // Single kill attempt per frame for gentler effect
+      const killAttempts = Math.floor(killRate * 2) + 1 // 1 to 3 attempts based on audio
 
       for (let attempt = 0; attempt < killAttempts; attempt++) {
-        if (Math.random() < killRate && particles.length > 30) {
-          // Lower minimum particles for more dramatic effect
+        if (Math.random() < killRate && particles.length > 100) {
+          // Higher minimum particles to maintain population
           // Remove a random particle
           const randomIndex = Math.floor(Math.random() * particles.length)
           particles.splice(randomIndex, 1)
@@ -615,6 +791,9 @@ const createAudioReactiveGridSketch =
       spacing = Math.max(100, containerWidth * 0.015) // Responsive spacing
       radius = Math.min(containerWidth, canvasHeight) * 0.4 // Responsive radius
 
+      // Generate TatsSketch-based particle positions
+      tatShapePositions = generateTatShapePositions()
+
       // Create gravitational points
       createGravitationalPoints()
 
@@ -640,6 +819,9 @@ const createAudioReactiveGridSketch =
       spacing = Math.max(100, containerWidth * 0.015) // Responsive spacing
       radius = Math.min(containerWidth, canvasHeight) * 0.4 // Responsive radius
 
+      // Regenerate TatsSketch-based particle positions for new canvas size
+      tatShapePositions = generateTatShapePositions()
+
       // Re-seed particles for new canvas size
       particles = []
       p.seed()
@@ -653,64 +835,49 @@ const createAudioReactiveGridSketch =
       updateGravityPoints()
 
       // Birth and kill particles based on audio
-      birthParticles(audioData)
-      killParticles(audioData)
+      // birthParticles(audioData)
+      // killParticles(audioData)
 
       for (let i = 0; i < particles.length; i++) {
         particles[i].move(i, audioData, particles)
         particles[i].show(audioData)
         particles[i].update()
-        particles[i].fade(audioData)
+        // particles[i].fade(audioData)
       }
     }
 
     p.seed = () => {
-      // Calculate number of particles based on canvas size and desired density
-      const canvasArea = (p.width - 2 * margin) * (p.height - 2 * margin)
-      const targetParticles =
-        Math.floor(canvasArea / (spacing * spacing * 0.8)) + 5 // Add 5 more particles
-
-      for (
-        let particleIndex = 0;
-        particleIndex < targetParticles;
-        particleIndex++
-      ) {
-        // Create unique seed for each particle
-        let particleSeed = (markovSeed + particleIndex * 123) % 10000
-
-        // choose random gravity point
-        let randomGravityPoint = Math.floor(
-          Math.random() * gravitationalPoints.length
+      // Use TatsSketch positions as particle starting points
+      if (tatShapePositions.length === 0) {
+        console.warn(
+          'No TatsSketch positions generated, falling back to random positioning'
         )
-        let randomGravityPointX = gravitationalPoints[randomGravityPoint].x
-        let randomGravityPointY = gravitationalPoints[randomGravityPoint].y
-
-        // Use Markov seed to influence random positioning
-        let randomSeed1 = (particleSeed * 456) % 10000
-        let randomSeed2 = (particleSeed * 789) % 10000
-
-        // Generate random positions influenced by Markov seed
-        let startX = margin + (randomSeed1 / 10000) * (p.width - 2 * margin)
-        let startY = margin + (randomSeed2 / 10000) * (p.height - 2 * margin)
-
-        // Add some clustering variation based on Markov seed
-        let clusteringFactor = (markovSeed % 100) / 50 // 0 to 1 clustering intensity
-        if (clusteringFactor > 0.5) {
-          // Create some clustering by adjusting positions
-          let clusterCenterX =
-            p.width / 2 + Math.sin(markovSeed * 0.1) * (p.width * 0.3)
-          let clusterCenterY =
-            p.height / 2 + Math.cos(markovSeed * 0.1) * (p.height * 0.3)
-
-          let pullStrength = (clusteringFactor - 0.5) * 1 // 0 to 1 pull strength
-          startX = startX + (randomGravityPointX - startX) * pullStrength * 0.6
-          startY = startY + (randomGravityPointY - startY) * pullStrength * 2
-
-          startX = startX + (clusterCenterX - startX) * pullStrength * 0.6
-          startY = startY + (clusterCenterY - startY) * pullStrength * 2
+        // Fallback to a simple grid if no positions were generated
+        for (let y = margin; y < p.height - margin; y += 50) {
+          for (let x = margin; x < p.width - margin; x += 50) {
+            tatShapePositions.push({ x, y })
+          }
         }
+      }
 
-        // Ensure particles stay within bounds
+      // Create particles based on TatsSketch positions
+      for (let i = 0; i < tatShapePositions.length; i++) {
+        const position = tatShapePositions[i]
+
+        // Create unique seed for each particle based on position and markov seed
+        let particleSeed =
+          (markovSeed + position.x * position.y + i * 123) % 10000
+
+        // Ensure positions are within canvas bounds
+        let startX = Math.max(margin, Math.min(p.width - margin, position.x))
+        let startY = Math.max(margin, Math.min(p.height - margin, position.y))
+
+        // Add some slight variation to avoid overlapping particles
+        const variation = 5 // Small random offset
+        startX += (((particleSeed % 100) - 50) / 50) * variation
+        startY += ((((particleSeed * 7) % 100) - 50) / 50) * variation
+
+        // Ensure particles stay within bounds after variation
         startX = Math.max(margin, Math.min(p.width - margin, startX))
         startY = Math.max(margin, Math.min(p.height - margin, startY))
 
@@ -725,9 +892,10 @@ const createAudioReactiveGridSketch =
         )
         particles.push(particle)
       }
+
       console.log(
-        `Created ${particles.length} particles with markov seed: ${markovSeed}`
-      ) // Debug log
+        `Created ${particles.length} particles from ${tatShapePositions.length} TatsSketch positions with markov seed: ${markovSeed}`
+      )
     }
   }
 
@@ -763,9 +931,7 @@ const AudioReactiveGridSketch = ({
           fontSize: '14px',
           height: '400px',
         }}
-      >
-        Loading sketch...
-      </div>
+      ></div>
     )
   }
 
@@ -784,9 +950,7 @@ const AudioReactiveGridSketch = ({
             fontSize: '14px',
             height: '400px',
           }}
-        >
-          Loading sketch...
-        </div>
+        ></div>
       }
     >
       <ClientSideSketch
