@@ -102,6 +102,38 @@
   transition: all 0.2s ease !important;
 }
 
+/* Fix navigation icons */
+.fc-prev-button .fc-icon,
+.fc-next-button .fc-icon {
+  font-family: inherit !important;
+}
+
+.fc-prev-button .fc-icon::before {
+  content: "‹" !important;
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+}
+
+.fc-next-button .fc-icon::before {
+  content: "›" !important;
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+}
+
+/* Alternative approach if above doesn't work */
+.fc-prev-button,
+.fc-next-button {
+  font-family: inherit !important;
+}
+
+.fc-prev-button::after {
+  content: "" !important;
+}
+
+.fc-next-button::after {
+  content: "" !important;
+}
+
 .fc-button:hover {
   background: #444 !important;
   border-color: #666 !important;

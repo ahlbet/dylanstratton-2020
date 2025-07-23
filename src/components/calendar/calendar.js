@@ -82,6 +82,8 @@ const CalendarComponent = () => {
           month: 'Month',
           week: 'Week',
           list: 'List',
+          prev: '‹',
+          next: '›',
         }}
         dayMaxEvents={3}
         eventClick={(info) => {
