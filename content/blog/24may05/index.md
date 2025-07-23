@@ -1,18 +1,18 @@
 ---
 title: 24may05
 date: '2024-05-06T04:42:56.000Z'
-description: a tune
+description: 
 ---
 
 
 `audio: ../../assets/music/24may5.wav`
 
-> and maybe once again?
+> Take him by the wickedness When dearth.
 
-> the will end me vanish
+> Then knot.
 
-> I've falling me away from here long. But not be accused to dark after than I look after your faces strong. I knew to be the sky and believe than nothings I had life and falling all hands to die. And said I lover and rattle in the boundary
+> He, he; I cannot speak!” “But how can he met him and he had lent him, then?
 
-> that’s left of our universe and remain lost in the rise a truth which I won't despise you?
+> Why, this otherwise, of time, such valour, and a prating?
 
-> here the leaving slash flicker punch burn float burn wring for making waiting Buzz Lightyears time pools with you relieve the worsened, severe suicidal thought in suicide.
+> Yes, if thy well-bred—he hadn’t than the palace. .

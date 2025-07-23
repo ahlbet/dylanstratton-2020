@@ -15,13 +15,15 @@ const PoemssSketchSketch = (p) => {
     p.createCanvas(600, 400)
     p.background(240)
 
-    // Load the actual 448.txt file
+    // Load text from multiple sources (Supabase or fallback)
     try {
+      // First try to load from 448.txt (for client-side p5 sketches)
       const response = await fetch('/448.txt')
       const text = await response.text()
       lines = text.split('\n').filter((line) => line.trim().length > 0)
+      console.log('Loaded text from 448.txt for p5 sketch')
     } catch (error) {
-      console.error('Error loading 448.txt:', error)
+      console.error('Error loading 448.txt for p5 sketch:', error)
       // Fallback to sample text if file loading fails
       lines = [
         'The quick brown fox jumps over the lazy dog.',
@@ -29,7 +31,13 @@ const PoemssSketchSketch = (p) => {
         'All that glitters is not gold.',
         'Actions speak louder than words.',
         'Beauty is in the eye of the beholder.',
+        'Every cloud has a silver lining.',
+        'Time heals all wounds.',
+        'Actions speak louder than words.',
+        'The early bird catches the worm.',
+        "Don't judge a book by its cover.",
       ]
+      console.log('Using fallback text for p5 sketch')
     }
 
     createdLines = lines

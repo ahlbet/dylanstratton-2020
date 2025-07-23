@@ -1,4 +1,103 @@
-# P5.js Sketch Conversion Script
+# Scripts
+
+This directory contains utility scripts for the project.
+
+## setup-markov-bucket.js
+
+A script to set up and manage the Supabase markov-text bucket system.
+
+### Usage
+```bash
+# Initial setup - creates bucket and uploads existing content
+node scripts/setup-markov-bucket.js setup
+
+# Upload a new text file to the bucket
+node scripts/setup-markov-bucket.js upload path/to/your-text.txt
+
+# List all files in the bucket
+node scripts/setup-markov-bucket.js list
+
+# Test Markov text generation
+node scripts/setup-markov-bucket.js test
+```
+
+### What it does
+- Creates the `markov-text` bucket in Supabase Storage
+- Uploads txt files to the bucket for Markov text generation
+- Provides tools to manage and test the text corpus
+- Replaces the single-file approach with a multi-file cloud-based system
+
+See `MARKOV_TEXT_SETUP.md` for complete documentation.
+
+## refresh-markov.js
+
+A script to replace existing Markov text in blog posts with newly generated content from the Supabase corpus.
+
+### Usage
+```bash
+# Preview what would be changed (recommended first step)
+node scripts/refresh-markov.js --dry-run
+
+# Refresh all blog posts (creates backups automatically)
+node scripts/refresh-markov.js
+
+# Refresh with different line count
+node scripts/refresh-markov.js --lines=3
+
+# Refresh only specific posts
+node scripts/refresh-markov.js --filter=25jul
+
+# Skip creating backups (not recommended)
+node scripts/refresh-markov.js --no-backup
+```
+
+### What it does
+- Finds blog posts with existing Markov text (trailing blockquotes)
+- Removes old Markov text while preserving all other content
+- Generates new text using the rich Supabase multi-file corpus
+- Creates timestamped backups for safety
+- Processes posts safely with built-in delays
+
+### Safety Features
+- **Dry run mode** to preview changes
+- **Automatic backups** with timestamps
+- **Smart detection** only touches files with Markov text
+- **Content preservation** maintains frontmatter and body content
+- **Error handling** continues processing even if individual posts fail
+
+## clean-descriptions.js
+
+A script to clean description fields from blog post frontmatter, leaving empty `description: ` fields.
+
+### Usage
+```bash
+# Preview what would be cleaned (recommended first step)
+node scripts/clean-descriptions.js --dry-run
+
+# Clean all descriptions (creates backups by default)
+node scripts/clean-descriptions.js
+
+# Clean without creating backups
+node scripts/clean-descriptions.js --no-backup
+
+# Clean only specific posts
+node scripts/clean-descriptions.js --filter=25jul
+```
+
+### What it does
+- Finds all blog posts with description content in frontmatter
+- Removes any content after `description: ` while preserving the field
+- Creates timestamped backups for safety (unless `--no-backup`)
+- Only processes files that actually have description content to clean
+
+### Safety Features
+- **Dry run mode** to preview changes before execution
+- **Automatic backups** with timestamps (optional)
+- **Smart detection** only touches files with actual description content
+- **Frontmatter preservation** maintains all other YAML fields exactly
+- **Content safety** never touches post body content
+
+## convert-sketch.js - P5.js Sketch Conversion Script
 
 This script converts standalone p5.js sketches to work with the P5Sketch React component wrapper.
 

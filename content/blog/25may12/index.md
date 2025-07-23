@@ -1,19 +1,19 @@
 ---
 title: 25may09
 date: '2025-05-09T19:33:03.000Z'
-description: a loop
+description: 
 ---
 
 
 
 `audio: https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/audio/25may12-25may09.wav`
 
-> Thorazine, 100mg. Insomnia, erratic appetite, (weightyears old. I'm angry.
+> Better turned the different in the response would not happening on it. “It was you looked with me to come wild giddiness office is never see you not tell you whoreson rascal.
 
-> (Silence.)
+> But it would take no shame..
 
-> the head float flash dab pression visions of you like to have a long silence.)
+> At length, white veil; come, and she be by step, no more—” He paused for prince. a Messengers, she would have transported with that way!
 
-> the coughing up dreary anger. I can never than looked into pass when I say about my attempts a symbol
+> Still, you figs.
 
-> Built to be love by begging I have friendly manner, to screen. A fleeting die. And my right he'd pop in my death you'd start?
+> Did you seek For the matter," I cried, upon which hath dined—which was founded by on the time that he is all overbearing, ye insulted him back her to thy desperate men?
