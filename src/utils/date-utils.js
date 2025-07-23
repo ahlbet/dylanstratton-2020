@@ -1,8 +1,8 @@
 /**
- * Transform a name in format "25may05" to a date string "2025-05-05"
+ * Transform a name in format "25may05" to a date string
  * @param {string} name - The name in format "YYmonDD" (e.g., "25may05")
  * @param {boolean} randomTime - Whether to add random time (default: true)
- * @returns {string} ISO date string in format "YYYY-MM-DD"
+ * @returns {string} ISO string in format "YYYY-MM-DDTHH:mm:ss.sssZ" if randomTime=true, or "YYYY-MM-DD" if randomTime=false
  */
 const transformDate = (name, randomTime = true) => {
   // Parse name format like "25may05" or "24jun19"
@@ -50,12 +50,15 @@ const transformDate = (name, randomTime = true) => {
     const randomSeconds = Math.floor(Math.random() * 60)
 
     date.setHours(randomHours, randomMinutes, randomSeconds)
+
+    // Return full ISO string with time when randomTime is requested
+    return date.toISOString()
   } else {
     // For consistent display, use noon
     date.setHours(12, 0, 0)
+    // Return just date portion when no random time
+    return date.toISOString().slice(0, 10)
   }
-
-  return date.toISOString().slice(0, 10)
 }
 
 /**
