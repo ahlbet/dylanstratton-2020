@@ -52,7 +52,18 @@ exports.onCreateNode = ({ node, actions, getNode }) => {
   const { createNodeField } = actions
 
   if (node.internal.type === `MarkdownRemark`) {
-    const value = createFilePath({ node, getNode })
+    const filePath = createFilePath({ node, getNode })
+
+    // Only modify slug for blog posts that have the duplicate pattern
+    let value = filePath
+    const duplicateMatch = filePath.match(/\/([^/]+)\/\1\/$/)
+
+    if (duplicateMatch) {
+      // Extract just the directory name for blog posts (e.g., '/25jul01/25jul01/' -> '/25jul01/')
+      const directoryName = duplicateMatch[1]
+      value = `/${directoryName}/`
+    }
+
     createNodeField({
       name: `slug`,
       node,
