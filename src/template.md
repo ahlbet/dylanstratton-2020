@@ -1,7 +1,8 @@
 ---
 title: {name}
 date: {date}
-description: {description}
+description: 
+cover_art: {cover_art}
 ---
 
 {audio_files}

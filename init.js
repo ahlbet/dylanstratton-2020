@@ -19,6 +19,9 @@ const { transformDate } = require('./src/utils/date-utils')
 // Import the Markov generator
 const { generateBlogPostText } = require('./src/utils/markov-generator')
 
+// Import the cover art generator
+const { generateCoverArt } = require('./src/utils/cover-art-generator')
+
 // Initialize Supabase client
 let supabase
 
@@ -41,16 +44,26 @@ const initializeSupabase = () => {
 }
 
 // Function to upload file to Supabase storage
-const uploadToSupabase = async (filePath, fileName, bucketName = 'audio') => {
+const uploadToSupabase = async (
+  filePathOrBuffer,
+  fileName,
+  bucketName = 'audio',
+  contentType = 'audio/wav'
+) => {
   try {
-    // Read the file
-    const fileBuffer = fs.readFileSync(filePath)
+    // Read the file or use provided buffer
+    let fileBuffer
+    if (Buffer.isBuffer(filePathOrBuffer)) {
+      fileBuffer = filePathOrBuffer
+    } else {
+      fileBuffer = fs.readFileSync(filePathOrBuffer)
+    }
 
     // Upload to Supabase
     const { data, error } = await supabase.storage
       .from(bucketName)
       .upload(fileName, fileBuffer, {
-        contentType: 'audio/wav',
+        contentType,
         upsert: false, // Don't overwrite existing files
       })
 
@@ -280,12 +293,37 @@ const main = async () => {
     markovText = '> Generated text could not be created for this post.'
   }
 
-  // Replace {name}, {date}, {description}, {audio_files}, and {markov_text} in template
+  // Generate cover art for the blog post
+  let coverArtUrl = ''
+  try {
+    console.log('Generating cover art for blog post...')
+    const coverArtBuffer = await generateCoverArt(name, 2500)
+    const sanitizedName = sanitizeFilename(name)
+    const coverArtFileName = `${sanitizedName}.png`
+
+    // Upload cover art to Supabase
+    coverArtUrl = await uploadToSupabase(
+      coverArtBuffer,
+      coverArtFileName,
+      'cover-art',
+      'image/png'
+    )
+
+    // Add cache-busting parameter to ensure fresh images
+    coverArtUrl += `?v=${Date.now()}`
+
+    console.log(`Generated and uploaded cover art: ${coverArtFileName}`)
+  } catch (error) {
+    console.error('Failed to generate cover art:', error.message)
+    // Cover art is optional, continue without it
+  }
+
+  // Replace {name}, {date}, {description}, {audio_files}, {cover_art}, and {markov_text} in template
   template = template
     .replace(/\{name\}/g, name)
     .replace(/\{date\}/g, date)
-    .replace(/\{description\}/g, description.split('_').join(' '))
     .replace(/\{audio_files\}/g, audioFilesContent)
+    .replace(/\{cover_art\}/g, coverArtUrl)
     .replace(/\{markov_text\}/g, markovText)
 
   fs.mkdirSync(dir, { recursive: true })

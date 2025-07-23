@@ -2,8 +2,8 @@
 title: 25may13
 date: '2025-05-13T19:24:01.000Z'
 description: 
+cover_art: https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/cover-art/25may13.png?v=1753309031779
 ---
-
 
 `audio: https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/audio/25may13-25may13.wav`
 
