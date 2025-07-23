@@ -1,0 +1,115 @@
+/* Blog Audio Player Styles */
+.blog-audio-player {
+  width: 100%;
+  margin: 20px 0;
+  position: relative; /* For absolute positioning of download button */
+}
+
+/* Download button styles */
+.blog-audio-player .track {
+  position: relative !important;
+}
+
+.blog-audio-player .download-button {
+  position: absolute !important;
+  right: 60px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  background: transparent !important;
+  border: none !important;
+  color: #DE3163 !important;
+  cursor: pointer !important;
+  font-size: 16px !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  opacity: 0 !important;
+  transition: all 0.2s ease !important;
+  z-index: 10 !important;
+}
+
+.blog-audio-player .track:hover .download-button {
+  opacity: 1 !important;
+}
+
+.blog-audio-player .download-button:hover {
+  background: #DE3163 !important;
+  color: #fff !important;
+}
+
+/* Dark theme overrides for react-list-player */
+.blog-audio-player .list-player {
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  font-family: 'Montserrat', sans-serif !important;
+}
+
+/* Force Montserrat font for all react-list-player elements */
+.blog-audio-player * {
+  font-family: 'Montserrat', sans-serif !important;
+}
+
+.blog-audio-player .list-header {
+  background-color: #2a2a2a;
+  color: #fff;
+}
+
+.blog-audio-player .list-body {
+  background-color: #1a1a1a;
+}
+
+.blog-audio-player .track {
+  color: #fff;
+  border-bottom: 1px solid #333;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.blog-audio-player .track:hover {
+  background-color: #333;
+}
+
+.blog-audio-player .track.selected {
+  background-color: #DE3163;
+  color: #fff;
+}
+
+.blog-audio-player .track .action-icon {
+  color: #DE3163;
+}
+
+.blog-audio-player .track.selected .action-icon {
+  color: #fff;
+}
+
+.blog-audio-player .controller-panel {
+  background-color: rgba(42, 42, 42, 0.9);
+  font-family: 'Montserrat', sans-serif;
+}
+
+.blog-audio-player .btn {
+  color: #DE3163;
+}
+
+.blog-audio-player .btn:hover {
+  color: #fff;
+}
+
+.blog-audio-player .text.pure {
+  color: #fff;
+}
+
+.blog-audio-player .text.number {
+  color: #ccc;
+}
+
+/* Additional font overrides for specific elements */
+.blog-audio-player span,
+.blog-audio-player div,
+.blog-audio-player p,
+.blog-audio-player button,
+.blog-audio-player .track-title,
+.blog-audio-player .track-artist,
+.blog-audio-player .track-duration,
+.blog-audio-player .text {
+  font-family: 'Montserrat', sans-serif !important;
+} 

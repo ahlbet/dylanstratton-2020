@@ -8,9 +8,14 @@ import Calendar from '../../components/calendar/calendar'
 import CalendarToggle from '../../components/calendar/calendar-toggle'
 import { useUserPreferences } from '../../components/calendar/user-preferences-context'
 import GridSketch from '../../components/grid-sketch/grid-sketch'
+import BlogAudioPlayer from '../../components/blog-audio-player/BlogAudioPlayer'
+import {
+  extractAudioUrls,
+  removeAudioFromHtml,
+} from '../../utils/extractAudioUrls'
+import './blog-post.css'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
-// Removed: import { position } from 'p5' - this was causing SSR issues
 
 // Lazy load the audio reactive grid sketch to prevent SSR issues
 const AudioReactiveGridSketch = React.lazy(
@@ -48,6 +53,12 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
 
   const markovText = extractMarkovText(post.html)
 
+  // Extract audio URLs from the post content
+  const audioUrls = extractAudioUrls(post.html)
+
+  // Remove audio elements from HTML to prevent duplicates
+  const cleanedHtml = removeAudioFromHtml(post.html)
+
   return (
     <Layout location={location} title={siteTitle}>
       <SEO
@@ -55,148 +66,206 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
         description={post.frontmatter.description || post.excerpt}
       />
 
-      {/* Calendar - Conditionally Rendered */}
-      <div style={{}}>
-        <div style={{}}>
-          <article>
-            <header>
-              <h1
-                style={{
-                  marginTop: rhythm(1),
-                  marginBottom: 0,
-                  color: '#DE3163',
-                }}
-              >
-                {post.frontmatter.title}
-              </h1>
-              <p
-                style={{
-                  ...scale(-1 / 5),
-                  display: `block`,
-                  marginBottom: rhythm(1),
-                }}
-              >
-                {post.frontmatter.date}
-              </p>
-              <nav>
-                <ul
+      {/* 2-Column Layout Container */}
+      <div className="blog-layout-container">
+        {/* Left Column - Content */}
+        <div className="left-column">
+          {/* Header, Navigation, Calendar - Always first */}
+          <div className="content-section">
+            <article>
+              <header>
+                {/* Title */}
+                <h1
                   style={{
-                    display: `flex`,
-                    flexWrap: `wrap`,
-                    justifyContent: `space-between`,
-                    listStyle: `none`,
-                    padding: 0,
-                    marginLeft: 0,
+                    marginTop: rhythm(1),
+                    marginBottom: 0,
+                    color: '#DE3163',
                   }}
                 >
-                  <li>
-                    {previous && (
-                      <Link to={previous.fields.slug} rel="prev">
-                        ← {previous.frontmatter.title}
-                      </Link>
-                    )}
-                  </li>
-                  <li>
-                    {next && (
-                      <Link to={next.fields.slug} rel="next">
-                        {next.frontmatter.title} →
-                      </Link>
-                    )}
-                  </li>
-                </ul>
-              </nav>
-            </header>
+                  {post.frontmatter.title}
+                </h1>
 
+                {/* Date */}
+                <p
+                  style={{
+                    ...scale(-1 / 5),
+                    display: `block`,
+                    marginBottom: rhythm(1),
+                  }}
+                >
+                  {post.frontmatter.date}
+                </p>
+
+                {/* Top Navigation */}
+                <nav>
+                  <ul
+                    style={{
+                      display: `flex`,
+                      flexWrap: `wrap`,
+                      justifyContent: `space-between`,
+                      listStyle: `none`,
+                      padding: 0,
+                      marginLeft: 0,
+                      marginBottom: rhythm(1),
+                    }}
+                  >
+                    <li>
+                      {previous && (
+                        <Link to={previous.fields.slug} rel="prev">
+                          ← {previous.frontmatter.title}
+                        </Link>
+                      )}
+                    </li>
+                    <li>
+                      {next && (
+                        <Link to={next.fields.slug} rel="next">
+                          {next.frontmatter.title} →
+                        </Link>
+                      )}
+                    </li>
+                  </ul>
+                </nav>
+              </header>
+
+              {/* Calendar Toggle Button */}
+              <div
+                style={{
+                  marginBottom: '1rem',
+                }}
+              >
+                <CalendarToggle />
+              </div>
+
+              {/* Calendar */}
+              {calendarVisible && (
+                <div style={{ marginBottom: rhythm(1) }}>
+                  <Calendar />
+                </div>
+              )}
+            </article>
+          </div>
+
+          {/* Canvas - Shows on mobile between calendar and audio player */}
+          <div className="canvas-section">
             {typeof window !== 'undefined' && (
               <React.Suspense
                 fallback={
                   <div
-                    style={
-                      {
-                        // width: '100%',
-                        // height: '100%',
-                        // position: 'fixed',
-                        // top: 0,
-                        // left: 0,
-                        // zIndex: -1,
-                        // backgroundColor: '#000',
-                      }
-                    }
-                  />
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: '#000',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '14px',
+                    }}
+                  >
+                    Loading visual...
+                  </div>
                 }
               >
-                <AudioReactiveGridSketch markovText={markovText} style={{}} />
+                <AudioReactiveGridSketch
+                  markovText={markovText}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                  }}
+                />
               </React.Suspense>
             )}
+          </div>
 
-            {/* <div
-          style={{
-            marginBottom: rhythm(2),
-            width: '100%',
-          }}
-        >
-          <GridSketch
-            style={{
-              width: '100%',
-              height: '400px',
-            }}
-          />
-        </div> */}
-            {/* Calendar Toggle Button */}
-            <div
-              style={{
-                marginBottom: '1rem',
-                // display: 'flex',
-                // justifyContent: 'center',
-              }}
-            >
-              <CalendarToggle />
-            </div>
-            {calendarVisible && <Calendar />}
-            <section dangerouslySetInnerHTML={{ __html: post.html }} />
-            <footer>
-              <Bio />
-            </footer>
-          </article>
+          {/* Audio Player - After canvas on mobile */}
+          <div className="audio-player-section">
+            {audioUrls.length > 0 && (
+              <div style={{ marginBottom: rhythm(1) }}>
+                <BlogAudioPlayer
+                  audioUrls={audioUrls}
+                  postTitle={post.frontmatter.title}
+                  postDate={post.frontmatter.date}
+                />
+              </div>
+            )}
+          </div>
 
-          <nav>
-            <ul
-              style={{
-                display: `flex`,
-                flexWrap: `wrap`,
-                justifyContent: `space-between`,
-                listStyle: `none`,
-                padding: 0,
-                marginLeft: 0,
-              }}
-            >
-              <li>
-                {previous && (
-                  <Link to={previous.fields.slug} rel="prev">
-                    ← {previous.frontmatter.title}
-                  </Link>
-                )}
-              </li>
-              <li>
-                {next && (
-                  <Link to={next.fields.slug} rel="next">
-                    {next.frontmatter.title} →
-                  </Link>
-                )}
-              </li>
-            </ul>
-          </nav>
+          {/* Post Content and Footer */}
+          <div className="post-content-section">
+            <article>
+              {/* Markov Text (Post Content) */}
+              <section
+                style={{ marginBottom: rhythm(2) }}
+                dangerouslySetInnerHTML={{ __html: cleanedHtml }}
+              />
+
+              <footer>
+                <Bio />
+              </footer>
+            </article>
+
+            {/* Bottom Navigation */}
+            <nav style={{ marginTop: rhythm(2) }}>
+              <ul
+                style={{
+                  display: `flex`,
+                  flexWrap: `wrap`,
+                  justifyContent: `space-between`,
+                  listStyle: `none`,
+                  padding: 0,
+                  marginLeft: 0,
+                }}
+              >
+                <li>
+                  {previous && (
+                    <Link to={previous.fields.slug} rel="prev">
+                      ← {previous.frontmatter.title}
+                    </Link>
+                  )}
+                </li>
+                <li>
+                  {next && (
+                    <Link to={next.fields.slug} rel="next">
+                      {next.frontmatter.title} →
+                    </Link>
+                  )}
+                </li>
+              </ul>
+            </nav>
+          </div>
         </div>
-        {/* Audio-Reactive Grid Sketch at the top of each blog post */}
-        {/* <div
-          style={{
-            marginBottom: rhythm(2),
-            width: '100%',
-            // position: 'relative',
-          }}
-        > */}
 
-        {/* </div> */}
+        {/* Right Column - Audio Reactive Grid Sketch (Desktop only) */}
+        <div className="right-column">
+          {typeof window !== 'undefined' && (
+            <React.Suspense
+              fallback={
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: '#000',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '14px',
+                  }}
+                >
+                  Loading visual...
+                </div>
+              }
+            >
+              <AudioReactiveGridSketch
+                markovText={markovText}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            </React.Suspense>
+          )}
+        </div>
       </div>
     </Layout>
   )
