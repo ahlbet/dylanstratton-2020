@@ -185,6 +185,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                   audioUrls={audioUrls}
                   postTitle={post.frontmatter.title}
                   postDate={post.frontmatter.date}
+                  coverArtUrl={post.frontmatter.cover_art}
                 />
               </div>
             )}
@@ -287,6 +288,7 @@ export const pageQuery = graphql`
       frontmatter {
         title
         date(formatString: "MMMM DD, YYYY")
+        cover_art
       }
       fields {
         slug

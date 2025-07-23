@@ -2,6 +2,79 @@
 
 This directory contains utility scripts for the project.
 
+## setup-cover-art-bucket.js
+
+A script to set up and manage the Supabase cover-art bucket system for blog post cover art.
+
+### Usage
+```bash
+# Initial setup - creates bucket with proper permissions
+node scripts/setup-cover-art-bucket.js setup
+
+# List all cover art files in the bucket
+node scripts/setup-cover-art-bucket.js list
+
+# Test bucket access and permissions
+node scripts/setup-cover-art-bucket.js test
+
+# Delete a specific cover art file
+node scripts/setup-cover-art-bucket.js delete 25jul01.png
+
+# Show help information
+node scripts/setup-cover-art-bucket.js help
+```
+
+### What it does
+- Creates the `cover-art` bucket in Supabase Storage with public access
+- Configures proper MIME type restrictions (PNG, JPEG, JPG)
+- Sets file size limits (10MB maximum)
+- Provides tools to list, test, and manage cover art files
+- Works with the cover art generation system in `init.js`
+
+### Cover Art System
+Cover art is automatically generated for each blog post using the Tat sketch algorithm:
+- **Deterministic**: Same post name always generates the same cover art
+- **High Quality**: 2500x2500 PNG images optimized for display
+- **Visual Style**: Matches the aesthetic of the Tat sketch with geometric patterns
+- **Integration**: Automatically displayed in the react-list-player header
+
+## backfill-cover-art.js
+
+A script to add cover art to all existing blog posts that don't already have it.
+
+### Usage
+```bash
+# Preview what would be processed (recommended first step)
+node scripts/backfill-cover-art.js --dry-run
+
+# Backfill all posts with cover art (creates backups)
+node scripts/backfill-cover-art.js
+
+# Process only posts from July 2025
+node scripts/backfill-cover-art.js --filter=25jul
+
+# Process without creating backups (not recommended)
+node scripts/backfill-cover-art.js --no-backup
+
+# Show help information
+node scripts/backfill-cover-art.js --help
+```
+
+### What it does
+- Scans all blog posts in `content/blog/` for posts missing cover art
+- Generates 4x4 grid cover art using the Tat sketch algorithm
+- Uploads cover art to the Supabase `cover-art` bucket
+- Updates blog post frontmatter with the cover art URL
+- Creates timestamped backups for safety
+- Processes posts with 1-second delays to be gentle on Supabase
+
+### Safety Features
+- **Dry run mode** to preview changes before execution
+- **Automatic backups** with timestamps (unless `--no-backup`)
+- **Smart detection** only processes posts that don't already have cover art
+- **Error handling** continues processing even if individual posts fail
+- **Cache busting** adds timestamps to URLs to prevent browser caching issues
+
 ## setup-markov-bucket.js
 
 A script to set up and manage the Supabase markov-text bucket system.

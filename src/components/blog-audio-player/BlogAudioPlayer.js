@@ -3,7 +3,7 @@ import { ListPlayer, ListPlayerContext } from 'react-list-player'
 import JSZip from 'jszip'
 import './BlogAudioPlayer.css'
 
-const BlogAudioPlayer = ({ audioUrls, postTitle, postDate }) => {
+const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
   const [selectedTrack, setSelectedTrack] = useState(-1) // -1 means no track selected
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -169,13 +169,13 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate }) => {
         ],
         duration: duration,
         src: url,
-        imageSrc: null, // No album artwork for now
+        imageSrc: coverArtUrl || null, // Use cover art from blog post
         // Add custom data for download
         downloadUrl: url,
         downloadFilename: filename,
       }
     })
-  }, [audioUrls, postTitle, postDate, trackDurations])
+  }, [audioUrls, postTitle, postDate, trackDurations, coverArtUrl])
 
   // Calculate total playlist duration
   const totalDuration = useMemo(() => {
