@@ -13,6 +13,7 @@ import {
   extractAudioUrls,
   removeAudioFromHtml,
 } from '../../utils/extractAudioUrls'
+import './blog-post.css'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
 
@@ -64,93 +65,6 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
         title={post.frontmatter.title}
         description={post.frontmatter.description || post.excerpt}
       />
-
-      {/* Responsive CSS */}
-      <style jsx>{`
-        .blog-layout-container {
-          display: flex;
-          min-height: 100vh;
-          gap: 2rem;
-        }
-
-        .left-column {
-          flex: 1 1 50%;
-          max-width: 50%;
-          padding-right: 1rem;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .right-column {
-          flex: 1 1 50%;
-          max-width: 50%;
-          position: sticky;
-          top: 0;
-          height: 100vh;
-        }
-
-        .content-section {
-          order: 1;
-        }
-
-        .canvas-section {
-          order: 2;
-          display: none; /* Hide on desktop - only show in right column */
-        }
-
-        .audio-player-section {
-          order: 3;
-        }
-
-        .post-content-section {
-          order: 4;
-        }
-
-        @media (max-width: 768px) {
-          .blog-layout-container {
-            flex-direction: column;
-            gap: 1rem;
-          }
-
-          .left-column {
-            flex: 1;
-            max-width: 100%;
-            padding-right: 0;
-          }
-
-          .right-column {
-            display: none; /* Hide right column on mobile */
-          }
-
-          /* Reorder elements on mobile */
-          .content-section {
-            order: 1;
-          }
-
-          .canvas-section {
-            order: 2;
-            display: block; /* Show on mobile */
-            height: 50vh;
-            min-height: 400px;
-            margin-bottom: 1rem;
-          }
-
-          .audio-player-section {
-            order: 3;
-          }
-
-          .post-content-section {
-            order: 4;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .canvas-section {
-            height: 40vh;
-            min-height: 300px;
-          }
-        }
-      `}</style>
 
       {/* 2-Column Layout Container */}
       <div className="blog-layout-container">
