@@ -98,7 +98,8 @@ export default async function handler(req, res) {
     // Return the combined text content for client-side generation
     const textContent = generator.lines.join('\n')
 
-    return res.status(200).json({
+    // Check response size and limit if necessary
+    const responseData = {
       text: textContent,
       stats: {
         lines: generator.lines.length,
@@ -106,7 +107,38 @@ export default async function handler(req, res) {
         ngramsCount: Object.keys(generator.ngrams).length,
         beginningsCount: generator.beginnings.length,
       },
-    })
+    }
+
+    const responseSize = JSON.stringify(responseData).length
+    const maxSize = 5 * 1024 * 1024 // 5MB limit for Netlify
+
+    if (responseSize > maxSize) {
+      console.warn(
+        `⚠️ Response too large (${responseSize} bytes), limiting text content`
+      )
+
+      // Reduce text content to fit within limits
+      const maxTextSize = 4 * 1024 * 1024 // Leave room for stats
+      let limitedText = textContent
+
+      if (limitedText.length > maxTextSize) {
+        // Take first 4MB of text
+        limitedText = limitedText.substring(0, maxTextSize)
+        // Try to end at a complete line
+        const lastNewline = limitedText.lastIndexOf('\n')
+        if (lastNewline > maxTextSize * 0.9) {
+          // If we can find a newline in last 10%
+          limitedText = limitedText.substring(0, lastNewline)
+        }
+      }
+
+      responseData.text = limitedText
+      responseData.stats.characters = limitedText.length
+      responseData.stats.lines = limitedText.split('\n').length
+      responseData.stats.truncated = true
+    }
+
+    return res.status(200).json(responseData)
   } catch (error) {
     console.error('❌ API: Error in markov-text endpoint:', error)
     return res.status(500).json({ error: 'Internal server error' })
