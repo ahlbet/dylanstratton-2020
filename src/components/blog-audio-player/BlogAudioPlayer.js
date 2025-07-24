@@ -49,12 +49,30 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     }
   }, [])
 
+  // Disable auto-scroll behavior
+  useEffect(() => {
+    const disableAutoScroll = () => {
+      // Override scrollIntoView on all elements within the player
+      const elements = document.querySelectorAll('.blog-audio-player *')
+      elements.forEach((element) => {
+        const originalScrollIntoView = element.scrollIntoView
+        element.scrollIntoView = () => {
+          // Do nothing - prevent scrolling
+        }
+      })
+    }
+
+    // Run after component mounts and after any track changes
+    const timer = setTimeout(disableAutoScroll, 100)
+
+    return () => clearTimeout(timer)
+  }, [selectedTrack]) // Re-run when selectedTrack changes
+
   // Download all audio files as ZIP function
   const downloadAllAudio = useCallback(async () => {
     if (isDownloadingZip) return // Prevent multiple simultaneous downloads
 
     setIsDownloadingZip(true)
-    console.log('Creating ZIP file with all audio files...')
 
     // Capture current values to avoid dependency issues
     const currentAudioUrls = audioUrls
@@ -75,11 +93,9 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
         const filename = urlParts[urlParts.length - 1]
 
         try {
-          console.log(`Fetching: ${filename}`)
           const response = await fetch(url)
           const blob = await response.blob()
           folder.file(filename, blob)
-          console.log(`Added to ZIP: ${filename}`)
           return { success: true, filename }
         } catch (error) {
           console.error(`Failed to fetch ${filename}:`, error)
@@ -92,8 +108,6 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
       const successful = results.filter((r) => r.success).length
       const failed = results.filter((r) => !r.success).length
 
-      console.log(`ZIP creation: ${successful} successful, ${failed} failed`)
-
       if (successful === 0) {
         alert('Failed to download any files. Please try again.')
         setIsDownloadingZip(false)
@@ -101,7 +115,6 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
       }
 
       // Generate ZIP file
-      console.log('Generating ZIP file...')
       const zipBlob = await zip.generateAsync({
         type: 'blob',
         compression: 'DEFLATE',
@@ -119,8 +132,6 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
 
       // Clean up
       window.URL.revokeObjectURL(downloadUrl)
-
-      console.log('ZIP download complete!')
 
       if (failed > 0) {
         alert(
@@ -627,6 +638,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
           playCallback={handlePlay}
           pauseCallback={handlePause}
           muteCallback={handleMute}
+          autoScroll={false}
         />
       </ListPlayerContext.Provider>
     </div>

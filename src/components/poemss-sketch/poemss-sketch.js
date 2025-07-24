@@ -21,7 +21,6 @@ const PoemssSketchSketch = (p) => {
       const response = await fetch('/448.txt')
       const text = await response.text()
       lines = text.split('\n').filter((line) => line.trim().length > 0)
-      console.log('Loaded text from 448.txt for p5 sketch')
     } catch (error) {
       console.error('Error loading 448.txt for p5 sketch:', error)
       // Fallback to sample text if file loading fails
@@ -37,7 +36,6 @@ const PoemssSketchSketch = (p) => {
         'The early bird catches the worm.',
         "Don't judge a book by its cover.",
       ]
-      console.log('Using fallback text for p5 sketch')
     }
 
     createdLines = lines

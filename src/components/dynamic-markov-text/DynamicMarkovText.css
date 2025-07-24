@@ -1,0 +1,206 @@
+/* Dynamic Markov Text Component Styles */
+.dynamic-markov-text {
+  margin-top: 2rem;
+}
+
+/* Generation indicator */
+.generation-indicator {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  opacity: 0.7;
+  font-size: 0.9rem;
+  color: #DE3163;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #DE3163;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+
+.generation-text {
+  font-style: italic;
+}
+
+/* Generated content container */
+.generated-content {
+  margin-top: 1.5rem;
+}
+
+/* Separator line */
+.separator {
+  display: flex;
+  align-items: center;
+  margin: 2rem 0 1.5rem 0;
+  opacity: 0.6;
+}
+
+.separator::before,
+.separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #DE3163, transparent);
+}
+
+.separator span {
+  padding: 0 1rem;
+  font-size: 0.8rem;
+  color: #DE3163;
+  font-family: 'Montserrat', sans-serif;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Generated text lines */
+.generated-line {
+  margin: 1.5rem 0;
+  padding-left: 1.5rem;
+  border-left: 3px solid #DE3163;
+  font-style: italic;
+  color: #666;
+  line-height: 1.6;
+  /* opacity: 0; */
+  transform: translateY(20px);
+  /* animation: fadeInUp 0.8s ease-out forwards; */
+  position: relative;
+  /* background: linear-gradient(135deg, rgba(222, 49, 99, 0.02), rgba(222, 49, 99, 0.05)); */
+  border-radius: 0 4px 4px 0;
+  padding: 1rem 1rem 1rem 1.5rem;
+  
+  /* Ensure proper text wrapping */
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  max-width: 100%;
+}
+
+/* Stagger animation for multiple lines */
+.generated-line:nth-child(2) { animation-delay: 0.2s; }
+.generated-line:nth-child(3) { animation-delay: 0.4s; }
+.generated-line:nth-child(4) { animation-delay: 0.6s; }
+.generated-line:nth-child(5) { animation-delay: 0.8s; }
+.generated-line:nth-child(n+6) { animation-delay: 1s; }
+
+@keyframes fadeInUp {
+  to {
+    opacity: 0.8;
+    transform: translateY(0);
+  }
+}
+
+/* Subtle glow effect on hover */
+.generated-line:hover {
+  /* opacity: 1;
+  background: linear-gradient(135deg, rgba(222, 49, 99, 0.05), rgba(222, 49, 99, 0.08));
+  transition: all 0.3s ease; */
+}
+
+/* Add a subtle typing effect to new lines */
+.generated-line:last-child::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background-color: #DE3163;
+  margin-left: 2px;
+  animation: blink 1s infinite;
+}
+
+/* Remove typing cursor when there's active typing to prevent double cursors */
+.generated-line.typing::after {
+  display: none;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Remove typing cursor after 3 seconds */
+.generated-line:not(:last-child)::after {
+  display: none;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .generated-line {
+    /* color: #bbb; */
+    /* background: linear-gradient(135deg, rgba(222, 49, 99, 0.08), rgba(222, 49, 99, 0.12)); */
+  }
+  
+  .generated-line:hover {
+    /* color: #ddd; */
+    /* background: linear-gradient(135deg, rgba(222, 49, 99, 0.12), rgba(222, 49, 99, 0.15)); */
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dynamic-markov-text {
+    margin-top: 1.5rem;
+  }
+  
+  .generated-line {
+    padding: 0.8rem 0.8rem 0.8rem 1rem;
+    margin: 1rem 0;
+  }
+  
+  .separator {
+    margin: 1.5rem 0 1rem 0;
+  }
+  
+  .separator span {
+    font-size: 0.7rem;
+    padding: 0 0.8rem;
+  }
+} 
+
+.generated-line.typing {
+  opacity: 0.8;
+  
+  /* Extra emphasis on text wrapping for typing lines */
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  hyphens: auto;
+}
+
+.typing-cursor {
+  animation: blink 1s infinite;
+  color: #007acc;
+  font-weight: bold;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+} 

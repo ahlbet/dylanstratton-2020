@@ -112,4 +112,37 @@
 .blog-audio-player .track-duration,
 .blog-audio-player .text {
   font-family: 'Montserrat', sans-serif !important;
+}
+
+/* Disable auto-scroll behavior */
+.blog-audio-player .list-body {
+  scroll-behavior: auto !important;
+}
+
+.blog-audio-player .track.selected {
+  scroll-margin: 0 !important;
+}
+
+/* More aggressive auto-scroll prevention */
+.blog-audio-player * {
+  scroll-behavior: auto !important;
+}
+
+.blog-audio-player .list-player {
+  scroll-behavior: auto !important;
+}
+
+.blog-audio-player .track {
+  scroll-margin: 0 !important;
+  scroll-padding: 0 !important;
+}
+
+/* Override any smooth scrolling */
+.blog-audio-player .list-body,
+.blog-audio-player .list-player,
+.blog-audio-player .track,
+.blog-audio-player .track.selected {
+  scroll-behavior: auto !important;
+  scroll-margin: 0 !important;
+  scroll-padding: 0 !important;
 } 
