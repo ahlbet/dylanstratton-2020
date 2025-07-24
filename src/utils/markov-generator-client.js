@@ -7,6 +7,8 @@ class MarkovGeneratorClient {
     this.ngrams = {}
     this.beginnings = []
     this.lines = []
+    this.recentBeginnings = [] // Track recently used beginnings
+    this.maxRecentBeginnings = 5 // Keep track of last 5 used
   }
 
   // Load text from API endpoint with caching
@@ -91,14 +93,77 @@ class MarkovGeneratorClient {
       return
     }
 
-    // Apply the same cleaning logic as server-side
-    const lines = text
+    // Apply the same comprehensive cleaning logic as server-side
+    const cleanedText = this.cleanText(text)
+    const lines = cleanedText
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
+      // Filter out only the most problematic lines
+      .filter((line) => {
+        // Skip lines that are too short
+        if (line.length < 5) return false
+        // Skip lines that are just numbers
+        if (/^\d+$/.test(line)) return false
+        // Skip lines that are mostly punctuation
+        if (/^[^a-zA-Z]*$/.test(line)) return false
+        return true
+      })
 
     this.lines = lines
     this.buildNgrams()
+  }
+
+  // Clean text to remove character names and formatting artifacts
+  cleanText(text) {
+    if (!text) return text
+
+    // Much more conservative cleaning - only remove obvious headers
+    return (
+      text
+        // Remove Gutenberg header and metadata
+        .replace(
+          /The Project Gutenberg eBook.*?START OF THE PROJECT GUTENBERG EBOOK.*?by William Shakespeare\s*/gs,
+          ''
+        )
+        .replace(/Title:.*?Language: English\s*/gs, '')
+        .replace(/Release date:.*?Language: English\s*/gs, '')
+        .replace(/Most recently updated:.*?Language: English\s*/gs, '')
+        .replace(/Contents\s*/gi, '')
+        .replace(/THE SONNETS\s*/gi, '')
+        // Remove only the most obvious headers (exact matches only)
+        .replace(/^ALL'S WELL THAT ENDS WELL$/gim, '')
+        .replace(/^THE TRAGEDY OF MACBETH$/gim, '')
+        .replace(/^HAMLET, PRINCE OF DENMARK$/gim, '')
+        .replace(/^ROMEO AND JULIET$/gim, '')
+        .replace(/^A MIDSUMMER NIGHT'S DREAM$/gim, '')
+        .replace(/^THE MERCHANT OF VENICE$/gim, '')
+        .replace(/^MUCH ADO ABOUT NOTHING$/gim, '')
+        .replace(/^AS YOU LIKE IT$/gim, '')
+        .replace(/^TWELFTH NIGHT$/gim, '')
+        .replace(/^KING LEAR$/gim, '')
+        .replace(/^OTHELLO$/gim, '')
+        .replace(/^JULIUS CAESAR$/gim, '')
+        .replace(/^THE TEMPEST$/gim, '')
+        .replace(/^HENRY IV$/gim, '')
+        .replace(/^HENRY V$/gim, '')
+        .replace(/^RICHARD II$/gim, '')
+        .replace(/^RICHARD III$/gim, '')
+        .replace(/^KING JOHN$/gim, '')
+        // Remove stage directions in brackets/parentheses
+        .replace(/\[.*?\]/g, '')
+        .replace(/\(.*?\)/g, '')
+        // Remove only obvious formatting artifacts
+        .replace(/^Act\s+[IVX]+$/gim, '')
+        .replace(/^Scene\s+[IVX]+$/gim, '')
+        .replace(/^Enter\s+/gim, '')
+        .replace(/^Exit\s+/gim, '')
+        .replace(/^Exeunt\s+/gim, '')
+        // Remove excessive whitespace but preserve line breaks
+        .replace(/[ \t]+/g, ' ') // Replace multiple spaces/tabs with single space
+        .replace(/\n\s*\n\s*\n+/g, '\n\n') // Replace multiple newlines with double newlines
+        .trim()
+    )
   }
 
   // Clean and compile text from array
@@ -144,8 +209,41 @@ class MarkovGeneratorClient {
       return ''
     }
 
-    let result =
-      this.beginnings[Math.floor(Math.random() * this.beginnings.length)]
+    // Try multiple random beginnings to get variety
+    let result = ''
+    let attempts = 0
+    const maxAttempts = 20
+
+    while (attempts < maxAttempts) {
+      const randomIndex = Math.floor(Math.random() * this.beginnings.length)
+      const beginning = this.beginnings[randomIndex]
+
+      // Skip if this beginning is too short or problematic
+      if (
+        beginning.length < 5 ||
+        beginning.includes('_') ||
+        beginning.includes('[')
+      ) {
+        attempts++
+        continue
+      }
+
+      // Skip if we've used this beginning recently
+      if (this.recentBeginnings.includes(beginning)) {
+        attempts++
+        continue
+      }
+
+      result = beginning
+      break
+    }
+
+    // If we couldn't find a good beginning, use any available one
+    if (!result && this.beginnings.length > 0) {
+      result =
+        this.beginnings[Math.floor(Math.random() * this.beginnings.length)]
+    }
+
     let sentenceCount = 0
 
     for (let i = 0; i < maxLength; i++) {
@@ -168,16 +266,85 @@ class MarkovGeneratorClient {
       }
     }
 
+    // Clean the generated text
+    result = this.cleanGeneratedText(result)
+
+    // Track this beginning to avoid repetition
+    if (result && this.recentBeginnings.length >= this.maxRecentBeginnings) {
+      this.recentBeginnings.shift() // Remove oldest
+    }
+    this.recentBeginnings.push(result.substring(0, this.order))
+
     return result
+  }
+
+  // Clean generated text to remove character names and formatting artifacts
+  cleanGeneratedText(text) {
+    if (!text) return text
+
+    let cleaned = text
+      // Remove stage directions in brackets/parentheses
+      .replace(/\[.*?\]/g, '')
+      .replace(/\(.*?\)/g, '')
+      // Remove common play formatting artifacts
+      .replace(/Act\s+[IVX]+/gi, '')
+      .replace(/Scene\s+[IVX]+/gi, '')
+      .replace(/Enter\s+/gi, '')
+      .replace(/Exit\s+/gi, '')
+      .replace(/Exeunt\s+/gi, '')
+      // Remove formatting artifacts like underscores and brackets
+      .replace(/[_\[\]]/g, '')
+      // Remove excessive whitespace
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    // If cleaning resulted in empty or very short text, return the original
+    if (!cleaned || cleaned.length < 10) {
+      return text
+    }
+
+    return cleaned
   }
 
   // Generate multiple lines
   generateMultipleLines(count = 1, maxLength = 500, maxSentences = 2) {
     const lines = []
-    for (let i = 0; i < count; i++) {
-      lines.push(this.generateText(maxLength, maxSentences))
+    let attempts = 0
+    const maxAttempts = count * 10 // Allow more attempts to get good lines
+
+    while (lines.length < count && attempts < maxAttempts) {
+      const line = this.generateText(maxLength, maxSentences)
+
+      // Filter out problematic lines
+      if (line && line.length > 20 && !this.containsOnlyCharacterName(line)) {
+        lines.push(line)
+      }
+
+      attempts++
     }
+
     return lines
+  }
+
+  // Check if text contains only a character name or is problematic
+  containsOnlyCharacterName(text) {
+    const trimmed = text.trim()
+
+    // Check if text is just numbers
+    if (/^\d+$/.test(trimmed)) return true
+
+    // Check if text is too short (less than 3 words)
+    const words = trimmed.split(/\s+/).filter((word) => word.length > 0)
+    if (words.length < 3) return true
+
+    // Check if text has excessive formatting artifacts
+    if (trimmed.includes('_') || trimmed.includes('[') || trimmed.includes(']'))
+      return true
+
+    // Check if text is mostly whitespace
+    if (trimmed.length < 10) return true
+
+    return false
   }
 
   // Cache management

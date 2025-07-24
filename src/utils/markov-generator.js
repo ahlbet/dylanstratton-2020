@@ -220,11 +220,66 @@ class MarkovGenerator {
 
     // Clean and normalize the text
     combinedText = combinedText
+      // Remove Gutenberg header and metadata
+      .replace(
+        /The Project Gutenberg eBook.*?START OF THE PROJECT GUTENBERG EBOOK.*?by William Shakespeare\s*/gs,
+        ''
+      )
+      .replace(/Title:.*?Language: English\s*/gs, '')
+      .replace(/Release date:.*?Language: English\s*/gs, '')
+      .replace(/Most recently updated:.*?Language: English\s*/gs, '')
+      .replace(/Contents\s*/gi, '')
+      .replace(/THE SONNETS\s*/gi, '')
+      // Remove play titles and headers
+      .replace(/ALL'S WELL THAT ENDS WELL\s*/gi, '')
+      .replace(/THE TRAGEDY OF MACBETH\s*/gi, '')
+      .replace(/THE COMEDY OF ERRORS\s*/gi, '')
+      .replace(/HAMLET, PRINCE OF DENMARK\s*/gi, '')
+      .replace(/ROMEO AND JULIET\s*/gi, '')
+      .replace(/A MIDSUMMER NIGHT'S DREAM\s*/gi, '')
+      .replace(/THE MERCHANT OF VENICE\s*/gi, '')
+      .replace(/MUCH ADO ABOUT NOTHING\s*/gi, '')
+      .replace(/AS YOU LIKE IT\s*/gi, '')
+      .replace(/TWELFTH NIGHT\s*/gi, '')
+      .replace(/THE TAMING OF THE SHREW\s*/gi, '')
+      .replace(/KING LEAR\s*/gi, '')
+      .replace(/OTHELLO\s*/gi, '')
+      .replace(/JULIUS CAESAR\s*/gi, '')
+      .replace(/ANTONY AND CLEOPATRA\s*/gi, '')
+      .replace(/CORIOLANUS\s*/gi, '')
+      .replace(/TITUS ANDRONICUS\s*/gi, '')
+      .replace(/PERICLES\s*/gi, '')
+      .replace(/CYMBELINE\s*/gi, '')
+      .replace(/THE WINTER'S TALE\s*/gi, '')
+      .replace(/THE TEMPEST\s*/gi, '')
+      .replace(/HENRY IV\s*/gi, '')
+      .replace(/HENRY V\s*/gi, '')
+      .replace(/HENRY VI\s*/gi, '')
+      .replace(/HENRY VIII\s*/gi, '')
+      .replace(/RICHARD II\s*/gi, '')
+      .replace(/RICHARD III\s*/gi, '')
+      .replace(/KING JOHN\s*/gi, '')
+      .replace(/MEASURE FOR MEASURE\s*/gi, '')
+      .replace(/TROILUS AND CRESSIDA\s*/gi, '')
+      .replace(/TIMON OF ATHENS\s*/gi, '')
+      .replace(/LOVE'S LABOUR'S LOST\s*/gi, '')
+      .replace(/THE TWO GENTLEMEN OF VERONA\s*/gi, '')
+      .replace(/THE MERRY WIVES OF WINDSOR\s*/gi, '')
+      .replace(/THE LIFE AND DEATH OF KING JOHN\s*/gi, '')
+      .replace(/THE FIRST PART OF KING HENRY IV\s*/gi, '')
+      .replace(/THE SECOND PART OF KING HENRY IV\s*/gi, '')
+      .replace(/THE LIFE OF KING HENRY V\s*/gi, '')
+      .replace(/THE FIRST PART OF KING HENRY VI\s*/gi, '')
+      .replace(/THE SECOND PART OF KING HENRY VI\s*/gi, '')
+      .replace(/THE THIRD PART OF KING HENRY VI\s*/gi, '')
+      .replace(/THE LIFE AND DEATH OF RICHARD III\s*/gi, '')
+      .replace(/THE LIFE OF KING HENRY VIII\s*/gi, '')
+      .replace(/THE TRAGEDY OF\s*/gi, '')
+      .replace(/THE COMEDY OF\s*/gi, '')
+      .replace(/THE HISTORY OF\s*/gi, '')
       // Remove stage directions in brackets/parentheses
       .replace(/\[.*?\]/g, '')
       .replace(/\(.*?\)/g, '')
-      // Remove all-caps words (character names like HAMLET, JULIET, etc.)
-      .replace(/\b[A-Z]{2,}\b\.?/g, '')
       // Remove common play formatting artifacts
       .replace(/Act\s+[IVX]+/gi, '')
       .replace(/Scene\s+[IVX]+/gi, '')
@@ -248,6 +303,34 @@ class MarkovGenerator {
       .replace(/\s{2,}/g, ' ')
 
     return combinedText
+  }
+
+  // Clean generated text to remove character names and formatting artifacts
+  cleanGeneratedText(text) {
+    if (!text) return text
+
+    let cleaned = text
+      // Remove stage directions in brackets/parentheses
+      .replace(/\[.*?\]/g, '')
+      .replace(/\(.*?\)/g, '')
+      // Remove common play formatting artifacts
+      .replace(/Act\s+[IVX]+/gi, '')
+      .replace(/Scene\s+[IVX]+/gi, '')
+      .replace(/Enter\s+/gi, '')
+      .replace(/Exit\s+/gi, '')
+      .replace(/Exeunt\s+/gi, '')
+      // Remove formatting artifacts like underscores and brackets
+      .replace(/[_\[\]]/g, '')
+      // Remove excessive whitespace
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    // If cleaning resulted in empty or very short text, return the original
+    if (!cleaned || cleaned.length < 10) {
+      return text
+    }
+
+    return cleaned
   }
 
   // Fallback to local file (backwards compatibility)
@@ -318,13 +401,46 @@ class MarkovGenerator {
 
   generateMultipleLines(count = 5, maxLength = 1000, maxSentences = 2) {
     const lines = []
-    for (let i = 0; i < count; i++) {
+    let attempts = 0
+    const maxAttempts = count * 3 // Allow more attempts to get good lines
+
+    while (lines.length < count && attempts < maxAttempts) {
       const generated = this.generateText(maxLength, maxSentences)
       if (generated) {
-        lines.push(generated)
+        // Additional filtering for character names and short lines
+        const cleaned = this.cleanGeneratedText(generated)
+        if (
+          cleaned &&
+          cleaned.length > 15 &&
+          !this.containsOnlyCharacterName(cleaned)
+        ) {
+          lines.push(cleaned)
+        }
       }
+      attempts++
     }
     return lines
+  }
+
+  // Check if text contains only a character name or is problematic
+  containsOnlyCharacterName(text) {
+    const trimmed = text.trim()
+
+    // Check if text is just numbers
+    if (/^\d+$/.test(trimmed)) return true
+
+    // Check if text is too short (less than 3 words)
+    const words = trimmed.split(/\s+/).filter((word) => word.length > 0)
+    if (words.length < 3) return true
+
+    // Check if text has excessive formatting artifacts
+    if (trimmed.includes('_') || trimmed.includes('[') || trimmed.includes(']'))
+      return true
+
+    // Check if text is mostly whitespace
+    if (trimmed.length < 10) return true
+
+    return false
   }
 }
 
