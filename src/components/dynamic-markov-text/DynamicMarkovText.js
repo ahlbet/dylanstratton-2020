@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import MarkovGeneratorClient from '../../utils/markov-generator-client'
+import MarkovGeneratorAPIClient from '../../utils/markov-generator-api-client'
 import './DynamicMarkovText.css'
 
 const DynamicMarkovText = ({ className = '' }) => {
@@ -17,25 +17,29 @@ const DynamicMarkovText = ({ className = '' }) => {
   const isCurrentlyTypingRef = useRef(false) // Track if actively typing to prevent race conditions
   const totalLinesStartedRef = useRef(0) // Track total lines started (immediate updates)
 
-  // Initialize the markov generator by fetching text from Supabase
+  // Initialize the markov generator API client
   useEffect(() => {
     const initializeGenerator = async () => {
       try {
-        const generator = new MarkovGeneratorClient(9)
-        const success = await generator.loadTextFromAPI()
+        const generator = new MarkovGeneratorAPIClient()
+        const isAvailable = await generator.isAvailable()
 
-        if (success) {
+        if (isAvailable) {
           generatorRef.current = generator
+          console.log('✅ Markov generator API client initialized')
         } else {
-          console.error('❌ Failed to initialize markov generator')
+          console.error('❌ Markov generator API is not available')
         }
       } catch (error) {
-        console.error('❌ Error initializing markov generator:', error)
+        console.error(
+          '❌ Error initializing markov generator API client:',
+          error
+        )
       }
     }
 
     initializeGenerator()
-  }, []) // Remove markovText dependency since we're fetching from Supabase
+  }, [])
 
   // Check audio playback state
   const checkAudioPlayback = useCallback(() => {
@@ -59,12 +63,7 @@ const DynamicMarkovText = ({ className = '' }) => {
 
   // Start/stop generation based on audio playback
   useEffect(() => {
-    if (
-      audioPlaying &&
-      !isGenerating &&
-      generatorRef.current &&
-      !intervalRef.current
-    ) {
+    if (audioPlaying && generatorRef.current && !intervalRef.current) {
       setIsGenerating(true)
 
       // Test immediate generation - only if no content is currently being processed and under limit
@@ -73,40 +72,41 @@ const DynamicMarkovText = ({ className = '' }) => {
         pendingLines.length === 0 &&
         totalLinesStartedRef.current < 20
       ) {
-        try {
-          const testLine = generatorRef.current.generateText(600, 2)
-          if (testLine && testLine.length > 20) {
-            // Check if this exact text is already being typed or in the queue
-            const isDuplicate =
-              currentlyTyping?.originalText === testLine ||
-              pendingLines.some((line) => line.text === testLine) ||
-              generatedLines.includes(testLine)
+        // Async immediate generation
+        const generateImmediateLine = async () => {
+          try {
+            const testLine = await generatorRef.current.generateText(600, 2)
+            if (testLine && testLine.length > 20) {
+              // Check if this exact text is already being typed or in the queue
+              const isDuplicate =
+                currentlyTyping?.originalText === testLine ||
+                pendingLines.some((line) => line.text === testLine) ||
+                generatedLines.includes(testLine)
 
-            if (!isDuplicate) {
-              addTypewriterLine(testLine)
+              if (!isDuplicate) {
+                addTypewriterLine(testLine)
+              }
             }
+          } catch (error) {
+            console.error('❌ Immediate test failed:', error)
           }
-        } catch (error) {
-          console.error('❌ Immediate test failed:', error)
         }
+
+        generateImmediateLine()
       }
 
       // Generate text every 1-2 seconds while audio is playing
       const intervalTime = 1000 + Math.random() * 1000
 
-      intervalRef.current = setInterval(() => {
-        // Don't generate new text if something is actively typing, if there's content in the queue, or if we've hit the limit
-        if (
-          isCurrentlyTypingRef.current ||
-          pendingLines.length > 0 ||
-          totalLinesStartedRef.current >= 20
-        ) {
+      intervalRef.current = setInterval(async () => {
+        // Don't generate new text if we've hit the limit
+        if (totalLinesStartedRef.current >= 20) {
           return
         }
 
         if (generatorRef.current) {
           try {
-            const newLine = generatorRef.current.generateText(600, 2)
+            const newLine = await generatorRef.current.generateText(600, 2)
 
             if (newLine && newLine.length > 20) {
               // Check if this exact text is already being typed or in the queue
@@ -146,7 +146,7 @@ const DynamicMarkovText = ({ className = '' }) => {
         intervalRef.current = null
       }
     }
-  }, [audioPlaying])
+  }, [audioPlaying, currentlyTyping, pendingLines, generatedLines])
 
   // Set up audio monitoring
   useEffect(() => {
