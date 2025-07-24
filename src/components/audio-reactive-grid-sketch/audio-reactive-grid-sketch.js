@@ -965,10 +965,6 @@ const createAudioReactiveGridSketch =
         )
         particles.push(particle)
       }
-
-      console.log(
-        `Created ${particles.length} particles from ${tatShapePositions.length} TatsSketch positions with markov seed: ${markovSeed}`
-      )
     }
   }
 

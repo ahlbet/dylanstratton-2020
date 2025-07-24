@@ -33,6 +33,98 @@ class MarkovGenerator {
     }
   }
 
+  // New method to load from Supabase markov-text bucket with explicit credentials
+  async loadTextFromSupabaseWithCredentials(
+    supabaseUrl,
+    supabaseKey,
+    bucketName = 'markov-text'
+  ) {
+    if (!createClient || typeof window !== 'undefined') {
+      console.warn('Supabase not available, falling back to local file')
+      return this.loadTextFromFallback()
+    }
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.warn(
+        'Missing Supabase credentials passed directly, falling back to local file'
+      )
+      return this.loadTextFromFallback()
+    }
+
+    try {
+      const supabase = createClient(supabaseUrl, supabaseKey)
+
+      // List all txt files in the markov-text bucket
+      const { data: files, error: listError } = await supabase.storage
+        .from(bucketName)
+        .list('', {
+          limit: 100,
+          sortBy: { column: 'name', order: 'asc' },
+        })
+
+      if (listError) {
+        console.error('Error listing files from Supabase:', listError.message)
+        return this.loadTextFromFallback()
+      }
+
+      // Filter for .txt files
+      const txtFiles = files.filter(
+        (file) =>
+          file.name.toLowerCase().endsWith('.txt') &&
+          file.name !== '.emptyFolderPlaceholder'
+      )
+
+      if (txtFiles.length === 0) {
+        console.warn(
+          'No txt files found in markov-text bucket, falling back to local file'
+        )
+        return this.loadTextFromFallback()
+      }
+
+      // Download and combine all txt files
+      let allText = ''
+      let successfulDownloads = 0
+
+      for (const file of txtFiles) {
+        try {
+          const { data, error } = await supabase.storage
+            .from(bucketName)
+            .download(file.name)
+
+          if (error) {
+            console.error(`Error downloading ${file.name}:`, error.message)
+            continue
+          }
+
+          const text = await data.text()
+          allText += text + '\n'
+          successfulDownloads++
+        } catch (error) {
+          console.error(`Error processing ${file.name}:`, error.message)
+        }
+      }
+
+      if (successfulDownloads === 0) {
+        console.warn(
+          'No files successfully downloaded, falling back to local file'
+        )
+        return this.loadTextFromFallback()
+      }
+
+      // Process the combined text
+      this.lines = allText.split('\n').filter((line) => line.trim().length > 0)
+      this.buildNgrams()
+
+      return true
+    } catch (error) {
+      console.error(
+        'Error in loadTextFromSupabaseWithCredentials:',
+        error.message
+      )
+      return this.loadTextFromFallback()
+    }
+  }
+
   // New method to load from Supabase markov-text bucket
   async loadTextFromSupabase(bucketName = 'markov-text') {
     if (!createClient || typeof window !== 'undefined') {
@@ -80,8 +172,6 @@ class MarkovGenerator {
         return this.loadTextFromFallback()
       }
 
-      console.log(`Found ${txtFiles.length} txt files in markov-text bucket`)
-
       // Download and compile all txt files
       const allTextContent = []
 
@@ -98,38 +188,27 @@ class MarkovGenerator {
             continue
           }
 
-          // Convert blob to text
           const text = await fileData.text()
-          if (text.trim()) {
-            allTextContent.push(text)
-            console.log(`Loaded ${file.name} (${text.length} characters)`)
-          }
+          allTextContent.push(text)
         } catch (error) {
           console.error(`Error processing ${file.name}:`, error.message)
-          continue
         }
       }
 
       if (allTextContent.length === 0) {
-        console.warn('No valid text content found, falling back to local file')
+        console.warn(
+          'No files successfully downloaded, falling back to local file'
+        )
         return this.loadTextFromFallback()
       }
 
-      // Compile all text content
-      const compiledText = this.compileAndCleanText(allTextContent)
-
-      // Split into lines and build n-grams
-      this.lines = compiledText
-        .split('\n')
-        .filter((line) => line.trim().length > 0)
+      // Process the combined text
+      this.lines = this.compileAndCleanText(allTextContent)
       this.buildNgrams()
 
-      console.log(
-        `Successfully loaded and processed ${allTextContent.length} files with ${this.lines.length} lines`
-      )
       return true
     } catch (error) {
-      console.error('Error loading from Supabase:', error.message)
+      console.error('Error in loadTextFromSupabase:', error.message)
       return this.loadTextFromFallback()
     }
   }
@@ -254,7 +333,6 @@ async function generateBlogPostText(postName, linesCount = 5) {
   const generator = new MarkovGenerator(7)
 
   // Try to load from Supabase markov-text bucket first
-  console.log('Loading Markov text from Supabase markov-text bucket...')
   const success = await generator.loadTextFromSupabase('markov-text')
 
   if (!success) {

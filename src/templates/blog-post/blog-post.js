@@ -9,6 +9,7 @@ import CalendarToggle from '../../components/calendar/calendar-toggle'
 import { useUserPreferences } from '../../components/calendar/user-preferences-context'
 import GridSketch from '../../components/grid-sketch/grid-sketch'
 import BlogAudioPlayer from '../../components/blog-audio-player/BlogAudioPlayer'
+import DynamicMarkovText from '../../components/dynamic-markov-text/DynamicMarkovText'
 import {
   extractAudioUrls,
   removeAudioFromHtml,
@@ -161,9 +162,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                       color: 'white',
                       fontSize: '14px',
                     }}
-                  >
-                    Loading visual...
-                  </div>
+                  ></div>
                 }
               >
                 <AudioReactiveGridSketch
@@ -199,6 +198,9 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                 style={{ marginBottom: rhythm(2) }}
                 dangerouslySetInnerHTML={{ __html: cleanedHtml }}
               />
+
+              {/* Dynamic Markov Text Generator */}
+              <DynamicMarkovText />
 
               <footer>
                 <Bio />
@@ -252,9 +254,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                     color: 'white',
                     fontSize: '14px',
                   }}
-                >
-                  Loading visual...
-                </div>
+                ></div>
               }
             >
               <AudioReactiveGridSketch

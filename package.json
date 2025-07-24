@@ -81,6 +81,7 @@
     "serve": "gatsby serve",
     "clean": "gatsby clean",
     "test": "jest",
-    "new-day": "node ./init.js"
+    "new-day": "node ./init.js",
+    "generate-markov": "node scripts/generate-markov-data.js"
   }
 }

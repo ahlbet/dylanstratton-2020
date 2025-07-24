@@ -86,7 +86,7 @@ const CalendarComponent = () => {
         }}
         dayMaxEvents={3}
         eventClick={(info) => {
-          console.log('Event clicked:', info.event.title)
+          // Event clicked - could add navigation logic here if needed
         }}
         eventDidMount={(info) => {
           if (info.event.extendedProps.description) {
