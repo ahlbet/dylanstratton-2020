@@ -111,7 +111,7 @@ const GridSketchSketch = (p) => {
 
     // Update global variables for new canvas dimensions
     margin = 5 // Minimal margin
-    spacing = Math.max(10, p.windowWidth * 0.015) // Responsive spacing
+    // spacing = Math.max(10, p.windowWidth * 0.015) // Responsive spacing
     radius = Math.min(p.windowWidth, p.windowHeight) * 0.4 // Responsive radius
 
     // Re-seed particles for new canvas size
