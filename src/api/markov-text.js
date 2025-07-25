@@ -1,5 +1,5 @@
+const { createClient } = require('@supabase/supabase-js')
 const path = require('path')
-const { MarkovGenerator } = require('../utils/markov-generator')
 
 // Load environment variables - works for both local development and Netlify
 function loadEnvironmentVariables() {
@@ -83,62 +83,75 @@ export default async function handler(req, res) {
   }
 
   try {
-    const generator = new MarkovGenerator(5)
-    const success = await generator.loadTextFromSupabaseWithCredentials(
+    const supabase = createClient(
       env.SUPABASE_URL,
-      env.SUPABASE_SERVICE_ROLE_KEY,
-      'markov-text'
+      env.SUPABASE_SERVICE_ROLE_KEY
     )
 
-    if (!success) {
-      console.error('❌ API: Failed to load markov text from Supabase')
-      return res.status(500).json({ error: 'Failed to load markov text' })
+    // Get total count first
+    const { count, error: countError } = await supabase
+      .from('markov_texts')
+      .select('*', { count: 'exact', head: true })
+
+    if (countError) {
+      console.error('❌ API: Failed to get count:', countError.message)
+      return res.status(500).json({ error: 'Failed to get text count' })
     }
 
-    // Return the combined text content for client-side generation
-    const textContent = generator.lines.join('\n')
-
-    // Check response size and limit if necessary
-    const responseData = {
-      text: textContent,
-      stats: {
-        lines: generator.lines.length,
-        characters: textContent.length,
-        ngramsCount: Object.keys(generator.ngrams).length,
-        beginningsCount: generator.beginnings.length,
-      },
+    if (!count || count === 0) {
+      return res.status(500).json({ error: 'No texts available' })
     }
 
-    const responseSize = JSON.stringify(responseData).length
-    const maxSize = 5 * 1024 * 1024 // 5MB limit for Netlify
+    // Get query parameter for number of texts (default 20)
+    const numTexts = parseInt(req.query.count) || 20
+    const maxTexts = Math.min(numTexts, 50) // Cap at 50 for performance
 
-    if (responseSize > maxSize) {
-      console.warn(
-        `⚠️ Response too large (${responseSize} bytes), limiting text content`
-      )
+    console.log(`🎲 Fetching ${maxTexts} random texts from ${count} total`)
 
-      // Reduce text content to fit within limits
-      const maxTextSize = 4 * 1024 * 1024 // Leave room for stats
-      let limitedText = textContent
+    // Get multiple random texts using random offsets
+    const randomTexts = []
+    const usedOffsets = new Set()
 
-      if (limitedText.length > maxTextSize) {
-        // Take first 4MB of text
-        limitedText = limitedText.substring(0, maxTextSize)
-        // Try to end at a complete line
-        const lastNewline = limitedText.lastIndexOf('\n')
-        if (lastNewline > maxTextSize * 0.9) {
-          // If we can find a newline in last 10%
-          limitedText = limitedText.substring(0, lastNewline)
-        }
+    for (let i = 0; i < maxTexts; i++) {
+      let randomOffset
+      do {
+        randomOffset = Math.floor(Math.random() * count)
+      } while (usedOffsets.has(randomOffset))
+
+      usedOffsets.add(randomOffset)
+
+      const { data: texts, error: textError } = await supabase
+        .from('markov_texts')
+        .select('id, text_content, text_length, created_at')
+        .range(randomOffset, randomOffset)
+
+      if (textError) {
+        console.error('❌ API: Failed to load text:', textError.message)
+        continue
       }
 
-      responseData.text = limitedText
-      responseData.stats.characters = limitedText.length
-      responseData.stats.lines = limitedText.split('\n').length
-      responseData.stats.truncated = true
+      if (texts && texts.length > 0) {
+        randomTexts.push({
+          id: texts[0].id,
+          text: texts[0].text_content,
+          length: texts[0].text_length,
+          createdAt: texts[0].created_at,
+        })
+      }
     }
 
-    return res.status(200).json(responseData)
+    if (randomTexts.length === 0) {
+      return res.status(500).json({ error: 'No texts found' })
+    }
+
+    return res.status(200).json({
+      texts: randomTexts,
+      stats: {
+        totalTexts: count,
+        requestedCount: maxTexts,
+        returnedCount: randomTexts.length,
+      },
+    })
   } catch (error) {
     console.error('❌ API: Error in markov-text endpoint:', error)
     return res.status(500).json({ error: 'Internal server error' })
