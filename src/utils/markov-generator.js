@@ -448,8 +448,19 @@ class MarkovGenerator {
 async function generateBlogPostText(postName, linesCount = 5) {
   const generator = new MarkovGenerator(7)
 
-  // Try to load from Supabase markov-text bucket first
-  const success = await generator.loadTextFromSupabase('markov-text')
+  // Try to load from Supabase markov-text bucket first with explicit credentials
+  const supabaseUrl = process.env.SUPABASE_URL
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+
+  let success = false
+  if (supabaseUrl && supabaseKey) {
+    success = await generator.loadTextFromSupabaseWithCredentials(
+      supabaseUrl,
+      supabaseKey,
+      'markov-text'
+    )
+  }
 
   if (!success) {
     console.warn('Failed to load from Supabase, using fallback text')
