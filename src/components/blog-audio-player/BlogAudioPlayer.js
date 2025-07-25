@@ -329,10 +329,20 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
         if (currentAudio) {
           currentAudio.pause()
           currentAudio.src = '' // Clear src to stop loading
+          // Remove from DOM
+          if (currentAudio.parentNode) {
+            currentAudio.parentNode.removeChild(currentAudio)
+          }
         }
 
         // Create new audio element
         const audio = new Audio(track.src)
+
+        // Append to DOM so other components can detect it
+        audio.style.display = 'none'
+        audio.id = 'blog-audio-player-main'
+        document.body.appendChild(audio)
+
         audio.addEventListener('loadedmetadata', () =>
           updateDuration(audio, track.src)
         )
@@ -392,6 +402,10 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
       if (currentAudio) {
         currentAudio.pause()
         currentAudio.src = '' // Clear src to stop loading
+        // Remove from DOM
+        if (currentAudio.parentNode) {
+          currentAudio.parentNode.removeChild(currentAudio)
+        }
       }
     }
   }, [currentAudio])
@@ -404,68 +418,16 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
   }, [isMuted, currentAudio])
 
   // Create and sync hidden DOM audio element for audio-reactive-grid-sketch
+  // DISABLED: This was causing audio delay effects. The audio-reactive sketch
+  // can work with the main audio element directly.
   useEffect(() => {
-    // Create hidden audio element if it doesn't exist
-    if (!hiddenAudioRef.current) {
-      const hiddenAudio = document.createElement('audio')
-      hiddenAudio.style.display = 'none'
-      hiddenAudio.id = 'blog-audio-player-hidden'
-      hiddenAudio.crossOrigin = 'anonymous' // Help with CORS for audio analysis
-      document.body.appendChild(hiddenAudio)
-      hiddenAudioRef.current = hiddenAudio
-    }
-
-    // Sync hidden audio with current audio
-    if (currentAudio && hiddenAudioRef.current) {
-      const hiddenAudio = hiddenAudioRef.current
-
-      // Set same source
-      hiddenAudio.src = currentAudio.src
-      hiddenAudio.volume = currentAudio.volume
-      hiddenAudio.muted = currentAudio.muted
-
-      // Sync playback events
-      const syncPlayback = () => {
-        if (!currentAudio.paused && hiddenAudio.paused) {
-          hiddenAudio.currentTime = currentAudio.currentTime
-          hiddenAudio.play().catch(() => {}) // Ignore errors
-        } else if (currentAudio.paused && !hiddenAudio.paused) {
-          hiddenAudio.pause()
-        }
-      }
-
-      // Sync time periodically
-      const syncInterval = setInterval(() => {
-        if (!currentAudio.paused && !hiddenAudio.paused) {
-          const timeDiff = Math.abs(
-            hiddenAudio.currentTime - currentAudio.currentTime
-          )
-          if (timeDiff > 0.1) {
-            // Only sync if more than 100ms difference
-            hiddenAudio.currentTime = currentAudio.currentTime
-          }
-        }
-      }, 100)
-
-      // Add event listeners to main audio
-      currentAudio.addEventListener('play', syncPlayback)
-      currentAudio.addEventListener('pause', syncPlayback)
-      currentAudio.addEventListener('ended', () => hiddenAudio.pause())
-
-      // Cleanup function
-      return () => {
-        currentAudio.removeEventListener('play', syncPlayback)
-        currentAudio.removeEventListener('pause', syncPlayback)
-        clearInterval(syncInterval)
-      }
-    }
-
-    // Cleanup hidden audio when no current audio
-    if (!currentAudio && hiddenAudioRef.current) {
+    // Cleanup any existing hidden audio element
+    if (hiddenAudioRef.current) {
       hiddenAudioRef.current.pause()
-      hiddenAudioRef.current.src = ''
+      hiddenAudioRef.current.remove()
+      hiddenAudioRef.current = null
     }
-  }, [currentAudio])
+  }, [])
 
   // Cleanup hidden audio element on unmount
   useEffect(() => {

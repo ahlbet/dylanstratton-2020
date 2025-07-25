@@ -6,6 +6,7 @@ const DynamicMarkovText = ({ className = '' }) => {
   const [generatedLines, setGeneratedLines] = useState([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [audioPlaying, setAudioPlaying] = useState(false)
+  const audioStopTimeoutRef = useRef(null)
   const [currentlyTyping, setCurrentlyTyping] = useState(null)
   const [pendingLines, setPendingLines] = useState([])
   const generatorRef = useRef(null)
@@ -15,6 +16,7 @@ const DynamicMarkovText = ({ className = '' }) => {
   const prevShouldShowContentRef = useRef(false)
   const isCurrentlyTypingRef = useRef(false)
   const totalLinesStartedRef = useRef(0)
+  const prevAudioElementRef = useRef(null)
 
   // Initialize the markov generator API client
   useEffect(() => {
@@ -43,46 +45,174 @@ const DynamicMarkovText = ({ className = '' }) => {
   const checkAudioPlayback = useCallback(() => {
     const audioElements = document.querySelectorAll('audio, video')
     let isPlaying = false
+    let currentAudioElement = null
 
     audioElements.forEach((audio) => {
       if (!audio.paused && !audio.ended && audio.currentTime > 0) {
         isPlaying = true
+        currentAudioElement = audio
       }
     })
 
-    setAudioPlaying(isPlaying)
+    // Track the current audio element
+    if (
+      currentAudioElement &&
+      currentAudioElement !== prevAudioElementRef.current
+    ) {
+      prevAudioElementRef.current = currentAudioElement
+    }
+
+    // Clear any existing timeout when audio is playing
+    if (isPlaying) {
+      if (audioStopTimeoutRef.current) {
+        clearTimeout(audioStopTimeoutRef.current)
+        audioStopTimeoutRef.current = null
+      }
+      setAudioPlaying(true)
+    } else {
+      // Add a delay before considering audio as stopped (to handle auto-advance)
+      if (!audioStopTimeoutRef.current) {
+        audioStopTimeoutRef.current = setTimeout(() => {
+          setAudioPlaying(false)
+          audioStopTimeoutRef.current = null
+        }, 200) // 200ms delay to handle auto-advance transitions
+      }
+    }
   }, [])
 
   // Start/stop generation based on audio playback
   useEffect(() => {
-    if (audioPlaying && generatorRef.current && !isGenerating) {
-      setIsGenerating(true)
+    if (audioPlaying && generatorRef.current) {
+      // Only start generating if we haven't started yet
+      if (!isGenerating && generatedLines.length === 0 && !currentlyTyping) {
+        setIsGenerating(true)
 
-      // Load initial batch of texts
-      const loadInitialBatch = async () => {
-        try {
-          await generatorRef.current.loadTextBatch(20)
-          // Add first text after loading
-          setTimeout(() => {
-            addNextTextFromQueue()
-          }, 500)
-        } catch (error) {
-          console.error('❌ Failed to load initial text batch:', error)
+        // Load initial batch of texts
+        const loadInitialBatch = async () => {
+          try {
+            await generatorRef.current.loadTextBatch(20)
+            // Add first text after loading
+            setTimeout(() => {
+              addNextTextFromQueue()
+            }, 500)
+          } catch (error) {
+            console.error('❌ Failed to load initial text batch:', error)
+          }
+        }
+
+        loadInitialBatch()
+      } else if (
+        isGenerating &&
+        !typewriterTimeoutRef.current &&
+        totalLinesStartedRef.current < 20
+      ) {
+        if (!currentlyTyping) {
+          // Audio resumed and we're generating but not typing - add next text from queue
+          setTimeout(addNextTextFromQueue, 500)
+        } else {
+          // Resume typing from where we left off
+          const words = currentlyTyping.originalText.split(' ')
+          const currentWordCount = currentlyTyping.text.split(' ').length
+
+          if (currentWordCount < words.length) {
+            // Reset the typing flag so we can continue
+            isCurrentlyTypingRef.current = false
+
+            // Set the current typing state to where we left off
+            setCurrentlyTyping({
+              text: currentlyTyping.text,
+              originalText: currentlyTyping.originalText,
+              isComplete: false,
+            })
+
+            // Start the typing process from the current word
+            let wordIndex = currentWordCount
+
+            const typeNextWord = () => {
+              if (wordIndex < words.length) {
+                setCurrentlyTyping((prev) => ({
+                  ...prev,
+                  text: words.slice(0, wordIndex + 1).join(' '),
+                }))
+
+                wordIndex++
+                if (wordIndex < words.length) {
+                  const nextDelay = 150 + Math.random() * 100
+                  typewriterTimeoutRef.current = setTimeout(
+                    typeNextWord,
+                    nextDelay
+                  )
+                } else {
+                  // Line completed
+                  setTimeout(() => {
+                    // Add completed line to permanent display
+                    setGeneratedLines((prev) => {
+                      const newGenerated = [
+                        ...prev,
+                        currentlyTyping.originalText,
+                      ]
+                      return newGenerated
+                    })
+
+                    // Check if there are pending lines to start immediately
+                    setPendingLines((currentPending) => {
+                      if (currentPending.length > 0) {
+                        const nextLine = currentPending[0]
+                        const remainingPending = currentPending.slice(1)
+
+                        // Start typing the next line immediately
+                        setTimeout(() => startTypingLine(nextLine.text), 50)
+
+                        return remainingPending
+                      } else {
+                        // Clear any remaining timeout to prevent race conditions
+                        if (typewriterTimeoutRef.current) {
+                          clearTimeout(typewriterTimeoutRef.current)
+                          typewriterTimeoutRef.current = null
+                        }
+                        currentTypingInstanceRef.current = null
+                        setCurrentlyTyping(null)
+                        isCurrentlyTypingRef.current = false
+
+                        // Add next text from queue if we haven't hit the limit
+                        if (totalLinesStartedRef.current < 20) {
+                          setTimeout(addNextTextFromQueue, 500)
+                        }
+
+                        return currentPending
+                      }
+                    })
+                  }, 100)
+                }
+              }
+            }
+
+            const initialDelay = 200
+            typewriterTimeoutRef.current = setTimeout(
+              typeNextWord,
+              initialDelay
+            )
+          }
         }
       }
-
-      loadInitialBatch()
     } else if (!audioPlaying) {
-      // Audio stopped - clean up
-      if (isGenerating) {
-        setIsGenerating(false)
+      // Audio paused - pause typing but don't reset state
+      if (typewriterTimeoutRef.current) {
+        clearTimeout(typewriterTimeoutRef.current)
+        typewriterTimeoutRef.current = null
       }
     }
 
     return () => {
       // Cleanup
     }
-  }, [audioPlaying, isGenerating])
+  }, [
+    audioPlaying,
+    isGenerating,
+    generatedLines.length,
+    currentlyTyping,
+    pendingLines.length,
+  ])
 
   // Set up audio monitoring
   useEffect(() => {
@@ -143,6 +273,9 @@ const DynamicMarkovText = ({ className = '' }) => {
       if (isCurrentlyTypingRef.current) {
         return // Already typing
       }
+
+      // Increment the counter when we actually start typing
+      totalLinesStartedRef.current += 1
 
       isCurrentlyTypingRef.current = true
       currentTypingInstanceRef.current = text
@@ -222,9 +355,6 @@ const DynamicMarkovText = ({ className = '' }) => {
         return
       }
 
-      // Increment the counter when we start a new line
-      totalLinesStartedRef.current += 1
-
       if (!currentlyTyping) {
         // Start typing immediately if nothing is currently typing
         startTypingLine(text)
@@ -276,6 +406,9 @@ const DynamicMarkovText = ({ className = '' }) => {
       }
       if (typewriterTimeoutRef.current) {
         clearTimeout(typewriterTimeoutRef.current)
+      }
+      if (audioStopTimeoutRef.current) {
+        clearTimeout(audioStopTimeoutRef.current)
       }
     }
   }, [])
