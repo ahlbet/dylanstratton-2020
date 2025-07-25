@@ -1,38 +1,51 @@
 class MarkovGeneratorAPIClient {
   constructor() {
     this.apiUrl = '/api/markov-text'
+    this.textQueue = []
+    this.isLoading = false
   }
 
-  async generateText(maxLength = 600, maxSentences = 2) {
+  async loadTextBatch(count = 20) {
+    if (this.isLoading) {
+      return this.textQueue.length
+    }
+
     try {
-      const response = await fetch(this.apiUrl)
+      this.isLoading = true
+      const params = new URLSearchParams({ count: count.toString() })
+      const response = await fetch(`${this.apiUrl}?${params}`)
+
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status}`)
       }
+
       const data = await response.json()
       if (data.error) {
         throw new Error(`API error: ${data.error}`)
       }
-      return data.text || 'Unable to generate text at this time.'
+
+      if (data.texts && data.texts.length > 0) {
+        this.textQueue = data.texts.map((item) => item.text)
+      }
+
+      return this.textQueue.length
     } catch (error) {
-      console.error('❌ Error generating text:', error)
-      return 'Unable to generate text at this time.'
+      console.error('❌ Error loading text batch:', error)
+      return 0
+    } finally {
+      this.isLoading = false
     }
   }
 
-  async generateMultipleLines(count = 5, maxLength = 600, maxSentences = 2) {
-    const lines = []
-    for (let i = 0; i < count; i++) {
-      try {
-        const text = await this.generateText(maxLength, maxSentences)
-        if (text && text.length > 10) {
-          lines.push(text)
-        }
-      } catch (error) {
-        console.error(`❌ Error generating line ${i + 1}:`, error)
-      }
+  getNextText() {
+    if (this.textQueue.length === 0) {
+      return null
     }
-    return lines
+    return this.textQueue.shift()
+  }
+
+  getQueueLength() {
+    return this.textQueue.length
   }
 
   async isAvailable() {

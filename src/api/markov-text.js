@@ -102,35 +102,54 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'No texts available' })
     }
 
-    // Pick a random offset
-    const randomOffset = Math.floor(Math.random() * count)
+    // Get query parameter for number of texts (default 20)
+    const numTexts = parseInt(req.query.count) || 20
+    const maxTexts = Math.min(numTexts, 50) // Cap at 50 for performance
 
-    console.log(`🎲 Fetching random text (${randomOffset + 1}/${count})`)
+    console.log(`🎲 Fetching ${maxTexts} random texts from ${count} total`)
 
-    // Get a random text using offset
-    const { data: texts, error: textError } = await supabase
-      .from('markov_texts')
-      .select('id, text_content, text_length, created_at')
-      .range(randomOffset, randomOffset)
+    // Get multiple random texts using random offsets
+    const randomTexts = []
+    const usedOffsets = new Set()
 
-    if (textError) {
-      console.error('❌ API: Failed to load text:', textError.message)
-      return res.status(500).json({ error: 'Failed to load random text' })
+    for (let i = 0; i < maxTexts; i++) {
+      let randomOffset
+      do {
+        randomOffset = Math.floor(Math.random() * count)
+      } while (usedOffsets.has(randomOffset))
+
+      usedOffsets.add(randomOffset)
+
+      const { data: texts, error: textError } = await supabase
+        .from('markov_texts')
+        .select('id, text_content, text_length, created_at')
+        .range(randomOffset, randomOffset)
+
+      if (textError) {
+        console.error('❌ API: Failed to load text:', textError.message)
+        continue
+      }
+
+      if (texts && texts.length > 0) {
+        randomTexts.push({
+          id: texts[0].id,
+          text: texts[0].text_content,
+          length: texts[0].text_length,
+          createdAt: texts[0].created_at,
+        })
+      }
     }
 
-    if (!texts || texts.length === 0) {
-      return res.status(500).json({ error: 'No text found' })
+    if (randomTexts.length === 0) {
+      return res.status(500).json({ error: 'No texts found' })
     }
-
-    const text = texts[0]
 
     return res.status(200).json({
-      text: text.text_content,
+      texts: randomTexts,
       stats: {
         totalTexts: count,
-        selectedId: text.id,
-        textLength: text.text_length,
-        createdAt: text.created_at,
+        requestedCount: maxTexts,
+        returnedCount: randomTexts.length,
       },
     })
   } catch (error) {

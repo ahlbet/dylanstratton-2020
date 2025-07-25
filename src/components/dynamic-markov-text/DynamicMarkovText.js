@@ -6,16 +6,15 @@ const DynamicMarkovText = ({ className = '' }) => {
   const [generatedLines, setGeneratedLines] = useState([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [audioPlaying, setAudioPlaying] = useState(false)
-  const [currentlyTyping, setCurrentlyTyping] = useState(null) // Single typing line
-  const [pendingLines, setPendingLines] = useState([]) // Queue of lines to type
+  const [currentlyTyping, setCurrentlyTyping] = useState(null)
+  const [pendingLines, setPendingLines] = useState([])
   const generatorRef = useRef(null)
-  const intervalRef = useRef(null)
   const audioCheckIntervalRef = useRef(null)
   const typewriterTimeoutRef = useRef(null)
-  const currentTypingInstanceRef = useRef(null) // Track active typing instance
-  const prevShouldShowContentRef = useRef(false) // Track content visibility changes
-  const isCurrentlyTypingRef = useRef(false) // Track if actively typing to prevent race conditions
-  const totalLinesStartedRef = useRef(0) // Track total lines started (immediate updates)
+  const currentTypingInstanceRef = useRef(null)
+  const prevShouldShowContentRef = useRef(false)
+  const isCurrentlyTypingRef = useRef(false)
+  const totalLinesStartedRef = useRef(0)
 
   // Initialize the markov generator API client
   useEffect(() => {
@@ -26,7 +25,6 @@ const DynamicMarkovText = ({ className = '' }) => {
 
         if (isAvailable) {
           generatorRef.current = generator
-          console.log('✅ Markov generator API client initialized')
         } else {
           console.error('❌ Markov generator API is not available')
         }
@@ -43,245 +41,127 @@ const DynamicMarkovText = ({ className = '' }) => {
 
   // Check audio playback state
   const checkAudioPlayback = useCallback(() => {
-    const audioElements = document.querySelectorAll('audio')
-    let isAnyAudioPlaying = false
+    const audioElements = document.querySelectorAll('audio, video')
+    let isPlaying = false
 
-    for (let audio of audioElements) {
-      if (!audio.paused && !audio.ended && audio.readyState >= 2) {
-        isAnyAudioPlaying = true
-        break
+    audioElements.forEach((audio) => {
+      if (!audio.paused && !audio.ended && audio.currentTime > 0) {
+        isPlaying = true
       }
-    }
+    })
 
-    // Only log when audio state actually changes
-    if (audioPlaying !== isAnyAudioPlaying) {
-      // Audio state changed - no logging needed
-    }
-
-    setAudioPlaying(isAnyAudioPlaying)
+    setAudioPlaying(isPlaying)
   }, [])
 
   // Start/stop generation based on audio playback
   useEffect(() => {
-    if (audioPlaying && generatorRef.current && !intervalRef.current) {
+    if (audioPlaying && generatorRef.current && !isGenerating) {
       setIsGenerating(true)
 
-      // Test immediate generation - only if no content is currently being processed and under limit
-      if (
-        !currentlyTyping &&
-        pendingLines.length === 0 &&
-        totalLinesStartedRef.current < 20
-      ) {
-        // Async immediate generation
-        const generateImmediateLine = async () => {
-          try {
-            const testLine = await generatorRef.current.generateText(600, 2)
-            if (testLine && testLine.length > 20) {
-              // Check if this exact text is already being typed or in the queue
-              const isDuplicate =
-                currentlyTyping?.originalText === testLine ||
-                pendingLines.some((line) => line.text === testLine) ||
-                generatedLines.includes(testLine)
-
-              if (!isDuplicate) {
-                addTypewriterLine(testLine)
-              }
-            }
-          } catch (error) {
-            console.error('❌ Immediate test failed:', error)
-          }
+      // Load initial batch of texts
+      const loadInitialBatch = async () => {
+        try {
+          await generatorRef.current.loadTextBatch(20)
+          // Add first text after loading
+          setTimeout(() => {
+            addNextTextFromQueue()
+          }, 500)
+        } catch (error) {
+          console.error('❌ Failed to load initial text batch:', error)
         }
-
-        generateImmediateLine()
       }
 
-      // Generate text every 1-2 seconds while audio is playing
-      const intervalTime = 1000 + Math.random() * 1000
-
-      intervalRef.current = setInterval(async () => {
-        // Don't generate new text if we've hit the limit
-        if (totalLinesStartedRef.current >= 20) {
-          return
-        }
-
-        if (generatorRef.current) {
-          try {
-            const newLine = await generatorRef.current.generateText(600, 2)
-
-            if (newLine && newLine.length > 20) {
-              // Check if this exact text is already being typed or in the queue
-              const isDuplicate =
-                currentlyTyping?.originalText === newLine ||
-                pendingLines.some((line) => line.text === newLine) ||
-                generatedLines.includes(newLine)
-
-              if (!isDuplicate) {
-                addTypewriterLine(newLine)
-              }
-            } else {
-              console.warn('⚠️ Generated text too short or empty:', newLine)
-            }
-          } catch (error) {
-            console.error('❌ Error during text generation:', error)
-          }
-        } else {
-          console.error('❌ No generator available for text generation')
-        }
-      }, intervalTime)
+      loadInitialBatch()
     } else if (!audioPlaying) {
       // Audio stopped - clean up
       if (isGenerating) {
         setIsGenerating(false)
       }
-
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
     }
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
+      // Cleanup
     }
-  }, [audioPlaying, currentlyTyping, pendingLines, generatedLines])
+  }, [audioPlaying, isGenerating])
 
   // Set up audio monitoring
   useEffect(() => {
     // Check immediately
     checkAudioPlayback()
 
-    // Then check every 500ms
-    audioCheckIntervalRef.current = setInterval(checkAudioPlayback, 500)
-
-    // Also listen for audio events on the document
-    const handleAudioPlay = () => {
-      // Use the same delayed check for consistency
-      setTimeout(() => {
-        const audioElements = document.querySelectorAll('audio')
-        let isAnyAudioPlaying = false
-
-        for (let audio of audioElements) {
-          if (!audio.paused && !audio.ended && audio.readyState >= 2) {
-            isAnyAudioPlaying = true
-            break
-          }
-        }
-        setAudioPlaying(isAnyAudioPlaying)
-      }, 50) // Shorter delay for play events
-    }
-
-    const handleAudioPause = () => {
-      // Delay check to see if any other audio is playing
-      setTimeout(checkAudioPlayback, 100)
-    }
-
-    document.addEventListener('play', handleAudioPlay, true)
-    document.addEventListener('pause', handleAudioPause, true)
-    document.addEventListener('ended', handleAudioPause, true)
+    // Set up interval to check audio state
+    audioCheckIntervalRef.current = setInterval(checkAudioPlayback, 1000)
 
     return () => {
       if (audioCheckIntervalRef.current) {
         clearInterval(audioCheckIntervalRef.current)
+        audioCheckIntervalRef.current = null
       }
-      document.removeEventListener('play', handleAudioPlay, true)
-      document.removeEventListener('pause', handleAudioPause, true)
-      document.removeEventListener('ended', handleAudioPause, true)
     }
   }, [checkAudioPlayback])
 
-  // Start typing a line (moved before useEffect to avoid circular dependency)
-  const startTypingLine = useCallback((text) => {
-    const uniqueId = Math.random().toString(36).substring(7)
-
-    // Check if already typing this exact text to prevent duplicates
-    if (currentlyTyping && currentlyTyping.originalText === text) {
+  // Function to add next text from queue
+  const addNextTextFromQueue = useCallback(() => {
+    if (totalLinesStartedRef.current >= 20) {
       return
     }
 
-    // Don't start new typing if something is actively typing (use ref for immediate check)
-    if (isCurrentlyTypingRef.current) {
-      // Add to queue instead of interrupting
-      setPendingLines((prev) => {
-        const newQueue = [...prev, { text, isComplete: false }]
-        return newQueue
-      })
-      return
-    }
+    if (generatorRef.current) {
+      try {
+        // Get next text from queue
+        const newLine = generatorRef.current.getNextText()
 
-    // Clear any existing timeout to prevent conflicts
-    if (typewriterTimeoutRef.current) {
-      clearTimeout(typewriterTimeoutRef.current)
-      typewriterTimeoutRef.current = null
-    }
+        if (newLine && newLine.length > 20) {
+          // Check if this exact text is already being typed or in the queue
+          const isDuplicate =
+            currentlyTyping?.originalText === newLine ||
+            pendingLines.some((line) => line.text === newLine) ||
+            generatedLines.includes(newLine)
 
-    // Clear any existing typing state to prevent race conditions
-    if (currentlyTyping) {
-      setCurrentlyTyping(null)
-    }
-
-    const words = text.split(' ')
-
-    // Set both state and ref for reliable tracking
-    const typingState = {
-      text: '',
-      isComplete: false,
-      originalText: text,
-      wordCount: words.length,
-      uniqueId: uniqueId, // Track which instance is typing
-    }
-
-    // Set the ref immediately to prevent race conditions
-    isCurrentlyTypingRef.current = true
-
-    // Use a small delay to ensure state is cleared before setting new state
-    setTimeout(() => {
-      setCurrentlyTyping(typingState)
-      currentTypingInstanceRef.current = uniqueId // Track in ref for reliable access
-
-      let wordIndex = 0
-      const typeNextWord = () => {
-        // Check if this instance should still be running using ref (more reliable than closure)
-        if (currentTypingInstanceRef.current !== uniqueId) {
-          return
-        }
-
-        // Also check if typing was cleared entirely
-        if (!currentTypingInstanceRef.current) {
-          return
-        }
-
-        if (wordIndex < words.length) {
-          const currentWords = words.slice(0, wordIndex + 1)
-          const newText = currentWords.join(' ')
-
-          setCurrentlyTyping((prev) => {
-            // If prev is null, it means the state was cleared, so we need to restore it
-            if (!prev) {
-              return {
-                text: newText,
-                isComplete: wordIndex === words.length - 1,
-                originalText: text,
-                wordCount: words.length,
-                uniqueId: uniqueId,
-                currentWordIndex: wordIndex,
-              }
-            }
-
-            // Double-check we're still the active instance
-            if (prev.uniqueId && prev.uniqueId !== uniqueId) {
-              return prev
-            }
-            const updated = {
-              ...prev,
-              text: newText,
-              isComplete: wordIndex === words.length - 1,
-              currentWordIndex: wordIndex,
-            }
-            return updated
+          if (!isDuplicate) {
+            addTypewriterLine(newLine)
+          } else {
+            // Try next text
+            setTimeout(addNextTextFromQueue, 100)
+          }
+        } else if (!newLine) {
+          // Queue is empty, load more texts
+          generatorRef.current.loadTextBatch(20).then(() => {
+            // Try to add a text immediately after loading
+            setTimeout(addNextTextFromQueue, 100)
           })
+        }
+      } catch (error) {
+        console.error('❌ Error during text generation:', error)
+      }
+    }
+  }, [currentlyTyping, pendingLines, generatedLines])
+
+  // Start typing a line
+  const startTypingLine = useCallback(
+    (text) => {
+      if (isCurrentlyTypingRef.current) {
+        return // Already typing
+      }
+
+      isCurrentlyTypingRef.current = true
+      currentTypingInstanceRef.current = text
+
+      setCurrentlyTyping({
+        text: '',
+        originalText: text,
+        isComplete: false,
+      })
+
+      const words = text.split(' ')
+      let wordIndex = 0
+
+      const typeNextWord = () => {
+        if (wordIndex < words.length) {
+          setCurrentlyTyping((prev) => ({
+            ...prev,
+            text: words.slice(0, wordIndex + 1).join(' '),
+          }))
 
           wordIndex++
           if (wordIndex < words.length) {
@@ -312,9 +192,15 @@ const DynamicMarkovText = ({ className = '' }) => {
                     clearTimeout(typewriterTimeoutRef.current)
                     typewriterTimeoutRef.current = null
                   }
-                  currentTypingInstanceRef.current = null // Clear ref too
+                  currentTypingInstanceRef.current = null
                   setCurrentlyTyping(null)
-                  isCurrentlyTypingRef.current = false // Clear the typing ref
+                  isCurrentlyTypingRef.current = false
+
+                  // Add next text from queue if we haven't hit the limit
+                  if (totalLinesStartedRef.current < 20) {
+                    setTimeout(addNextTextFromQueue, 500)
+                  }
+
                   return currentPending
                 }
               })
@@ -325,18 +211,9 @@ const DynamicMarkovText = ({ className = '' }) => {
 
       const initialDelay = 200
       typewriterTimeoutRef.current = setTimeout(typeNextWord, initialDelay)
-    }, 50) // Small delay to ensure state is cleared
-  }, []) // Keep empty to prevent recreation during renders
-
-  // Process pending lines queue (now handled directly in completion logic)
-  useEffect(() => {
-    // Only process queue if nothing is typing AND we haven't handled it in completion
-    if (!currentlyTyping && pendingLines.length > 0) {
-      const nextLine = pendingLines[0]
-      setPendingLines((prev) => prev.slice(1)) // Remove first item
-      startTypingLine(nextLine.text)
-    }
-  }, [currentlyTyping, pendingLines, startTypingLine])
+    },
+    [addNextTextFromQueue]
+  )
 
   // Simplified addTypewriterLine - just adds to queue
   const addTypewriterLine = useCallback(
@@ -362,21 +239,11 @@ const DynamicMarkovText = ({ className = '' }) => {
     [currentlyTyping, startTypingLine]
   )
 
-  // Additional cleanup effect for rapid audio state changes
-  useEffect(() => {
-    if (!audioPlaying && currentlyTyping) {
-      // If audio stops while typing, let the current typing complete
-      // Don't clear the typing state immediately - let it finish naturally
-    }
-  }, [audioPlaying, currentlyTyping])
-
   // Clear generated text when audio stops for a while
   useEffect(() => {
     if (!audioPlaying) {
       const clearTimer = setTimeout(() => {
         if (!audioPlaying) {
-          // Double check after delay
-
           // Clear any active timeouts first
           if (typewriterTimeoutRef.current) {
             clearTimeout(typewriterTimeoutRef.current)
@@ -386,7 +253,7 @@ const DynamicMarkovText = ({ className = '' }) => {
           // Clear all state
           setGeneratedLines([])
           setPendingLines([])
-          totalLinesStartedRef.current = 0 // Reset the counter
+          totalLinesStartedRef.current = 0
 
           // Only clear typing state if not actively typing
           if (!isCurrentlyTypingRef.current) {
@@ -404,9 +271,6 @@ const DynamicMarkovText = ({ className = '' }) => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
       if (audioCheckIntervalRef.current) {
         clearInterval(audioCheckIntervalRef.current)
       }
@@ -418,11 +282,9 @@ const DynamicMarkovText = ({ className = '' }) => {
 
   // Track when content visibility changes
   useEffect(() => {
-    const currentShouldShowContent =
-      generatedLines.length > 0 || !!currentlyTyping
-
-    if (prevShouldShowContentRef.current !== currentShouldShowContent) {
-      prevShouldShowContentRef.current = currentShouldShowContent
+    const shouldShowContent = generatedLines.length > 0 || !!currentlyTyping
+    if (shouldShowContent !== prevShouldShowContentRef.current) {
+      prevShouldShowContentRef.current = shouldShowContent
     }
   }, [generatedLines.length, !!currentlyTyping])
 
@@ -434,26 +296,24 @@ const DynamicMarkovText = ({ className = '' }) => {
 
   return (
     <div className={`dynamic-markov-text ${className}`}>
-      {shouldShowContent ? (
+      {shouldShowContent && (
         <div className="generated-content">
+          {/* Display completed lines */}
           {generatedLines.map((line, index) => (
             <blockquote key={`complete-${index}`} className="generated-line">
               {line}
             </blockquote>
           ))}
+
+          {/* Display currently typing line */}
           {currentlyTyping && (
-            <blockquote
-              key={`typing-${currentlyTyping.uniqueId}`}
-              className="generated-line typing"
-            >
+            <blockquote className="generated-line typing">
               {currentlyTyping.text}
-              {!currentlyTyping.isComplete && (
-                <span className="typing-cursor">|</span>
-              )}
+              <span className="typing-cursor">|</span>
             </blockquote>
           )}
         </div>
-      ) : null}
+      )}
     </div>
   )
 }
