@@ -31,6 +31,16 @@ const mockP5 = jest.fn().mockImplementation((sketch, element) => {
     sketch(mockInstance)
   }
 
+  // Apply mobile fix if available (for testing)
+  if (typeof window !== 'undefined' && window.navigator) {
+    try {
+      const { applyMobileFix } = require('../../src/utils/p5-mobile-fix')
+      applyMobileFix(mockInstance)
+    } catch (e) {
+      // Ignore if mobile fix is not available in test environment
+    }
+  }
+
   return mockInstance
 })
 

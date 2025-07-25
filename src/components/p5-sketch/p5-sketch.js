@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { applyMobileFix } from '../../utils/p5-mobile-fix'
 
 const P5Sketch = ({ sketch, className = '', style = {} }) => {
   const canvasRef = useRef(null)
@@ -24,6 +25,9 @@ const P5Sketch = ({ sketch, className = '', style = {} }) => {
 
         // Create new p5 instance
         p5InstanceRef.current = new p5(sketch, canvasRef.current)
+
+        // Apply mobile fix to prevent excessive windowResized calls
+        applyMobileFix(p5InstanceRef.current)
 
         // Cleanup function
         return () => {
