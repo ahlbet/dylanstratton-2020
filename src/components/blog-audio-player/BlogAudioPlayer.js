@@ -1,22 +1,26 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { ListPlayer, ListPlayerContext } from 'react-list-player'
 import JSZip from 'jszip'
+import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import './BlogAudioPlayer.css'
 
 const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
-  const [selectedTrack, setSelectedTrack] = useState(-1) // -1 means no track selected
-  const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [isDownloadingZip, setIsDownloadingZip] = useState(false)
 
-  // Audio element ref for actual playback
-  const audioRef = useRef(null)
-  const [currentAudio, setCurrentAudio] = useState(null)
+  // Get audio player context
+  const {
+    playlist,
+    currentIndex,
+    isPlaying,
+    setIsPlaying,
+    audioRef,
+    playTrack,
+  } = useAudioPlayer()
+
   const [trackDurations, setTrackDurations] = useState({})
   const loadingTracksRef = useRef(new Set()) // Track which URLs we're currently loading
   const batchLoadingRef = useRef({ isRunning: false, currentBatch: 0 })
   const hasStartedLoadingRef = useRef(false) // Prevent multiple loading attempts
-  const hiddenAudioRef = useRef(null) // Hidden DOM audio element for audio-reactive-grid-sketch
 
   // Format duration from seconds to MM:SS
   const formatDuration = (seconds) => {
@@ -62,11 +66,11 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
       })
     }
 
-    // Run after component mounts and after any track changes
+    // Run after component mounts
     const timer = setTimeout(disableAutoScroll, 100)
 
     return () => clearTimeout(timer)
-  }, [selectedTrack]) // Re-run when selectedTrack changes
+  }, []) // Run only once on mount
 
   // Download all audio files as ZIP function
   const downloadAllAudio = useCallback(async () => {
@@ -146,46 +150,40 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     }
   }, [isDownloadingZip, audioUrls, postTitle, postDate]) // Dependencies for the download function
 
-  // Convert Supabase URLs to react-list-player format
+  // Convert audio URLs to track format
   const tracks = useMemo(() => {
-    return audioUrls.map((url, index) => {
-      // Extract filename from URL for display
-      const urlParts = url.split('/')
-      const filename = urlParts[urlParts.length - 1]
-      const trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
+    // Ensure audioUrls is an array
+    if (!audioUrls || !Array.isArray(audioUrls) || audioUrls.length === 0) {
+      return []
+    }
 
-      const duration = formatDuration(trackDurations[url])
+    return audioUrls
+      .map((url, index) => {
+        // Ensure url is a string
+        if (!url || typeof url !== 'string') {
+          return null
+        }
 
-      return {
-        title: [
-          {
-            type: 'text',
-            content: trackName,
-            className: 'track-title',
-          },
-        ],
-        artist: [
-          {
-            type: 'text',
-            content: postTitle,
-            className: 'track-artist',
-          },
-        ],
-        album: [
-          {
-            type: 'text',
-            content: postDate,
-            className: 'track-album',
-          },
-        ],
-        duration: duration,
-        src: url,
-        imageSrc: coverArtUrl || null, // Use cover art from blog post
-        // Add custom data for download
-        downloadUrl: url,
-        downloadFilename: filename,
-      }
-    })
+        // Extract filename from URL for display
+        const urlParts = url.split('/')
+        const filename = urlParts[urlParts.length - 1]
+        const trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
+
+        const duration = formatDuration(trackDurations[url])
+
+        return {
+          title: trackName || 'Unknown Track',
+          artist: postTitle || 'Unknown Artist',
+          album: postDate || 'Unknown Album',
+          duration: duration || '0:00',
+          src: url,
+          imageSrc: coverArtUrl || null, // Use cover art from blog post
+          // Add custom data for download
+          downloadUrl: url,
+          downloadFilename: filename,
+        }
+      })
+      .filter(Boolean) // Remove any null entries
   }, [audioUrls, postTitle, postDate, trackDurations, coverArtUrl])
 
   // Calculate total playlist duration
@@ -196,18 +194,6 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     )
     return formatDuration(totalSeconds)
   }, [trackDurations])
-
-  // Playlist info
-  const listInfo = useMemo(
-    () => ({
-      type: 'playlist',
-      name: postTitle,
-      numTracks: tracks.length,
-      duration: totalDuration,
-      creationDate: postDate,
-    }),
-    [postTitle, tracks.length, totalDuration, postDate]
-  )
 
   // Update duration when audio metadata loads
   const updateDuration = (audio, trackUrl) => {
@@ -318,127 +304,43 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     batchLoadingRef.current.isRunning = false
   }
 
-  // Handle playback callbacks
-  const handlePlay = (index, resume) => {
-    if (index >= 0 && index < tracks.length) {
-      const track = tracks[index]
+  // Convert tracks to context format (url instead of src)
+  const contextTracks = useMemo(() => {
+    // Ensure tracks is an array
+    if (!tracks || !Array.isArray(tracks) || tracks.length === 0) {
+      return []
+    }
 
-      // If we're switching tracks or starting fresh, load new audio
-      if (!currentAudio || currentAudio.src !== track.src) {
-        // Clean up previous audio
-        if (currentAudio) {
-          currentAudio.pause()
-          currentAudio.src = '' // Clear src to stop loading
-          // Remove from DOM
-          if (currentAudio.parentNode) {
-            currentAudio.parentNode.removeChild(currentAudio)
-          }
+    return tracks
+      .map((track) => {
+        // Ensure track is valid
+        if (!track || typeof track !== 'object') {
+          return null
         }
 
-        // Create new audio element
-        const audio = new Audio(track.src)
+        return {
+          ...track,
+          url: track.src, // Convert src to url for context
+        }
+      })
+      .filter(Boolean) // Remove any null entries
+  }, [tracks])
 
-        // Append to DOM so other components can detect it
-        audio.style.display = 'none'
-        audio.id = 'blog-audio-player-main'
-        document.body.appendChild(audio)
-
-        audio.addEventListener('loadedmetadata', () =>
-          updateDuration(audio, track.src)
-        )
-
-        // Define track end handler inline to avoid circular dependency
-        audio.addEventListener('ended', () => {
+  // Handle track selection and play/pause - let FixedAudioPlayer handle playback
+  const handleTrackClick = useCallback(
+    (index) => {
+      if (index >= 0 && index < tracks.length) {
+        if (currentIndex === index && isPlaying) {
+          // If clicking the currently playing track, pause it
           setIsPlaying(false)
-          // Auto-advance to next track if not the last track
-          if (index >= 0 && index < tracks.length - 1) {
-            setTimeout(() => {
-              handlePlay(index + 1, false)
-            }, 100)
-          }
-        })
-
-        audio.muted = isMuted
-
-        setCurrentAudio(audio)
-        setSelectedTrack(index)
-
-        // Play when loaded
-        audio.addEventListener(
-          'canplay',
-          () => {
-            audio.play().catch(console.error)
-            setIsPlaying(true)
-          },
-          { once: true }
-        )
-
-        audio.load()
-      } else {
-        // Resume existing audio
-        currentAudio.play().catch(console.error)
-        setIsPlaying(true)
-      }
-    }
-  }
-
-  const handlePause = () => {
-    if (currentAudio) {
-      currentAudio.pause()
-      setIsPlaying(false)
-    }
-  }
-
-  const handleMute = () => {
-    if (currentAudio) {
-      currentAudio.muted = !isMuted
-      setIsMuted(!isMuted)
-    }
-  }
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (currentAudio) {
-        currentAudio.pause()
-        currentAudio.src = '' // Clear src to stop loading
-        // Remove from DOM
-        if (currentAudio.parentNode) {
-          currentAudio.parentNode.removeChild(currentAudio)
+        } else {
+          // Otherwise, play the selected track
+          playTrack(index, contextTracks)
         }
       }
-    }
-  }, [currentAudio])
-
-  // Update mute state when isMuted changes
-  useEffect(() => {
-    if (currentAudio) {
-      currentAudio.muted = isMuted
-    }
-  }, [isMuted, currentAudio])
-
-  // Create and sync hidden DOM audio element for audio-reactive-grid-sketch
-  // DISABLED: This was causing audio delay effects. The audio-reactive sketch
-  // can work with the main audio element directly.
-  useEffect(() => {
-    // Cleanup any existing hidden audio element
-    if (hiddenAudioRef.current) {
-      hiddenAudioRef.current.pause()
-      hiddenAudioRef.current.remove()
-      hiddenAudioRef.current = null
-    }
-  }, [])
-
-  // Cleanup hidden audio element on unmount
-  useEffect(() => {
-    return () => {
-      if (hiddenAudioRef.current) {
-        hiddenAudioRef.current.pause()
-        hiddenAudioRef.current.remove()
-        hiddenAudioRef.current = null
-      }
-    }
-  }, [])
+    },
+    [tracks, currentIndex, isPlaying, playTrack, contextTracks, setIsPlaying]
+  )
 
   // Start loading when component mounts - run only once
   useEffect(() => {
@@ -447,95 +349,250 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     }
   }, []) // Empty dependency array - run only once on mount
 
-  // Add download buttons to tracks
+  // Add hover effects for download buttons
   useEffect(() => {
-    const addDownloadButtons = () => {
-      const trackElements = document.querySelectorAll(
-        '.blog-audio-player .track'
-      )
+    const trackItems = document.querySelectorAll('.track-item')
 
-      trackElements.forEach((trackElement, index) => {
-        // Skip if button already exists
-        if (trackElement.querySelector('.download-button')) {
-          return
-        }
-
-        // Create download button
-        const downloadButton = document.createElement('button')
-        downloadButton.className = 'download-button'
-        downloadButton.innerHTML = '⬇'
-        downloadButton.title = 'Download audio file'
-        downloadButton.style.cssText = `
-          position: absolute;
-          right: 60px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: transparent;
-          border: none;
-          color: #DE3163;
-          cursor: pointer;
-          font-size: 16px;
-          padding: 4px 8px;
-          border-radius: 4px;
-          opacity: 0;
-          transition: all 0.2s ease;
-          z-index: 10;
-        `
-
-        // Add hover styles
-        downloadButton.addEventListener('mouseenter', () => {
-          downloadButton.style.backgroundColor = '#DE3163'
-          downloadButton.style.color = '#fff'
-        })
-
-        downloadButton.addEventListener('mouseleave', () => {
-          downloadButton.style.backgroundColor = 'transparent'
-          downloadButton.style.color = '#DE3163'
-        })
-
-        // Add click handler using audioUrls directly to avoid dependency issues
-        if (audioUrls[index]) {
-          const url = audioUrls[index]
-          const urlParts = url.split('/')
-          const filename = urlParts[urlParts.length - 1]
-
-          downloadButton.addEventListener('click', (e) => {
-            e.stopPropagation() // Prevent track selection
-            downloadAudio(url, filename)
-          })
-        }
-
-        // Make track element relative positioned
-        trackElement.style.position = 'relative'
-
-        // Show button on track hover
-        trackElement.addEventListener('mouseenter', () => {
+    trackItems.forEach((trackItem) => {
+      const downloadButton = trackItem.querySelector('button')
+      if (downloadButton) {
+        const handleMouseEnter = () => {
           downloadButton.style.opacity = '1'
-        })
+        }
 
-        trackElement.addEventListener('mouseleave', () => {
+        const handleMouseLeave = () => {
           downloadButton.style.opacity = '0'
-        })
+        }
 
-        // Add button to track
-        trackElement.appendChild(downloadButton)
-      })
-    }
+        trackItem.addEventListener('mouseenter', handleMouseEnter)
+        trackItem.addEventListener('mouseleave', handleMouseLeave)
 
-    // Run after component renders
-    const timer = setTimeout(addDownloadButtons, 200)
+        // Cleanup function
+        return () => {
+          trackItem.removeEventListener('mouseenter', handleMouseEnter)
+          trackItem.removeEventListener('mouseleave', handleMouseLeave)
+        }
+      }
+    })
+  }, [tracks])
 
-    return () => {
-      clearTimeout(timer)
-    }
-  }, [audioUrls, downloadAudio]) // Only depend on audioUrls, not tracks
+  // Custom playlist component
+  const CustomPlaylist = () => {
+    return (
+      <div className="custom-playlist">
+        {/* Playlist Header */}
+        <div
+          className="playlist-header"
+          style={{
+            padding: '16px',
+            borderBottom: '1px solid #e5e7eb',
+            backgroundColor: 'rgba(42, 42, 42, 0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            color: '#fff',
+          }}
+        >
+          {/* Cover Art */}
+          {coverArtUrl && (
+            <div
+              style={{
+                width: '200px',
+                height: '200px',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                flexShrink: 0,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              }}
+            >
+              <img
+                src={coverArtUrl}
+                alt={`Cover art for ${postTitle}`}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+                onError={(e) => {
+                  e.target.style.display = 'none'
+                }}
+              />
+            </div>
+          )}
 
-  if (!audioUrls || audioUrls.length === 0) {
+          {/* Playlist Info */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3
+              style={{
+                margin: 0,
+                color: '#fff',
+                fontSize: '18px',
+                fontWeight: '600',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {postTitle}
+            </h3>
+            <p
+              style={{
+                margin: '4px 0 0 0',
+                color: '#fff',
+                fontSize: '14px',
+              }}
+            >
+              {tracks.length} tracks • {totalDuration}
+            </p>
+          </div>
+        </div>
+
+        {/* Track List */}
+        <div className="track-list">
+          {tracks.map((track, index) => {
+            const isCurrentTrack = currentIndex === index
+            const isPlayingCurrent = isCurrentTrack && isPlaying
+
+            return (
+              <div
+                key={index}
+                className={`track-item ${isCurrentTrack ? 'current-track' : ''}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid #f3f4f6',
+                  backgroundColor: isCurrentTrack
+                    ? 'rgba(42, 42, 42, 0.9)'
+                    : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease',
+                  position: 'relative',
+                  minHeight: '60px', // Ensure clickable area
+                  userSelect: 'none', // Prevent text selection
+                  zIndex: 10, // Ensure track items are above other content
+                }}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleTrackClick(index)
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = isCurrentTrack
+                    ? 'rgba(60, 60, 60, 0.9)'
+                    : 'rgba(42, 42, 42, 0.9)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = isCurrentTrack
+                    ? 'rgba(42, 42, 42, 0.9)'
+                    : 'transparent'
+                }}
+              >
+                {/* Play/Pause Button */}
+                <div
+                  style={{
+                    marginRight: '12px',
+                    width: '24px',
+                    textAlign: 'center',
+                  }}
+                >
+                  {isPlayingCurrent ? (
+                    <span style={{ color: '#fff', fontSize: '16px' }}>⏸</span>
+                  ) : (
+                    <span style={{ color: '#fff', fontSize: '16px' }}>▶</span>
+                  )}
+                </div>
+
+                {/* Track Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontWeight: isCurrentTrack ? '600' : '500',
+                      color: isCurrentTrack ? '#fff' : '#fff',
+                      fontSize: '14px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {track.title}
+                  </div>
+                  <div
+                    style={{
+                      color: '#fff',
+                      fontSize: '12px',
+                      marginTop: '2px',
+                    }}
+                  >
+                    {track.artist} • {track.album}
+                  </div>
+                </div>
+
+                {/* Duration */}
+                <div
+                  style={{
+                    color: '#fff',
+                    fontSize: '12px',
+                    marginLeft: '12px',
+                    minWidth: '40px',
+                    textAlign: 'right',
+                  }}
+                >
+                  {track.duration}
+                </div>
+
+                {/* Download Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    downloadAudio(track.downloadUrl, track.downloadFilename)
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    padding: '4px 8px',
+                    marginLeft: '8px',
+                    borderRadius: '4px',
+                    opacity: 0,
+                    transition: 'opacity 0.2s ease',
+                    position: 'relative',
+                    zIndex: 100, // Higher than FixedAudioPlayer's z-index of 50
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = '#DE3163'
+                    e.target.style.color = '#fff'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'transparent'
+                    e.target.style.color = '#fff'
+                  }}
+                  title="Download audio file"
+                >
+                  ⬇
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  if (!audioUrls || !Array.isArray(audioUrls) || audioUrls.length === 0) {
     return null
   }
 
   return (
-    <div className="blog-audio-player">
+    <div
+      className="blog-audio-player"
+      style={{
+        position: 'relative',
+        zIndex: 60, // Higher than FixedAudioPlayer's z-index of 50
+      }}
+    >
       {/* Download All Button - Positioned as overlay */}
       <div
         style={{
@@ -584,25 +641,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
         </button>
       </div>
 
-      <ListPlayerContext.Provider
-        value={{
-          selectedTrack,
-          setSelectedTrack,
-          isPlaying,
-          setIsPlaying,
-          isMuted,
-          setIsMuted,
-        }}
-      >
-        <ListPlayer
-          tracks={tracks}
-          listInfo={listInfo}
-          playCallback={handlePlay}
-          pauseCallback={handlePause}
-          muteCallback={handleMute}
-          autoScroll={false}
-        />
-      </ListPlayerContext.Provider>
+      <CustomPlaylist />
     </div>
   )
 }
