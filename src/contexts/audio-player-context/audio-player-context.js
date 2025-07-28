@@ -6,12 +6,17 @@ export const AudioPlayerProvider = ({ children }) => {
   const [playlist, setPlaylist] = useState([])
   const [currentIndex, setCurrentIndex] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [totalPlaylistDuration, setTotalPlaylistDuration] = useState(0)
   const audioRef = useRef(null)
 
   const playTrack = (index, newPlaylist) => {
     if (newPlaylist) setPlaylist(newPlaylist)
     setCurrentIndex(index)
     setIsPlaying(true)
+  }
+
+  const updateTotalPlaylistDuration = (duration) => {
+    setTotalPlaylistDuration(duration)
   }
 
   return (
@@ -23,6 +28,8 @@ export const AudioPlayerProvider = ({ children }) => {
         setIsPlaying,
         playTrack,
         audioRef,
+        totalPlaylistDuration,
+        updateTotalPlaylistDuration,
       }}
     >
       {children}

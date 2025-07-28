@@ -17,7 +17,10 @@ import {
 import './blog-post.css'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
-import { AudioPlayerProvider } from '../../contexts/audio-player-context/audio-player-context'
+import {
+  AudioPlayerProvider,
+  useAudioPlayer,
+} from '../../contexts/audio-player-context/audio-player-context'
 import { FixedAudioPlayer } from '../../components/fixed-audio-player/FixedAudioPlayer'
 
 // Lazy load the audio reactive grid sketch to prevent SSR issues
@@ -28,6 +31,7 @@ const AudioReactiveGridSketch = React.lazy(
     )
 )
 
+// Main component that wraps everything in AudioPlayerProvider
 const BlogPostTemplate = ({ data, pageContext, location }) => {
   const post = data.markdownRemark
   const siteTitle = data.site.siteMetadata.title
@@ -63,8 +67,8 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
   const cleanedHtml = removeAudioFromHtml(post.html)
 
   return (
-    <Layout location={location} title={siteTitle}>
-      <AudioPlayerProvider>
+    <AudioPlayerProvider>
+      <Layout location={location} title={siteTitle}>
         <SEO
           title={post.frontmatter.title}
           description={post.frontmatter.description || post.excerpt}
@@ -272,8 +276,8 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
           </div>
         </div>
         <FixedAudioPlayer />
-      </AudioPlayerProvider>
-    </Layout>
+      </Layout>
+    </AudioPlayerProvider>
   )
 }
 

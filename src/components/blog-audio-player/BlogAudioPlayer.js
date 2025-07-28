@@ -16,6 +16,8 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     setIsPlaying,
     audioRef,
     playTrack,
+    totalPlaylistDuration,
+    updateTotalPlaylistDuration,
   } = useAudioPlayer()
 
   const [trackDurations, setTrackDurations] = useState({})
@@ -195,6 +197,20 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     )
     return formatDuration(totalSeconds)
   }, [trackDurations])
+
+  // Update context with total playlist duration
+  useEffect(() => {
+    const totalSeconds = Object.values(trackDurations).reduce(
+      (sum, duration) => sum + (duration || 0),
+      0
+    )
+    updateTotalPlaylistDuration(totalSeconds)
+
+    // Also set a global variable for the sketch to access
+    if (typeof window !== 'undefined') {
+      window.totalPlaylistDuration = totalSeconds
+    }
+  }, [trackDurations, updateTotalPlaylistDuration])
 
   // Update duration when audio metadata loads
   const updateDuration = (audio, trackUrl) => {

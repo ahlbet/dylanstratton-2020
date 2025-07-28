@@ -9,7 +9,7 @@ const P5SketchComponent = lazy(() =>
 
 // Audio-reactive grid sketch function - only runs client-side
 const createAudioReactiveGridSketch =
-  (markovText = '') =>
+  (markovText = '', totalPlaylistDuration = 0) =>
   (p) => {
     // Global variables
     let particles = []
@@ -18,6 +18,12 @@ const createAudioReactiveGridSketch =
     let radius = 300
     let num = 2000
     let tatShapePositions = [] // Will store positions generated from TatsSketch logic
+
+    // Particle removal based on playlist time
+    let lastRemovalTime = 0
+    let particlesRemoved = 0
+    let totalParticlesToRemove = 0
+    let removalInterval = 0
 
     // Generate a seed from Markov text to influence sketch behavior
     const generateSeedFromText = (text) => {
@@ -641,6 +647,67 @@ const createAudioReactiveGridSketch =
       }
     }
 
+    // Function to calculate particle removal parameters based on playlist duration
+    const calculateParticleRemovalParams = () => {
+      // Get totalPlaylistDuration from global variable
+      const duration =
+        typeof window !== 'undefined' ? window.totalPlaylistDuration || 0 : 0
+
+      if (duration <= 0) {
+        totalParticlesToRemove = 0
+        removalInterval = 0
+        return
+      }
+
+      // Calculate how many particles to remove total (even split)
+      totalParticlesToRemove = particles.length // Remove 100% of particles
+
+      // Calculate time interval between removals
+      removalInterval = duration / totalParticlesToRemove
+
+      // Reset counters
+      particlesRemoved = 0
+      lastRemovalTime = 0
+    }
+
+    // Function to remove particles based on current playback time
+    const removeParticlesBasedOnTime = () => {
+      if (
+        totalParticlesToRemove <= 0 ||
+        particlesRemoved >= totalParticlesToRemove
+      ) {
+        return
+      }
+
+      // Get current playback time from audio element - use the same logic as getAudioData
+      const allAudioElements = document.querySelectorAll('audio')
+      let playingAudioElement = null
+
+      for (let el of allAudioElements) {
+        if (!el.paused && !el.ended && el.readyState >= 2) {
+          playingAudioElement = el
+          break
+        }
+      }
+
+      if (!playingAudioElement) {
+        return
+      }
+
+      const currentTime = playingAudioElement.currentTime
+
+      // Check if it's time to remove another particle
+      if (currentTime - lastRemovalTime >= removalInterval) {
+        // Remove one particle
+        if (particles.length > 0) {
+          const randomIndex = Math.floor(Math.random() * particles.length)
+          particles.splice(randomIndex, 1)
+          particlesRemoved++
+          lastRemovalTime = currentTime
+        }
+      }
+    }
+
     // Function to find and analyze audio elements on the page
     const setupAudioAnalysis = () => {
       try {
@@ -874,6 +941,9 @@ const createAudioReactiveGridSketch =
       setupAudioAnalysis()
 
       p.seed()
+
+      // Calculate particle removal parameters AFTER particles are created
+      calculateParticleRemovalParams()
     }
 
     p.windowResized = () => {
@@ -901,11 +971,17 @@ const createAudioReactiveGridSketch =
       // Re-seed particles for new canvas size
       particles = []
       p.seed()
+
+      // Recalculate particle removal parameters for new particle count
+      calculateParticleRemovalParams()
     }
 
     p.draw = () => {
       // Get current audio data
       const audioData = getAudioData()
+
+      // Remove particles based on playlist time
+      removeParticlesBasedOnTime()
 
       // Birth and kill particles based on audio
       // birthParticles(audioData)
@@ -969,10 +1045,15 @@ const createAudioReactiveGridSketch =
   }
 
 // Client-side only component that renders the sketch
-const ClientSideSketch = ({ className, style, markovText }) => {
+const ClientSideSketch = ({
+  className,
+  style,
+  markovText,
+  totalPlaylistDuration,
+}) => {
   return (
     <P5SketchComponent
-      sketch={createAudioReactiveGridSketch(markovText)}
+      sketch={createAudioReactiveGridSketch(markovText, totalPlaylistDuration)}
       className={className}
       style={style}
     />
@@ -984,6 +1065,7 @@ const AudioReactiveGridSketch = ({
   className = '',
   style = {},
   markovText = '',
+  totalPlaylistDuration = 0,
 }) => {
   // Return loading placeholder during SSR
   if (typeof window === 'undefined') {
@@ -1026,6 +1108,7 @@ const AudioReactiveGridSketch = ({
         className={className}
         style={style}
         markovText={markovText}
+        totalPlaylistDuration={totalPlaylistDuration}
       />
     </Suspense>
   )
