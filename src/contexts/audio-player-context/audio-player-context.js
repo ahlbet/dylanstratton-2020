@@ -14,22 +14,6 @@ export const AudioPlayerProvider = ({ children }) => {
     setIsPlaying(true)
   }
 
-  // const onEnded = () => {
-  //   console.log(
-  //     'Context onEnded called - currentIndex:',
-  //     currentIndex,
-  //     'playlist.length:',
-  //     playlist.length
-  //   )
-  //   if (currentIndex !== null && currentIndex < playlist.length - 1) {
-  //     console.log('Auto-advancing to next track:', currentIndex + 1)
-  //     playTrack(currentIndex + 1)
-  //   } else {
-  //     console.log('End of playlist reached, stopping playback')
-  //     setIsPlaying(false)
-  //   }
-  // }
-
   return (
     <AudioPlayerContext.Provider
       value={{
@@ -39,7 +23,6 @@ export const AudioPlayerProvider = ({ children }) => {
         setIsPlaying,
         playTrack,
         audioRef,
-        // onEnded,
       }}
     >
       {children}

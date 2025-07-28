@@ -13,8 +13,6 @@ export const FixedAudioPlayer = () => {
     audioRef,
   } = useAudioPlayer()
 
-  console.log('isplaying', isPlaying)
-
   const progressRef = useRef(null)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -28,9 +26,7 @@ export const FixedAudioPlayer = () => {
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
     const handleLoadedMetadata = () => setDuration(audio.duration)
     const handleEnded = () => {
-      console.log('ended', currentIndex, playlist.length)
       if (currentIndex < playlist.length - 1) {
-        console.log('playing next track', currentIndex + 1)
         playTrack(currentIndex + 1)
       } else {
         setIsPlaying(false)
