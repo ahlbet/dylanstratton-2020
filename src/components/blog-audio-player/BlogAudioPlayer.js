@@ -6,6 +6,7 @@ import './BlogAudioPlayer.css'
 const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
   const [isMuted, setIsMuted] = useState(false)
   const [isDownloadingZip, setIsDownloadingZip] = useState(false)
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
   // Get audio player context
   const {
@@ -349,33 +350,6 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     }
   }, []) // Empty dependency array - run only once on mount
 
-  // Add hover effects for download buttons
-  useEffect(() => {
-    const trackItems = document.querySelectorAll('.track-item')
-
-    trackItems.forEach((trackItem) => {
-      const downloadButton = trackItem.querySelector('button')
-      if (downloadButton) {
-        const handleMouseEnter = () => {
-          downloadButton.style.opacity = '1'
-        }
-
-        const handleMouseLeave = () => {
-          downloadButton.style.opacity = '0'
-        }
-
-        trackItem.addEventListener('mouseenter', handleMouseEnter)
-        trackItem.addEventListener('mouseleave', handleMouseLeave)
-
-        // Cleanup function
-        return () => {
-          trackItem.removeEventListener('mouseenter', handleMouseEnter)
-          trackItem.removeEventListener('mouseleave', handleMouseLeave)
-        }
-      }
-    })
-  }, [tracks])
-
   // Custom playlist component
   const CustomPlaylist = () => {
     return (
@@ -542,37 +516,38 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                 </div>
 
                 {/* Download Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    downloadAudio(track.downloadUrl, track.downloadFilename)
-                  }}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    padding: '4px 8px',
-                    marginLeft: '8px',
-                    borderRadius: '4px',
-                    opacity: 0,
-                    transition: 'opacity 0.2s ease',
-                    position: 'relative',
-                    zIndex: 100, // Higher than FixedAudioPlayer's z-index of 50
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#DE3163'
-                    e.target.style.color = '#fff'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = 'transparent'
-                    e.target.style.color = '#fff'
-                  }}
-                  title="Download audio file"
-                >
-                  ⬇
-                </button>
+                {!isMobile && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      downloadAudio(track.downloadUrl, track.downloadFilename)
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      padding: '4px 8px',
+                      marginLeft: '8px',
+                      borderRadius: '4px',
+                      opacity: 1,
+                      position: 'relative',
+                      zIndex: 100,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = '#DE3163'
+                      e.target.style.color = '#fff'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = 'transparent'
+                      e.target.style.color = '#fff'
+                    }}
+                    title="Download audio file"
+                  >
+                    ⬇
+                  </button>
+                )}
               </div>
             )
           })}
@@ -594,52 +569,54 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
       }}
     >
       {/* Download All Button - Positioned as overlay */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '16px',
-          right: '16px',
-          zIndex: 30,
-        }}
-      >
-        <button
-          onClick={downloadAllAudio}
-          disabled={isDownloadingZip}
+      {!isMobile && (
+        <div
           style={{
-            background: isDownloadingZip ? '#666' : '#DE3163',
-            border: 'none',
-            color: '#fff',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontSize: '12px',
-            fontWeight: '500',
-            fontFamily: 'Montserrat, sans-serif',
-            cursor: isDownloadingZip ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            opacity: isDownloadingZip ? 0.7 : 1,
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            zIndex: 30,
           }}
-          onMouseEnter={(e) => {
-            if (!isDownloadingZip) {
-              e.target.style.background = '#c92d56'
-              e.target.style.transform = 'translateY(-1px)'
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isDownloadingZip) {
-              e.target.style.background = '#DE3163'
-              e.target.style.transform = 'translateY(0)'
-            }
-          }}
-          title={
-            isDownloadingZip
-              ? 'Creating ZIP archive...'
-              : 'Download all audio files as ZIP archive'
-          }
         >
-          {isDownloadingZip ? '⏳ Creating ZIP...' : '📦 Download ZIP'}
-        </button>
-      </div>
+          <button
+            onClick={downloadAllAudio}
+            disabled={isDownloadingZip}
+            style={{
+              background: isDownloadingZip ? '#666' : '#DE3163',
+              border: 'none',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: '500',
+              fontFamily: 'Montserrat, sans-serif',
+              cursor: isDownloadingZip ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              opacity: isDownloadingZip ? 0.7 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!isDownloadingZip) {
+                e.target.style.background = '#c92d56'
+                e.target.style.transform = 'translateY(-1px)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isDownloadingZip) {
+                e.target.style.background = '#DE3163'
+                e.target.style.transform = 'translateY(0)'
+              }
+            }}
+            title={
+              isDownloadingZip
+                ? 'Creating ZIP archive...'
+                : 'Download all audio files as ZIP archive'
+            }
+          >
+            {isDownloadingZip ? '⏳ Creating ZIP...' : '📦 Download ZIP'}
+          </button>
+        </div>
+      )}
 
       <CustomPlaylist />
     </div>
