@@ -11,6 +11,8 @@ export const FixedAudioPlayer = () => {
     setIsPlaying,
     playTrack,
     audioRef,
+    volume,
+    updateVolume,
   } = useAudioPlayer()
 
   const progressRef = useRef(null)
@@ -146,10 +148,10 @@ export const FixedAudioPlayer = () => {
           min={0}
           max={1}
           step={0.01}
-          defaultValue={1}
+          value={volume}
           onChange={(e) => {
-            if (audioRef.current)
-              audioRef.current.volume = parseFloat(e.target.value)
+            const newVolume = parseFloat(e.target.value)
+            updateVolume(newVolume)
           }}
         />
       </div>
