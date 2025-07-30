@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import JSZip from 'jszip'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
+import { trackAudioEvent } from '../../utils/plausible-analytics'
 import './BlogAudioPlayer.css'
 
 const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
@@ -34,27 +35,40 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
   }
 
   // Download function for audio files
-  const downloadAudio = useCallback(async (url, filename) => {
-    try {
-      const response = await fetch(url)
-      const blob = await response.blob()
-      const downloadUrl = window.URL.createObjectURL(blob)
+  const downloadAudio = useCallback(
+    async (url, filename) => {
+      try {
+        const response = await fetch(url)
+        const blob = await response.blob()
+        const downloadUrl = window.URL.createObjectURL(blob)
 
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
 
-      // Clean up the object URL
-      window.URL.revokeObjectURL(downloadUrl)
-    } catch (error) {
-      console.error('Download failed:', error)
-      // Fallback: open in new tab
-      window.open(url, '_blank')
-    }
-  }, [])
+        // Clean up the object URL
+        window.URL.revokeObjectURL(downloadUrl)
+
+        // Track download event with Plausible Analytics
+        trackAudioEvent.audioDownload(filename, postTitle)
+      } catch (error) {
+        console.error('Download failed:', error)
+        // Fallback: open in new tab
+        window.open(url, '_blank')
+
+        // Track failed download
+        trackAudioEvent.audioDownloadFailed(
+          filename,
+          postTitle,
+          'network_error'
+        )
+      }
+    },
+    [postTitle]
+  )
 
   // Disable auto-scroll behavior
   useEffect(() => {
@@ -140,6 +154,13 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
       // Clean up
       window.URL.revokeObjectURL(downloadUrl)
 
+      // Track ZIP download event with Plausible Analytics
+      trackAudioEvent.audioZipDownload(
+        currentPostTitle,
+        successful,
+        `${folderName}.zip`
+      )
+
       if (failed > 0) {
         alert(
           `Download complete! ${successful} files downloaded successfully, ${failed} files failed.`
@@ -147,6 +168,13 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
       }
     } catch (error) {
       console.error('ZIP creation failed:', error)
+
+      // Track ZIP download failure
+      trackAudioEvent.audioZipDownloadFailed(
+        currentPostTitle,
+        'zip_creation_error'
+      )
+
       alert('Failed to create ZIP file. Please try individual downloads.')
     } finally {
       setIsDownloadingZip(false)
@@ -350,13 +378,31 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
         if (currentIndex === index && isPlaying) {
           // If clicking the currently playing track, pause it
           setIsPlaying(false)
+
+          // Track pause event
+          trackAudioEvent.songPause(
+            tracks[index],
+            postTitle,
+            index + 1,
+            tracks.length,
+            'blog_player'
+          )
         } else {
           // Otherwise, play the selected track
+          // Note: songPlay event is tracked in the context's playTrack function
           playTrack(index, contextTracks)
         }
       }
     },
-    [tracks, currentIndex, isPlaying, playTrack, contextTracks, setIsPlaying]
+    [
+      tracks,
+      currentIndex,
+      isPlaying,
+      playTrack,
+      contextTracks,
+      setIsPlaying,
+      postTitle,
+    ]
   )
 
   // Start loading when component mounts - run only once

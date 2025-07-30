@@ -5,6 +5,7 @@ import React, {
   useRef,
   useEffect,
 } from 'react'
+import { trackAudioEvent, getPostName } from '../../utils/plausible-analytics'
 
 const AudioPlayerContext = createContext()
 
@@ -61,6 +62,19 @@ export const AudioPlayerProvider = ({ children }) => {
     if (newPlaylist) setPlaylist(newPlaylist)
     setCurrentIndex(index)
     setIsPlaying(true)
+
+    // Track song play with Plausible Analytics
+    const track = newPlaylist ? newPlaylist[index] : playlist[index]
+    if (track) {
+      const postName = getPostName(track)
+      trackAudioEvent.songPlay(
+        track,
+        postName,
+        index + 1,
+        newPlaylist ? newPlaylist.length : playlist.length,
+        'context_player'
+      )
+    }
   }
 
   const updateVolume = (newVolume) => {

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
+import { trackAudioEvent, getPostName } from '../../utils/plausible-analytics'
 import './FixedAudioPlayer.css'
 import {
   Pause,
@@ -101,7 +102,23 @@ export const FixedAudioPlayer = () => {
     return () => audio.removeEventListener('loadedmetadata', tryPlay)
   }, [currentTrack, isPlaying])
 
-  const togglePlay = () => setIsPlaying(!isPlaying)
+  const togglePlay = () => {
+    const newPlayingState = !isPlaying
+    setIsPlaying(newPlayingState)
+
+    // Track play/pause events
+    if (currentTrack) {
+      const postName = getPostName(currentTrack)
+      const eventName = newPlayingState ? 'song-play' : 'song-pause'
+      trackAudioEvent[eventName](
+        currentTrack,
+        postName,
+        currentIndex + 1,
+        playlist.length,
+        'fixed_player'
+      )
+    }
+  }
 
   const formatTime = (secs) => {
     if (!secs || isNaN(secs)) return '0:00'
@@ -157,13 +174,51 @@ export const FixedAudioPlayer = () => {
           >
             <Repeat size={18} />
           </button>
-          <button onClick={() => playTrack(getPreviousTrackIndex())}>
+          <button
+            onClick={() => {
+              const prevIndex = getPreviousTrackIndex()
+              playTrack(prevIndex)
+
+              // Track previous track navigation
+              if (playlist[prevIndex]) {
+                const track = playlist[prevIndex]
+                const postName = getPostName(track)
+                trackAudioEvent.trackNavigate(
+                  track,
+                  postName,
+                  prevIndex + 1,
+                  playlist.length,
+                  'previous',
+                  'fixed_player'
+                )
+              }
+            }}
+          >
             <SkipBack size={20} />
           </button>
           <button onClick={togglePlay}>
             {isPlaying ? <Pause size={24} /> : <Play size={24} />}
           </button>
-          <button onClick={() => playTrack(getNextTrackIndex())}>
+          <button
+            onClick={() => {
+              const nextIndex = getNextTrackIndex()
+              playTrack(nextIndex)
+
+              // Track next track navigation
+              if (playlist[nextIndex]) {
+                const track = playlist[nextIndex]
+                const postName = getPostName(track)
+                trackAudioEvent.trackNavigate(
+                  track,
+                  postName,
+                  nextIndex + 1,
+                  playlist.length,
+                  'next',
+                  'fixed_player'
+                )
+              }
+            }}
+          >
             <SkipForward size={20} />
           </button>
         </div>
