@@ -10,3 +10,13 @@ import { UserPreferencesProvider } from './src/components/calendar/user-preferen
 export const wrapRootElement = ({ element }) => {
   return <UserPreferencesProvider>{element}</UserPreferencesProvider>
 }
+
+// Initialize Plausible for custom event tracking
+export const onClientEntry = () => {
+  // Initialize plausible function for custom events
+  window.plausible =
+    window.plausible ||
+    function () {
+      ;(window.plausible.q = window.plausible.q || []).push(arguments)
+    }
+}
