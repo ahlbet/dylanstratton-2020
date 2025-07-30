@@ -50,7 +50,11 @@ export const FixedAudioPlayer = () => {
         }
       } else {
         // Normal behavior - go to next track or stop
-        const nextIndex = getNextTrackIndex()
+        let nextIndex = getNextTrackIndex()
+        if (!isShuffleOn && currentIndex === playlist.length - 1) {
+          // If shuffle is off and we're at the last track, loop back to the first track
+          nextIndex = 0
+        }
         if (nextIndex !== currentIndex) {
           playTrack(nextIndex)
         } else {

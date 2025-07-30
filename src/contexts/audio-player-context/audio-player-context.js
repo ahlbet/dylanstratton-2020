@@ -93,7 +93,7 @@ export const AudioPlayerProvider = ({ children }) => {
       // Find the original index of the next track
       return playlist.findIndex((track) => track.url === nextTrack.url)
     } else {
-      return Math.min(currentIndex + 1, playlist.length - 1)
+      return (currentIndex + 1) % playlist.length
     }
   }
 
