@@ -94,8 +94,38 @@
   padding: 0 16px;
 }
 
-/* Hide progress bar and volume control on mobile screens */
+/* Mobile layout */
 @media (max-width: 768px) {
+  .audio-player-container {
+    padding: 8px 12px;
+  }
+
+  .player-left {
+    flex: 0 0 auto;
+    padding: 0;
+    gap: 0;
+    justify-content: flex-start;
+  }
+
+  .track-info {
+    max-width: 120px;
+    overflow: hidden;
+  }
+
+  .track-title {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .track-artist {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .player-center {
     display: none;
   }
@@ -106,6 +136,19 @@
   
   .player-right {
     display: none;
+  }
+
+  /* Move controls to center on mobile */
+  .player-controls {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 6px;
+  }
+
+  .player-controls button {
+    font-size: 18px;
+    padding: 4px;
   }
 }
 
