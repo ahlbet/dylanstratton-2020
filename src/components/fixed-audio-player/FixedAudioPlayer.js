@@ -109,7 +109,7 @@ export const FixedAudioPlayer = () => {
     // Track play/pause events
     if (currentTrack) {
       const postName = getPostName(currentTrack)
-      const eventName = newPlayingState ? 'song-play' : 'song-pause'
+      const eventName = newPlayingState ? 'songPlay' : 'songPause'
       trackAudioEvent[eventName](
         currentTrack,
         postName,
