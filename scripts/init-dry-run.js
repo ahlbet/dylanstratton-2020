@@ -1,0 +1,243 @@
+const fs = require('fs')
+const path = require('path')
+const readline = require('readline')
+const { execSync } = require('child_process')
+const { createClient } = require('@supabase/supabase-js')
+const { generateBlogPostText } = require('../src/utils/markov-generator')
+const { cleanText } = require('../src/utils/text-cleaner')
+require('dotenv').config()
+
+// Create readline interface for user input
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+})
+
+// Helper function to prompt user for input
+const askQuestion = (question) => {
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      resolve(answer)
+    })
+  })
+}
+
+// Helper function to display text in a formatted way
+const displayText = (text, title) => {
+  console.log(`\n${'='.repeat(60)}`)
+  console.log(`${title}`)
+  console.log(`${'='.repeat(60)}`)
+  console.log(text)
+  console.log(`${'='.repeat(60)}\n`)
+}
+
+// Helper function to edit text interactively
+const editText = async (originalText, textNumber) => {
+  displayText(originalText, `Original Markov Text #${textNumber}`)
+
+  const editChoice = await askQuestion(
+    `Do you want to edit this text? (y/n, or 'r' to regenerate): `
+  )
+
+  if (editChoice.toLowerCase() === 'r') {
+    return 'REGENERATE'
+  }
+
+  if (editChoice.toLowerCase() !== 'y') {
+    return originalText
+  }
+
+  console.log('\nEnter your edited text (press Enter twice to finish):')
+  console.log(
+    '(Type "skip" to keep original, "regenerate" to generate new text)'
+  )
+
+  const lines = []
+  let lineNumber = 1
+
+  while (true) {
+    const line = await askQuestion(`Line ${lineNumber}: `)
+
+    if (line === '') {
+      if (lines.length > 0) break
+      continue
+    }
+
+    if (line.toLowerCase() === 'skip') {
+      return originalText
+    }
+
+    if (line.toLowerCase() === 'regenerate') {
+      return 'REGENERATE'
+    }
+
+    lines.push(line)
+    lineNumber++
+  }
+
+  return lines.join('\n')
+}
+
+// Main dry-run function
+const main = async () => {
+  const name = process.argv[2]
+
+  if (!name) {
+    console.error('Usage: node scripts/init-dry-run.js <post-name>')
+    console.error('Example: node scripts/init-dry-run.js 25jan15')
+    process.exit(1)
+  }
+
+  console.log(`🚀 DRY RUN: Creating blog post "${name}"`)
+  console.log('This will generate 5 markov texts for interactive editing')
+  console.log('No files will be created or uploaded to Supabase\n')
+
+  // Generate 5 markov texts
+  console.log('📝 Generating 5 markov texts...')
+  const markovTexts = []
+  let attempts = 0
+  const maxAttempts = 15 // Allow up to 3 attempts per text
+
+  for (let i = 0; i < 5; i++) {
+    let text = null
+    let attemptCount = 0
+
+    while (!text && attemptCount < 3) {
+      try {
+        const generatedText = await generateBlogPostText(name, 1)
+        // Remove the "> " prefix since we're generating individual texts
+        text = generatedText.replace(/^> /, '').trim()
+
+        if (text && text.length > 10) {
+          break
+        }
+      } catch (error) {
+        console.error(`Error generating text ${i + 1}:`, error.message)
+      }
+      attemptCount++
+    }
+
+    if (!text) {
+      text = `Generated text ${i + 1} could not be created.`
+    }
+
+    markovTexts.push(text)
+  }
+
+  console.log(`✅ Generated ${markovTexts.length} initial texts\n`)
+
+  // Interactive editing
+  const editedTexts = []
+  for (let i = 0; i < markovTexts.length; i++) {
+    let currentText = markovTexts[i]
+    let needsRegeneration = false
+
+    do {
+      needsRegeneration = false
+      const editedText = await editText(currentText, i + 1)
+
+      if (editedText === 'REGENERATE') {
+        try {
+          const newText = await generateBlogPostText(name, 1)
+          currentText = newText.replace(/^> /, '').trim()
+          needsRegeneration = true
+          console.log(`🔄 Regenerated text ${i + 1}`)
+        } catch (error) {
+          console.error(`Error regenerating text ${i + 1}:`, error.message)
+          currentText = `Generated text ${i + 1} could not be created.`
+        }
+      } else {
+        currentText = editedText
+      }
+    } while (needsRegeneration)
+
+    editedTexts.push(currentText)
+    console.log(`✅ Text ${i + 1} finalized\n`)
+  }
+
+  // Format for markdown
+  const markdownText = editedTexts.map((text) => `> ${text}`).join('\n\n')
+
+  // Show what would be uploaded to Supabase
+  console.log('📊 WHAT WOULD BE UPLOADED TO SUPABASE:')
+  console.log('='.repeat(60))
+
+  const supabaseTexts = editedTexts.map((text, index) => ({
+    text_content: text,
+    text_length: text.length,
+    metadata: {
+      generated_at: new Date().toISOString(),
+      source: 'markov-generator',
+      post_name: name,
+      text_number: index + 1,
+      edited_by_user: true,
+      cleaned_with_bad_words_filter: true,
+    },
+  }))
+
+  console.log(
+    `Would upload ${supabaseTexts.length} texts to markov_texts table:`
+  )
+  supabaseTexts.forEach((textRecord, index) => {
+    console.log(`\nText ${index + 1}:`)
+    console.log(`  Length: ${textRecord.text_length} characters`)
+    console.log(
+      `  Content: "${textRecord.text_content.substring(0, 100)}${textRecord.text_content.length > 100 ? '...' : ''}"`
+    )
+    console.log(`  Metadata: ${JSON.stringify(textRecord.metadata, null, 2)}`)
+  })
+
+  // Show what would be added to markdown
+  console.log('\n📝 WHAT WOULD BE ADDED TO MARKDOWN:')
+  console.log('='.repeat(60))
+  displayText(markdownText, 'Markov Text Blockquotes')
+
+  // Show what the final markdown file would look like
+  console.log('📄 WHAT THE FINAL MARKDOWN FILE WOULD LOOK LIKE:')
+  console.log('='.repeat(60))
+
+  const template = fs.readFileSync(
+    path.join(__dirname, '../src/template.md'),
+    'utf8'
+  )
+  const date = new Date().toISOString().split('T')[0]
+
+  const finalMarkdown = template
+    .replace(/\{name\}/g, name)
+    .replace(/\{date\}/g, date)
+    .replace(/\{audio_files\}/g, '<!-- Audio files would be added here -->')
+    .replace(/\{cover_art\}/g, '<!-- Cover art would be added here -->')
+    .replace(/\{markov_text\}/g, markdownText)
+
+  console.log(finalMarkdown)
+
+  // Ask if user wants to proceed with actual creation
+  console.log('\n🤔 DRY RUN COMPLETE')
+  console.log('='.repeat(60))
+
+  const proceed = await askQuestion(
+    'Do you want to proceed with actual creation? (y/n): '
+  )
+
+  if (proceed.toLowerCase() === 'y') {
+    console.log('\n🚀 Proceeding with actual creation...')
+    console.log('(This would create the files and upload to Supabase)')
+
+    // Here you would call the actual init script or implement the creation logic
+    console.log('✅ Would create:')
+    console.log(`  - content/blog/${name}/${name}.md`)
+    console.log(`  - Upload ${supabaseTexts.length} texts to Supabase`)
+    console.log(`  - Commit and push to git`)
+  } else {
+    console.log('\n❌ Dry run completed. No files created.')
+  }
+
+  rl.close()
+}
+
+// Run the main function
+main().catch((error) => {
+  console.error('Script failed:', error.message)
+  rl.close()
+  process.exit(1)
+})
