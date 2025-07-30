@@ -1,7 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import './FixedAudioPlayer.css'
-import { Pause, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react'
+import {
+  Pause,
+  Play,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  Shuffle,
+  Repeat,
+} from 'lucide-react'
 
 export const FixedAudioPlayer = () => {
   const {
@@ -13,6 +21,12 @@ export const FixedAudioPlayer = () => {
     audioRef,
     volume,
     updateVolume,
+    isShuffleOn,
+    toggleShuffle,
+    isLoopOn,
+    toggleLoop,
+    getNextTrackIndex,
+    getPreviousTrackIndex,
   } = useAudioPlayer()
 
   const progressRef = useRef(null)
@@ -28,10 +42,20 @@ export const FixedAudioPlayer = () => {
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
     const handleLoadedMetadata = () => setDuration(audio.duration)
     const handleEnded = () => {
-      if (currentIndex < playlist.length - 1) {
-        playTrack(currentIndex + 1)
+      if (isLoopOn) {
+        // If loop is on, restart the current track
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0
+          audioRef.current.play()
+        }
       } else {
-        setIsPlaying(false)
+        // Normal behavior - go to next track or stop
+        const nextIndex = getNextTrackIndex()
+        if (nextIndex !== currentIndex) {
+          playTrack(nextIndex)
+        } else {
+          setIsPlaying(false)
+        }
       }
     }
 
@@ -44,7 +68,7 @@ export const FixedAudioPlayer = () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
       audio.removeEventListener('ended', handleEnded)
     }
-  }, [audioRef, currentIndex])
+  }, [audioRef, currentIndex, getNextTrackIndex, isLoopOn])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -107,17 +131,35 @@ export const FixedAudioPlayer = () => {
           <div className="track-artist">{currentTrack.artist}</div>
         </div>
         <div className="player-controls">
-          <button onClick={() => playTrack(Math.max(currentIndex - 1, 0))}>
+          {playlist.length > 1 && (
+            <button
+              onClick={toggleShuffle}
+              style={{
+                color: isShuffleOn ? '#DE3163' : '#fff',
+                transition: 'color 0.2s ease',
+              }}
+              title={isShuffleOn ? 'Shuffle is on' : 'Turn shuffle on'}
+            >
+              <Shuffle size={18} />
+            </button>
+          )}
+          <button
+            onClick={toggleLoop}
+            style={{
+              color: isLoopOn ? '#DE3163' : '#fff',
+              transition: 'color 0.2s ease',
+            }}
+            title={isLoopOn ? 'Loop is on' : 'Turn loop on'}
+          >
+            <Repeat size={18} />
+          </button>
+          <button onClick={() => playTrack(getPreviousTrackIndex())}>
             <SkipBack size={20} />
           </button>
           <button onClick={togglePlay}>
             {isPlaying ? <Pause size={24} /> : <Play size={24} />}
           </button>
-          <button
-            onClick={() =>
-              playTrack(Math.min(currentIndex + 1, playlist.length - 1))
-            }
-          >
+          <button onClick={() => playTrack(getNextTrackIndex())}>
             <SkipForward size={20} />
           </button>
         </div>

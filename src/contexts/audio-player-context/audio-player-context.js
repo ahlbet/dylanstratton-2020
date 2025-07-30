@@ -14,9 +14,12 @@ export const AudioPlayerProvider = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [totalPlaylistDuration, setTotalPlaylistDuration] = useState(0)
   const [volume, setVolume] = useState(1)
+  const [isShuffleOn, setIsShuffleOn] = useState(false)
+  const [isLoopOn, setIsLoopOn] = useState(false)
+  const [shuffledPlaylist, setShuffledPlaylist] = useState([])
   const audioRef = useRef(null)
 
-  // Load volume from localStorage on mount
+  // Load volume, shuffle, and loop from localStorage on mount
   useEffect(() => {
     const savedVolume = localStorage.getItem('audioPlayerVolume')
     if (savedVolume !== null) {
@@ -24,6 +27,16 @@ export const AudioPlayerProvider = ({ children }) => {
       if (!isNaN(parsedVolume) && parsedVolume >= 0 && parsedVolume <= 1) {
         setVolume(parsedVolume)
       }
+    }
+
+    const savedShuffle = localStorage.getItem('audioPlayerShuffle')
+    if (savedShuffle !== null) {
+      setIsShuffleOn(savedShuffle === 'true')
+    }
+
+    const savedLoop = localStorage.getItem('audioPlayerLoop')
+    if (savedLoop !== null) {
+      setIsLoopOn(savedLoop === 'true')
     }
   }, [])
 
@@ -34,6 +47,16 @@ export const AudioPlayerProvider = ({ children }) => {
     }
   }, [volume])
 
+  // Create shuffled playlist when shuffle is toggled or playlist changes
+  useEffect(() => {
+    if (isShuffleOn && playlist.length > 0) {
+      const shuffled = [...playlist].sort(() => Math.random() - 0.5)
+      setShuffledPlaylist(shuffled)
+    } else {
+      setShuffledPlaylist([])
+    }
+  }, [isShuffleOn, playlist])
+
   const playTrack = (index, newPlaylist) => {
     if (newPlaylist) setPlaylist(newPlaylist)
     setCurrentIndex(index)
@@ -43,6 +66,54 @@ export const AudioPlayerProvider = ({ children }) => {
   const updateVolume = (newVolume) => {
     setVolume(newVolume)
     localStorage.setItem('audioPlayerVolume', newVolume.toString())
+  }
+
+  const toggleShuffle = () => {
+    const newShuffleState = !isShuffleOn
+    setIsShuffleOn(newShuffleState)
+    localStorage.setItem('audioPlayerShuffle', newShuffleState.toString())
+  }
+
+  const toggleLoop = () => {
+    const newLoopState = !isLoopOn
+    setIsLoopOn(newLoopState)
+    localStorage.setItem('audioPlayerLoop', newLoopState.toString())
+  }
+
+  const getNextTrackIndex = () => {
+    if (isShuffleOn && shuffledPlaylist.length > 0) {
+      // Find current track in shuffled playlist and get next
+      const currentTrack = playlist[currentIndex]
+      const currentShuffledIndex = shuffledPlaylist.findIndex(
+        (track) => track.url === currentTrack.url
+      )
+      const nextShuffledIndex =
+        (currentShuffledIndex + 1) % shuffledPlaylist.length
+      const nextTrack = shuffledPlaylist[nextShuffledIndex]
+      // Find the original index of the next track
+      return playlist.findIndex((track) => track.url === nextTrack.url)
+    } else {
+      return Math.min(currentIndex + 1, playlist.length - 1)
+    }
+  }
+
+  const getPreviousTrackIndex = () => {
+    if (isShuffleOn && shuffledPlaylist.length > 0) {
+      // Find current track in shuffled playlist and get previous
+      const currentTrack = playlist[currentIndex]
+      const currentShuffledIndex = shuffledPlaylist.findIndex(
+        (track) => track.url === currentTrack.url
+      )
+      const prevShuffledIndex =
+        currentShuffledIndex === 0
+          ? shuffledPlaylist.length - 1
+          : currentShuffledIndex - 1
+      const prevTrack = shuffledPlaylist[prevShuffledIndex]
+      // Find the original index of the previous track
+      return playlist.findIndex((track) => track.url === prevTrack.url)
+    } else {
+      return Math.max(currentIndex - 1, 0)
+    }
   }
 
   const updateTotalPlaylistDuration = (duration) => {
@@ -62,6 +133,12 @@ export const AudioPlayerProvider = ({ children }) => {
         updateTotalPlaylistDuration,
         volume,
         updateVolume,
+        isShuffleOn,
+        toggleShuffle,
+        isLoopOn,
+        toggleLoop,
+        getNextTrackIndex,
+        getPreviousTrackIndex,
       }}
     >
       {children}
