@@ -10,7 +10,7 @@ async function addMoreMarkovTexts() {
     process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
-  console.log('📈 Adding 10,000 more Markov texts...')
+  console.log('📈 Adding 10,000 more Markov texts with bad-words filtering...')
 
   // Load the full corpus and build ngrams with cleaning
   const generator = new MarkovGenerator(5)
@@ -27,8 +27,8 @@ async function addMoreMarkovTexts() {
 
   console.log(`📚 Loaded ${generator.lines.length} lines of text`)
 
-  // Clean the lines before building ngrams
-  console.log('🧹 Cleaning text lines...')
+  // Clean the lines before building ngrams (now includes bad-words filtering)
+  console.log('🧹 Cleaning text lines with bad-words filter...')
   generator.lines = generator.lines
     .map((line) => cleanText(line))
     .filter((line) => line.length > 10) // Remove very short lines
@@ -58,6 +58,7 @@ async function addMoreMarkovTexts() {
             max_length: 600,
             max_sentences: 2,
             batch: 'additional-10k',
+            cleaned_with_bad_words_filter: true,
           },
         })
       }
@@ -73,9 +74,9 @@ async function addMoreMarkovTexts() {
   console.log(`✅ Generated ${texts.length} valid texts`)
 
   // Insert texts into database in batches
-  console.log('📦 Inserting additional texts into database...')
+  console.log('📦 Inserting cleaned texts into database...')
 
-  const batchSize = 100 // Larger batches for efficiency
+  const batchSize = 50
   for (let i = 0; i < texts.length; i += batchSize) {
     const batch = texts.slice(i, i + batchSize)
 
@@ -95,7 +96,7 @@ async function addMoreMarkovTexts() {
       )
     }
 
-    if (i % 1000 === 0) {
+    if (i % 500 === 0) {
       console.log(`📤 Inserted ${i + batch.length}/${texts.length} texts...`)
     }
   }

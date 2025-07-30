@@ -14,6 +14,7 @@
     "@fullcalendar/react": "^6.1.18",
     "@fullcalendar/timegrid": "^6.1.18",
     "@supabase/supabase-js": "^2.50.2",
+    "bad-words": "3.0.0",
     "canvas": "^3.1.2",
     "dotenv": "^17.0.1",
     "express": "^5.1.0",
@@ -82,6 +83,7 @@
     "clean": "gatsby clean",
     "test": "jest",
     "new-day": "node ./init.js",
-    "generate-markov": "node scripts/generate-markov-data.js"
+    "generate-markov": "node scripts/generate-markov-data.js",
+    "clean-markov-bad-words": "node scripts/clean-markov-texts-with-bad-words.js"
   }
 }

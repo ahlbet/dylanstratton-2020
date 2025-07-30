@@ -10,7 +10,9 @@ async function cleanMarkovTextsDB() {
     process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
-  console.log('🧹 Cleaning and regenerating Markov texts...')
+  console.log(
+    '🧹 Cleaning and regenerating Markov texts with bad-words filtering...'
+  )
 
   // First, delete all existing texts
   console.log('🗑️ Deleting existing texts...')
@@ -41,8 +43,8 @@ async function cleanMarkovTextsDB() {
 
   console.log(`📚 Loaded ${generator.lines.length} lines of text`)
 
-  // Clean the lines before building ngrams
-  console.log('🧹 Cleaning text lines...')
+  // Clean the lines before building ngrams (now includes bad-words filtering)
+  console.log('🧹 Cleaning text lines with bad-words filter...')
   generator.lines = generator.lines
     .map((line) => cleanText(line))
     .filter((line) => line.length > 10) // Remove very short lines
@@ -71,6 +73,7 @@ async function cleanMarkovTextsDB() {
             source: 'markov-generator',
             max_length: 600,
             max_sentences: 2,
+            cleaned_with_bad_words_filter: true,
           },
         })
       }
