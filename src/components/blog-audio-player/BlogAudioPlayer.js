@@ -389,15 +389,8 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
           )
         } else {
           // Otherwise, play the selected track
+          // Note: songPlay event is tracked in the context's playTrack function
           playTrack(index, contextTracks)
-
-          // Track track selection (in addition to play event from context)
-          trackAudioEvent.trackSelect(
-            tracks[index],
-            postTitle,
-            index + 1,
-            tracks.length
-          )
         }
       }
     },

@@ -1,5 +1,15 @@
 /**
  * Plausible Analytics utility functions for audio tracking
+ * 
+ * Tracking Strategy:
+ * - songPlay: Triggered when any track starts playing (from context playTrack)
+ * - songPause: Triggered when tracks are paused
+ * - trackNavigate: Triggered when using next/previous buttons
+ * - audioDownload: Triggered when individual files are downloaded
+ * - audioZipDownload: Triggered when ZIP files are downloaded
+ * 
+ * Note: We avoid duplicate tracking by not having separate "track selection" events
+ * since songPlay already captures when users select and play tracks.
  */
 
 // Check if Plausible is available
@@ -53,18 +63,6 @@ export const trackAudioEvent = {
       track_index: trackIndex || 1,
       total_tracks: totalTracks || 1,
       player_type: playerType,
-    })
-  },
-
-  // Track track selection (when user clicks on a track)
-  trackSelect: (track, postName, trackIndex, totalTracks) => {
-    trackEvent('track-select', {
-      track_title: track?.title || 'Unknown Track',
-      track_artist: track?.artist || 'Unknown Artist',
-      track_album: track?.album || 'Unknown Album',
-      post_name: postName || 'Unknown Post',
-      track_index: trackIndex || 1,
-      total_tracks: totalTracks || 1,
     })
   },
 
