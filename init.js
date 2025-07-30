@@ -5,8 +5,80 @@ require('dotenv').config()
 
 const fs = require('fs')
 const path = require('path')
+const readline = require('readline')
 const { execSync } = require('child_process')
 const { createClient } = require('@supabase/supabase-js')
+
+// Create readline interface for user input
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+})
+
+// Helper function to prompt user for input
+const askQuestion = (question) => {
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      resolve(answer)
+    })
+  })
+}
+
+// Helper function to display text in a formatted way
+const displayText = (text, title) => {
+  console.log(`\n${'='.repeat(60)}`)
+  console.log(`${title}`)
+  console.log(`${'='.repeat(60)}`)
+  console.log(text)
+  console.log(`${'='.repeat(60)}\n`)
+}
+
+// Helper function to edit text interactively
+const editText = async (originalText, textNumber) => {
+  displayText(originalText, `Original Markov Text #${textNumber}`)
+
+  const editChoice = await askQuestion(
+    `Do you want to edit this text? (y/n, or 'r' to regenerate): `
+  )
+
+  if (editChoice.toLowerCase() === 'r') {
+    return 'REGENERATE'
+  }
+
+  if (editChoice.toLowerCase() !== 'y') {
+    return originalText
+  }
+
+  console.log('\nEnter your edited text (press Enter twice to finish):')
+  console.log(
+    '(Type "skip" to keep original, "regenerate" to generate new text)'
+  )
+
+  const lines = []
+  let lineNumber = 1
+
+  while (true) {
+    const line = await askQuestion(`Line ${lineNumber}: `)
+
+    if (line === '') {
+      if (lines.length > 0) break
+      continue
+    }
+
+    if (line.toLowerCase() === 'skip') {
+      return originalText
+    }
+
+    if (line.toLowerCase() === 'regenerate') {
+      return 'REGENERATE'
+    }
+
+    lines.push(line)
+    lineNumber++
+  }
+
+  return lines.join('\n')
+}
 
 // Function to strip special characters except hyphens
 const sanitizeFilename = (filename) => {
@@ -282,15 +354,97 @@ const main = async () => {
     // }
   }
 
-  // Generate Markov chain text for the blog post
-  let markovText = ''
+  // Generate and edit Markov chain texts for the blog post
+  console.log('📝 Generating 5 markov texts for interactive editing...')
+  const markovTexts = []
+  const editedTexts = []
+
+  // Generate 5 initial texts
+  for (let i = 0; i < 5; i++) {
+    let text = null
+    let attemptCount = 0
+
+    while (!text && attemptCount < 3) {
+      try {
+        const generatedText = await generateBlogPostText(name, 1)
+        // Remove the "> " prefix since we're generating individual texts
+        text = generatedText.replace(/^> /, '').trim()
+
+        if (text && text.length > 10) {
+          break
+        }
+      } catch (error) {
+        console.error(`Error generating text ${i + 1}:`, error.message)
+      }
+      attemptCount++
+    }
+
+    if (!text) {
+      text = `Generated text ${i + 1} could not be created.`
+    }
+
+    markovTexts.push(text)
+  }
+
+  console.log(`✅ Generated ${markovTexts.length} initial texts\n`)
+
+  // Interactive editing
+  for (let i = 0; i < markovTexts.length; i++) {
+    let currentText = markovTexts[i]
+    let needsRegeneration = false
+
+    do {
+      needsRegeneration = false
+      const editedText = await editText(currentText, i + 1)
+
+      if (editedText === 'REGENERATE') {
+        try {
+          const newText = await generateBlogPostText(name, 1)
+          currentText = newText.replace(/^> /, '').trim()
+          needsRegeneration = true
+          console.log(`🔄 Regenerated text ${i + 1}`)
+        } catch (error) {
+          console.error(`Error regenerating text ${i + 1}:`, error.message)
+          currentText = `Generated text ${i + 1} could not be created.`
+        }
+      } else {
+        currentText = editedText
+      }
+    } while (needsRegeneration)
+
+    editedTexts.push(currentText)
+    console.log(`✅ Text ${i + 1} finalized\n`)
+  }
+
+  // Format for markdown
+  const markovText = editedTexts.map((text) => `> ${text}`).join('\n\n')
+
+  // Upload edited texts to Supabase
+  console.log('📦 Uploading edited texts to Supabase...')
+  const supabaseTexts = editedTexts.map((text, index) => ({
+    text_content: text,
+    text_length: text.length,
+    metadata: {
+      generated_at: new Date().toISOString(),
+      source: 'markov-generator',
+      post_name: name,
+      text_number: index + 1,
+      edited_by_user: true,
+      cleaned_with_bad_words_filter: true,
+    },
+  }))
+
   try {
-    console.log('Generating Markov chain text for blog post...')
-    markovText = await generateBlogPostText(name, 5)
-    console.log('Generated Markov text successfully')
+    const { error } = await supabase.from('markov_texts').insert(supabaseTexts)
+    if (error) {
+      console.error('Failed to upload texts to Supabase:', error.message)
+    } else {
+      console.log(
+        `✅ Successfully uploaded ${supabaseTexts.length} texts to Supabase`
+      )
+    }
   } catch (error) {
-    console.error('Failed to generate Markov text:', error.message)
-    markovText = '> Generated text could not be created for this post.'
+    console.error('Failed to upload texts to Supabase:', error.message)
   }
 
   // Generate cover art for the blog post
@@ -361,15 +515,19 @@ const main = async () => {
       `No audio files were uploaded to Supabase. Skipping git push to avoid incomplete commits.`
     )
   }
+
+  // Close readline interface
+  rl.close()
 }
 
 // Export functions for testing
-module.exports = { main }
+module.exports = { main, askQuestion, displayText, editText }
 
 // Run the main function only if this is the main module
 if (require.main === module) {
   main().catch((error) => {
     console.error('Script failed:', error.message)
+    rl.close()
     process.exit(1)
   })
 }
