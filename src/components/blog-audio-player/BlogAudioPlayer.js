@@ -585,7 +585,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
       }}
     >
       {/* Download All Button - Positioned as overlay */}
-      {!isMobile && (
+      {!isMobile && audioUrls.length > 1 && (
         <div
           style={{
             position: 'absolute',
