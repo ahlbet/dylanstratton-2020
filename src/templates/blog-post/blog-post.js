@@ -219,7 +219,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                   </nav>
                 </header>
 
-                {/* Calendar Toggle Button */}
+                {/* Calendar Toggle Button
                 <div
                   style={{
                     marginBottom: '1rem',
@@ -229,11 +229,12 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                 </div>
 
                 {/* Calendar */}
-                {calendarVisible && (
+                {/*{calendarVisible && (
                   <div style={{ marginBottom: rhythm(1) }}>
                     <Calendar />
                   </div>
-                )}
+                //)}
+                */}
               </article>
             </div>
 
