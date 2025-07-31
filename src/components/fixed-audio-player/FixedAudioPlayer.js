@@ -42,6 +42,12 @@ export const FixedAudioPlayer = () => {
 
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
     const handleLoadedMetadata = () => setDuration(audio.duration)
+    const handleLoadStart = () => {
+      // Set volume when audio starts loading new source
+      if (audioRef.current) {
+        audioRef.current.volume = volume
+      }
+    }
     const handleEnded = () => {
       if (isLoopOn) {
         // If loop is on, restart the current track
@@ -66,14 +72,16 @@ export const FixedAudioPlayer = () => {
 
     audio.addEventListener('timeupdate', handleTimeUpdate)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+    audio.addEventListener('loadstart', handleLoadStart)
     audio.addEventListener('ended', handleEnded)
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate)
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      audio.removeEventListener('loadstart', handleLoadStart)
       audio.removeEventListener('ended', handleEnded)
     }
-  }, [audioRef, currentIndex, getNextTrackIndex, isLoopOn])
+  }, [audioRef, currentIndex, getNextTrackIndex, isLoopOn, volume])
 
   useEffect(() => {
     const audio = audioRef.current

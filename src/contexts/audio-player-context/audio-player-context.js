@@ -43,10 +43,26 @@ export const AudioPlayerProvider = ({ children }) => {
 
   // Update audio volume when volume state changes
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume
+    const audio = audioRef.current
+    if (audio) {
+      audio.volume = volume
     }
   }, [volume])
+
+  // Set volume when current track changes (e.g., after navigation)
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio && currentIndex !== null) {
+      // Small delay to ensure audio element has loaded the new source
+      const timeoutId = setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.volume = volume
+        }
+      }, 100)
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [currentIndex, volume])
 
   // Create shuffled playlist when shuffle is toggled or playlist changes
   useEffect(() => {
