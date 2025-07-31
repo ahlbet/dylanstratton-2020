@@ -107,16 +107,6 @@ export const FixedAudioPlayer = () => {
             ) ===
               shuffledPlaylist.length - 1)
 
-        console.log('🎵 Track ended:', {
-          currentIndex,
-          playlistLength: playlist.length,
-          isShuffleOn,
-          shuffledPlaylistLength: shuffledPlaylist.length,
-          isLastTrack,
-          isAutopilotOn,
-          currentTrackUrl: playlist[currentIndex]?.url,
-        })
-
         if (isLastTrack && isAutopilotOn) {
           // If autopilot is on and this was the last track, navigate to random post
           navigateToRandomPost()
