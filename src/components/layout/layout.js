@@ -77,7 +77,22 @@ const Layout = ({ location, title, children }) => {
           </label>
         )}
       </ThemeToggler> */}
-      <header style={{ paddingRight: '72px' }}>{header}</header>
+      <header style={{ paddingRight: '72px' }}>
+        {header}
+        <nav style={{ marginTop: rhythm(0.5) }}>
+          <Link
+            to="/all"
+            style={{
+              color: '#DE3163',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: '500',
+            }}
+          >
+            All Songs
+          </Link>
+        </nav>
+      </header>
       <main>{children}</main>
       <footer>{new Date().getFullYear()}</footer>
       <RandomDayButton />
