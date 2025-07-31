@@ -95,7 +95,7 @@ const Layout = ({ location, title, children }) => {
       </header>
       <main>{children}</main>
       <footer>{new Date().getFullYear()}</footer>
-      <RandomDayButton />
+      {/* <RandomDayButton /> */}
     </div>
   )
 }
