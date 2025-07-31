@@ -14,6 +14,7 @@ import {
   extractAudioUrls,
   removeAudioFromHtml,
 } from '../../utils/extractAudioUrls'
+import audioPreloader from '../../utils/audio-preloader'
 import './blog-post.css'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
@@ -61,6 +62,16 @@ const AutopilotAutoPlay = ({ audioUrls }) => {
 
       if (JSON.stringify(currentUrls) !== JSON.stringify(newUrls)) {
         setPlaylist(tracks)
+
+        // Preload audio files for better performance
+        audioPreloader.preloadMultiple(audioUrls).then((results) => {
+          const successCount = results.filter(
+            (result) => result.status === 'fulfilled'
+          ).length
+          console.log(
+            `Preloaded ${successCount}/${audioUrls.length} audio files`
+          )
+        })
       }
 
       // Check if we navigated here via autopilot
