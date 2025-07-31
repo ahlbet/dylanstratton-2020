@@ -1,9 +1,12 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { graphql } from 'gatsby'
 import Layout from '../components/layout/layout'
 import SEO from '../components/seo/seo'
 import { rhythm } from '../utils/typography'
-import { AudioPlayerProvider } from '../contexts/audio-player-context/audio-player-context'
+import {
+  AudioPlayerProvider,
+  useAudioPlayer,
+} from '../contexts/audio-player-context/audio-player-context'
 import { FixedAudioPlayer } from '../components/fixed-audio-player/FixedAudioPlayer'
 import AllSongsPlaylist from '../components/all-songs-playlist/all-songs-playlist'
 import DynamicMarkovText from '../components/dynamic-markov-text/DynamicMarkovText'
@@ -16,6 +19,20 @@ const AudioReactiveGridSketch = React.lazy(
       '../components/audio-reactive-grid-sketch/audio-reactive-grid-sketch'
     )
 )
+
+// Component to handle autopilot state on /all page
+const AllSongsAutopilotHandler = () => {
+  const { isAutopilotOn, toggleAutopilot } = useAudioPlayer()
+
+  useEffect(() => {
+    // Turn off autopilot when /all page loads
+    if (isAutopilotOn) {
+      toggleAutopilot()
+    }
+  }, []) // Only run once on mount
+
+  return null
+}
 
 const AllSongsPage = ({ data, location }) => {
   const siteTitle = data.site.siteMetadata.title
@@ -44,6 +61,7 @@ const AllSongsPage = ({ data, location }) => {
 
   return (
     <AudioPlayerProvider>
+      <AllSongsAutopilotHandler />
       <Layout location={location} title={siteTitle}>
         <SEO title="All Songs" description="Complete playlist of all songs" />
 

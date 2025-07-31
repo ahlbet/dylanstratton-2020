@@ -17,6 +17,7 @@ export const AudioPlayerProvider = ({ children }) => {
   const [volume, setVolume] = useState(1)
   const [isShuffleOn, setIsShuffleOn] = useState(false)
   const [isLoopOn, setIsLoopOn] = useState(false)
+  const [isAutopilotOn, setIsAutopilotOn] = useState(false)
   const [shuffledPlaylist, setShuffledPlaylist] = useState([])
   const audioRef = useRef(null)
 
@@ -38,6 +39,18 @@ export const AudioPlayerProvider = ({ children }) => {
     const savedLoop = localStorage.getItem('audioPlayerLoop')
     if (savedLoop !== null) {
       setIsLoopOn(savedLoop === 'true')
+    }
+
+    const savedAutopilot = localStorage.getItem('audioPlayerAutopilot')
+    if (savedAutopilot !== null) {
+      // Don't load autopilot state if we're on the /all page
+      if (
+        typeof window !== 'undefined' &&
+        window.location.pathname !== '/all' &&
+        window.location.pathname !== '/all/'
+      ) {
+        setIsAutopilotOn(savedAutopilot === 'true')
+      }
     }
   }, [])
 
@@ -92,6 +105,31 @@ export const AudioPlayerProvider = ({ children }) => {
     const newLoopState = !isLoopOn
     setIsLoopOn(newLoopState)
     localStorage.setItem('audioPlayerLoop', newLoopState.toString())
+  }
+
+  const toggleAutopilot = () => {
+    const newAutopilotState = !isAutopilotOn
+    setIsAutopilotOn(newAutopilotState)
+    localStorage.setItem('audioPlayerAutopilot', newAutopilotState.toString())
+
+    // If turning on autopilot, ensure shuffle is also on
+    if (newAutopilotState && !isShuffleOn) {
+      setIsShuffleOn(true)
+      localStorage.setItem('audioPlayerShuffle', 'true')
+    }
+  }
+
+  // Function to check if autopilot navigation is needed
+  const shouldNavigateToRandomPost = () => {
+    if (!isAutopilotOn) return false
+
+    // Check if we're on home or /all page
+    if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname
+      return pathname === '/' || pathname === '/all' || pathname === '/all/'
+    }
+
+    return false
   }
 
   const getNextTrackIndex = () => {
@@ -152,6 +190,10 @@ export const AudioPlayerProvider = ({ children }) => {
         toggleShuffle,
         isLoopOn,
         toggleLoop,
+        isAutopilotOn,
+        toggleAutopilot,
+        shouldNavigateToRandomPost,
+        shuffledPlaylist,
         getNextTrackIndex,
         getPreviousTrackIndex,
       }}
