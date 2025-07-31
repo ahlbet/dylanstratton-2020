@@ -5,7 +5,7 @@
 const Filter = require('bad-words')
 
 // Create a filter instance
-const filter = new Filter()
+const filter = new Filter({ placeHolder: '' })
 
 // Clean text by removing Gutenberg headers, footers, and other metadata
 function cleanText(text) {

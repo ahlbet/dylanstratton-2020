@@ -5,7 +5,7 @@ const path = require('path')
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
 // Create a filter instance for tracking
-const filter = new Filter()
+const filter = new Filter({ placeHolder: '' })
 
 async function cleanMarkovTextsWithBadWords() {
   const supabase = createClient(
