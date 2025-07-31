@@ -138,6 +138,7 @@ export const AudioPlayerProvider = ({ children }) => {
     <AudioPlayerContext.Provider
       value={{
         playlist,
+        setPlaylist,
         currentIndex,
         isPlaying,
         setIsPlaying,

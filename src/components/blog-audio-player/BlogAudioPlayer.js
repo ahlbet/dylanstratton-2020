@@ -9,6 +9,21 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
   const [isDownloadingZip, setIsDownloadingZip] = useState(false)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
+  // Normalize audioUrls to handle both string URLs and objects with metadata
+  const normalizedAudioUrls = useMemo(() => {
+    return audioUrls.map((item) => {
+      if (typeof item === 'string') {
+        return { url: item, postTitle, postDate }
+      }
+      return item
+    })
+  }, [audioUrls, postTitle, postDate])
+
+  // Extract just the URLs for the audio player context
+  const audioUrlStrings = useMemo(() => {
+    return normalizedAudioUrls.map((item) => item.url)
+  }, [normalizedAudioUrls])
+
   // Get audio player context
   const {
     playlist,
@@ -19,12 +34,15 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     playTrack,
     totalPlaylistDuration,
     updateTotalPlaylistDuration,
+    isShuffleOn,
   } = useAudioPlayer()
 
   const [trackDurations, setTrackDurations] = useState({})
   const loadingTracksRef = useRef(new Set()) // Track which URLs we're currently loading
   const batchLoadingRef = useRef({ isRunning: false, currentBatch: 0 })
   const hasStartedLoadingRef = useRef(false) // Prevent multiple loading attempts
+  const trackListRef = useRef(null)
+  const trackItemRefs = useRef({})
 
   // Format duration from seconds to MM:SS
   const formatDuration = (seconds) => {
@@ -412,6 +430,34 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     }
   }, []) // Empty dependency array - run only once on mount
 
+  // Scroll current track into view when shuffle is on
+  useEffect(() => {
+    if (
+      isShuffleOn &&
+      currentIndex !== null &&
+      trackItemRefs.current[currentIndex]
+    ) {
+      const trackElement = trackItemRefs.current[currentIndex]
+      const trackList = trackListRef.current
+
+      if (trackElement && trackList) {
+        // Calculate if the track is visible
+        const trackRect = trackElement.getBoundingClientRect()
+        const listRect = trackList.getBoundingClientRect()
+
+        const isVisible =
+          trackRect.top >= listRect.top && trackRect.bottom <= listRect.bottom
+
+        if (!isVisible) {
+          trackElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          })
+        }
+      }
+    }
+  }, [currentIndex, isShuffleOn])
+
   // Custom playlist component
   const CustomPlaylist = () => {
     return (
@@ -422,7 +468,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
           style={{
             padding: '16px',
             borderBottom: '1px solid #e5e7eb',
-            backgroundColor: 'rgba(42, 42, 42, 0.9)',
+            // backgroundColor: 'rgba(42, 42, 42, 0.9)',
             display: 'flex',
             alignItems: 'center',
             gap: '16px',
@@ -484,7 +530,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
         </div>
 
         {/* Track List */}
-        <div className="track-list">
+        <div className="track-list" ref={trackListRef}>
           {tracks.map((track, index) => {
             const isCurrentTrack = currentIndex === index
             const isPlayingCurrent = isCurrentTrack && isPlaying
@@ -498,15 +544,16 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                   alignItems: 'center',
                   padding: '12px 16px',
                   borderBottom: '1px solid #f3f4f6',
-                  backgroundColor: isCurrentTrack
-                    ? 'rgba(42, 42, 42, 0.9)'
-                    : 'transparent',
+                  // backgroundColor: 'transparent',
                   cursor: 'pointer',
                   transition: 'background-color 0.2s ease',
                   position: 'relative',
                   minHeight: '60px', // Ensure clickable area
                   userSelect: 'none', // Prevent text selection
                   zIndex: 10, // Ensure track items are above other content
+                  borderLeft: isCurrentTrack
+                    ? '4px solid #DE3163'
+                    : '4px solid transparent',
                 }}
                 onClick={(e) => {
                   e.preventDefault()
@@ -514,15 +561,12 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                   handleTrackClick(index)
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = isCurrentTrack
-                    ? 'rgba(60, 60, 60, 0.9)'
-                    : 'rgba(42, 42, 42, 0.9)'
+                  e.currentTarget.style.backgroundColor = 'transparent'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = isCurrentTrack
-                    ? 'rgba(42, 42, 42, 0.9)'
-                    : 'transparent'
+                  e.currentTarget.style.backgroundColor = 'transparent'
                 }}
+                ref={(el) => (trackItemRefs.current[index] = el)}
               >
                 {/* Play/Pause Button */}
                 <div
@@ -533,9 +577,18 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                   }}
                 >
                   {isPlayingCurrent ? (
-                    <span style={{ color: '#fff', fontSize: '16px' }}>⏸</span>
+                    <span style={{ color: '#DE3163', fontSize: '16px' }}>
+                      ⏸
+                    </span>
                   ) : (
-                    <span style={{ color: '#fff', fontSize: '16px' }}>▶</span>
+                    <span
+                      style={{
+                        color: isCurrentTrack ? '#DE3163' : '#fff',
+                        fontSize: '16px',
+                      }}
+                    >
+                      ▶
+                    </span>
                   )}
                 </div>
 
@@ -544,7 +597,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                   <div
                     style={{
                       fontWeight: isCurrentTrack ? '600' : '500',
-                      color: isCurrentTrack ? '#fff' : '#fff',
+                      color: isCurrentTrack ? '#DE3163' : '#fff',
                       fontSize: '14px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -555,7 +608,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                   </div>
                   <div
                     style={{
-                      color: '#fff',
+                      color: isCurrentTrack ? '#DE3163' : '#fff',
                       fontSize: '12px',
                       marginTop: '2px',
                     }}
@@ -567,7 +620,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                 {/* Duration */}
                 <div
                   style={{
-                    color: '#fff',
+                    color: isCurrentTrack ? '#DE3163' : '#fff',
                     fontSize: '12px',
                     marginLeft: '12px',
                     minWidth: '40px',
