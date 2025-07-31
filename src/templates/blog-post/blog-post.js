@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Link, graphql } from 'gatsby'
 
 import Bio from '../../components/bio/bio'
@@ -30,6 +30,89 @@ const AudioReactiveGridSketch = React.lazy(
       '../../components/audio-reactive-grid-sketch/audio-reactive-grid-sketch'
     )
 )
+
+// Component to handle autopilot auto-play and playlist setup
+const AutopilotAutoPlay = ({ audioUrls }) => {
+  const { setPlaylist, playTrack, playlist, currentIndex } = useAudioPlayer()
+
+  useEffect(() => {
+    // Always set up the playlist for this page's audio tracks
+    if (audioUrls.length > 0) {
+      const tracks = audioUrls.map((url, index) => {
+        const filename = url
+          .split('/')
+          .pop()
+          .replace(/\.[^/.]+$/, '')
+        return {
+          title: filename || 'Unknown Track',
+          artist: 'degreesminutesseconds',
+          album: 'Unknown Album',
+          duration: '0:00',
+          url: url, // Use 'url' to match what FixedAudioPlayer expects
+          src: url,
+          downloadUrl: url,
+          downloadFilename: filename,
+        }
+      })
+
+      // Only set playlist if it's different from current playlist
+      const currentUrls = playlist.map((track) => track.url)
+      const newUrls = audioUrls
+
+      if (JSON.stringify(currentUrls) !== JSON.stringify(newUrls)) {
+        setPlaylist(tracks)
+      }
+
+      // Check if we navigated here via autopilot
+      const isAutopilotNavigation =
+        localStorage.getItem('autopilotNavigation') === 'true'
+
+      if (isAutopilotNavigation) {
+        // Clear the flag
+        localStorage.removeItem('autopilotNavigation')
+
+        // Play a random track with a small delay
+        const randomIndex = Math.floor(Math.random() * tracks.length)
+
+        // Small delay to ensure the audio element is ready
+        setTimeout(() => {
+          try {
+            playTrack(randomIndex, tracks)
+          } catch (error) {
+            console.warn('Autopilot auto-play failed:', error)
+          }
+        }, 100)
+      } else {
+        // Check if we should auto-play (e.g., when navigating back to a page with audio)
+        // Only auto-play if audio was playing when navigation occurred
+        const wasAudioPlaying =
+          localStorage.getItem('audioWasPlaying') === 'true'
+
+        if (wasAudioPlaying) {
+          // Clear the flag
+          localStorage.removeItem('audioWasPlaying')
+
+          // Play a random track with a small delay
+          const randomIndex = Math.floor(Math.random() * tracks.length)
+
+          // Small delay to ensure the audio element is ready
+          setTimeout(() => {
+            try {
+              playTrack(randomIndex, tracks)
+            } catch (error) {
+              console.warn('Auto-play failed:', error)
+            }
+          }, 100)
+        }
+      }
+    } else {
+      // If no audio URLs, clear the playlist
+      setPlaylist([])
+    }
+  }, [audioUrls, setPlaylist, playTrack, playlist])
+
+  return null
+}
 
 // Main component that wraps everything in AudioPlayerProvider
 const BlogPostTemplate = ({ data, pageContext, location }) => {
@@ -68,6 +151,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
 
   return (
     <AudioPlayerProvider>
+      <AutopilotAutoPlay audioUrls={audioUrls} />
       <Layout location={location} title={siteTitle}>
         <SEO
           title={post.frontmatter.title}

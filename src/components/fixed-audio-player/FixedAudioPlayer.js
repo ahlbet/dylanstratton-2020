@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent, getPostName } from '../../utils/plausible-analytics'
+import { navigate, useStaticQuery, graphql } from 'gatsby'
 import './FixedAudioPlayer.css'
 import {
   Pause,
@@ -10,9 +11,28 @@ import {
   Volume2,
   Shuffle,
   Repeat,
+  Zap,
 } from 'lucide-react'
 
 export const FixedAudioPlayer = () => {
+  // Get all blog posts for random navigation
+  const data = useStaticQuery(graphql`
+    query {
+      allMarkdownRemark(sort: { fields: [frontmatter___date], order: DESC }) {
+        edges {
+          node {
+            fields {
+              slug
+            }
+            frontmatter {
+              title
+            }
+          }
+        }
+      }
+    }
+  `)
+
   const {
     playlist,
     currentIndex,
@@ -26,6 +46,10 @@ export const FixedAudioPlayer = () => {
     toggleShuffle,
     isLoopOn,
     toggleLoop,
+    isAutopilotOn,
+    toggleAutopilot,
+    shouldNavigateToRandomPost,
+    shuffledPlaylist,
     getNextTrackIndex,
     getPreviousTrackIndex,
   } = useAudioPlayer()
@@ -35,6 +59,29 @@ export const FixedAudioPlayer = () => {
   const [duration, setDuration] = useState(0)
 
   const currentTrack = playlist[currentIndex]
+
+  // Function to navigate to a random blog post
+  const navigateToRandomPost = () => {
+    const posts = data.allMarkdownRemark.edges
+    if (posts.length > 0) {
+      const randomIndex = Math.floor(Math.random() * posts.length)
+      const randomPost = posts[randomIndex].node
+
+      // Store that we're navigating via autopilot so we can auto-play
+      // This flag will be checked by AutopilotAutoPlay component on the new page
+      localStorage.setItem('autopilotNavigation', 'true')
+
+      // Store whether audio was playing when navigation occurred
+      if (isPlaying) {
+        localStorage.setItem('audioWasPlaying', 'true')
+      }
+
+      // Small delay to ensure localStorage is set before navigation
+      setTimeout(() => {
+        navigate(randomPost.fields.slug)
+      }, 50)
+    }
+  }
 
   useEffect(() => {
     const audio = audioRef.current
@@ -56,6 +103,33 @@ export const FixedAudioPlayer = () => {
           audioRef.current.play()
         }
       } else {
+        // Check if this was the last track in the playlist
+        const isLastTrack =
+          currentIndex === playlist.length - 1 ||
+          (isShuffleOn &&
+            shuffledPlaylist.length > 0 &&
+            shuffledPlaylist.findIndex(
+              (track) => track.url === playlist[currentIndex]?.url
+            ) ===
+              shuffledPlaylist.length - 1)
+
+        console.log('🎵 Track ended:', {
+          currentIndex,
+          playlistLength: playlist.length,
+          isShuffleOn,
+          shuffledPlaylistLength: shuffledPlaylist.length,
+          isLastTrack,
+          isAutopilotOn,
+          currentTrackUrl: playlist[currentIndex]?.url,
+        })
+
+        if (isLastTrack && isAutopilotOn) {
+          // If autopilot is on and this was the last track, navigate to random post
+          navigateToRandomPost()
+          setIsPlaying(false)
+          return
+        }
+
         // Normal behavior - go to next track or stop
         let nextIndex = getNextTrackIndex()
         if (!isShuffleOn && currentIndex === playlist.length - 1) {
@@ -81,14 +155,43 @@ export const FixedAudioPlayer = () => {
       audio.removeEventListener('loadstart', handleLoadStart)
       audio.removeEventListener('ended', handleEnded)
     }
-  }, [audioRef, currentIndex, getNextTrackIndex, isLoopOn, volume])
+  }, [
+    audioRef,
+    currentIndex,
+    getNextTrackIndex,
+    isLoopOn,
+    isAutopilotOn,
+    shuffledPlaylist,
+    navigateToRandomPost,
+    volume,
+  ])
 
   useEffect(() => {
     const audio = audioRef.current
     if (audio) {
-      isPlaying ? audio.play() : audio.pause()
+      if (isPlaying) {
+        const playPromise = audio.play()
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            // Ignore AbortError as it's expected when navigating
+            if (error.name !== 'AbortError') {
+              console.warn('Audio play failed:', error)
+            }
+          })
+        }
+      } else {
+        audio.pause()
+      }
     }
   }, [isPlaying])
+
+  // Handle autopilot navigation when enabled on home or /all page
+  useEffect(() => {
+    if (isAutopilotOn && shouldNavigateToRandomPost()) {
+      // Immediate navigation for better responsiveness
+      navigateToRandomPost()
+    }
+  }, [isAutopilotOn, shouldNavigateToRandomPost, navigateToRandomPost])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -100,7 +203,10 @@ export const FixedAudioPlayer = () => {
         const promise = audio.play()
         if (promise?.catch) {
           promise.catch((err) => {
-            console.warn('Autoplay failed:', err)
+            // Ignore AbortError as it's expected when navigating
+            if (err.name !== 'AbortError') {
+              console.warn('Autoplay failed:', err)
+            }
           })
         }
       }
@@ -111,6 +217,15 @@ export const FixedAudioPlayer = () => {
   }, [currentTrack, isPlaying])
 
   const togglePlay = () => {
+    // If no track is selected but we have a playlist, start playing
+    if (!currentTrack && playlist.length > 0) {
+      const trackIndex = isShuffleOn
+        ? Math.floor(Math.random() * playlist.length)
+        : 0
+      playTrack(trackIndex)
+      return
+    }
+
     const newPlayingState = !isPlaying
     setIsPlaying(newPlayingState)
 
@@ -150,14 +265,32 @@ export const FixedAudioPlayer = () => {
     audioRef.current.currentTime = percent * duration
   }
 
-  if (!currentTrack) return null
-
   return (
     <div className="audio-player-container">
       <div className="player-left">
+        <button
+          onClick={toggleAutopilot}
+          style={{
+            color: isAutopilotOn ? '#DE3163' : '#fff',
+            transition: 'color 0.2s ease',
+            backgroundColor: 'transparent',
+            border: 'none',
+            display: 'flex',
+            padding: 0,
+            margin: '0 6px 0 0',
+            cursor: 'pointer',
+          }}
+          title={isAutopilotOn ? 'Autopilot is on' : 'Turn autopilot on'}
+        >
+          <Zap size={24} />
+        </button>
         <div className="track-info">
-          <div className="track-title">{currentTrack.title}</div>
-          <div className="track-artist">{currentTrack.artist}</div>
+          <div className="track-title">
+            {currentTrack?.title || 'No track selected'}
+          </div>
+          <div className="track-artist">
+            {currentTrack?.artist || 'Select a track to start playing'}
+          </div>
         </div>
         <div className="player-controls">
           {playlist.length > 1 && (
@@ -168,10 +301,12 @@ export const FixedAudioPlayer = () => {
                 transition: 'color 0.2s ease',
               }}
               title={isShuffleOn ? 'Shuffle is on' : 'Turn shuffle on'}
+              disabled={!currentTrack}
             >
               <Shuffle size={18} />
             </button>
           )}
+
           <button
             onClick={toggleLoop}
             style={{
@@ -179,12 +314,39 @@ export const FixedAudioPlayer = () => {
               transition: 'color 0.2s ease',
             }}
             title={isLoopOn ? 'Loop is on' : 'Turn loop on'}
+            disabled={!currentTrack}
           >
             <Repeat size={18} />
           </button>
           <button
             onClick={() => {
               const prevIndex = getPreviousTrackIndex()
+
+              // Check if we're on the first track and autopilot is on
+              const isFirstTrack =
+                currentIndex === 0 ||
+                (isShuffleOn &&
+                  shuffledPlaylist.length > 0 &&
+                  shuffledPlaylist.findIndex(
+                    (track) => track.url === playlist[currentIndex]?.url
+                  ) === 0)
+
+              if (isFirstTrack && isAutopilotOn) {
+                // Set flag to indicate audio was playing when navigation occurred
+                if (isPlaying) {
+                  localStorage.setItem('audioWasPlaying', 'true')
+                }
+
+                // Navigate to previous page instead of playing previous track
+                if (
+                  typeof window !== 'undefined' &&
+                  window.history.length > 1
+                ) {
+                  window.history.back()
+                }
+                return
+              }
+
               playTrack(prevIndex)
 
               // Track previous track navigation
@@ -201,15 +363,36 @@ export const FixedAudioPlayer = () => {
                 )
               }
             }}
+            disabled={!currentTrack}
           >
             <SkipBack size={20} />
           </button>
-          <button onClick={togglePlay}>
+          <button
+            onClick={togglePlay}
+            disabled={!currentTrack && playlist.length === 0}
+          >
             {isPlaying ? <Pause size={24} /> : <Play size={24} />}
           </button>
           <button
             onClick={() => {
               const nextIndex = getNextTrackIndex()
+
+              // Check if this is the last track and autopilot is on
+              const isLastTrack =
+                currentIndex === playlist.length - 1 ||
+                (isShuffleOn &&
+                  shuffledPlaylist.length > 0 &&
+                  shuffledPlaylist.findIndex(
+                    (track) => track.url === playlist[currentIndex]?.url
+                  ) ===
+                    shuffledPlaylist.length - 1)
+
+              if (isLastTrack && isAutopilotOn) {
+                // Navigate to random blog post instead of playing next track
+                navigateToRandomPost()
+                return
+              }
+
               playTrack(nextIndex)
 
               // Track next track navigation
@@ -226,6 +409,7 @@ export const FixedAudioPlayer = () => {
                 )
               }
             }}
+            disabled={!currentTrack}
           >
             <SkipForward size={20} />
           </button>
@@ -241,11 +425,11 @@ export const FixedAudioPlayer = () => {
         <div
           className="progress-bar-container"
           ref={progressRef}
-          onClick={handleSeek}
+          onClick={currentTrack ? handleSeek : undefined}
         >
           <div
             className="progress-bar-fill"
-            style={{ width: `${getProgress()}%` }}
+            style={{ width: currentTrack ? `${getProgress()}%` : '0%' }}
           ></div>
         </div>
       </div>
@@ -262,10 +446,11 @@ export const FixedAudioPlayer = () => {
             const newVolume = parseFloat(e.target.value)
             updateVolume(newVolume)
           }}
+          disabled={!currentTrack}
         />
       </div>
 
-      <audio ref={audioRef} src={currentTrack.url} />
+      <audio ref={audioRef} src={currentTrack?.url} />
     </div>
   )
 }
