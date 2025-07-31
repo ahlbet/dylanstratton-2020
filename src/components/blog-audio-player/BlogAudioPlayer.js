@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import JSZip from 'jszip'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent } from '../../utils/plausible-analytics'
+import { useTrackDurations } from '../../hooks/use-track-durations'
 import './BlogAudioPlayer.css'
 
 const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
@@ -37,10 +38,8 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     isShuffleOn,
   } = useAudioPlayer()
 
-  const [trackDurations, setTrackDurations] = useState({})
-  const loadingTracksRef = useRef(new Set()) // Track which URLs we're currently loading
-  const batchLoadingRef = useRef({ isRunning: false, currentBatch: 0 })
-  const hasStartedLoadingRef = useRef(false) // Prevent multiple loading attempts
+  // Use shared hook for track durations
+  const { trackDurations } = useTrackDurations(audioUrls)
   const trackListRef = useRef(null)
   const trackItemRefs = useRef({})
 
@@ -258,115 +257,6 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     }
   }, [trackDurations, updateTotalPlaylistDuration])
 
-  // Update duration when audio metadata loads
-  const updateDuration = (audio, trackUrl) => {
-    // Only store if we have a valid duration AND don't already have a better one
-    if (
-      audio &&
-      audio.duration &&
-      !isNaN(audio.duration) &&
-      audio.duration > 0
-    ) {
-      const existingDuration = trackDurations[trackUrl]
-      const hasGoodExistingDuration =
-        existingDuration && !isNaN(existingDuration) && existingDuration > 0
-
-      if (!hasGoodExistingDuration) {
-        setTrackDurations((prev) => ({
-          ...prev,
-          [trackUrl]: audio.duration,
-        }))
-      }
-    }
-  }
-
-  // Load all track durations simultaneously
-  const loadAllTrackDurations = async () => {
-    if (
-      batchLoadingRef.current.isRunning ||
-      audioUrls.length === 0 ||
-      hasStartedLoadingRef.current
-    ) {
-      return
-    }
-
-    hasStartedLoadingRef.current = true
-    batchLoadingRef.current.isRunning = true
-
-    const promises = audioUrls.map((url, index) => {
-      return new Promise((resolve) => {
-        if (loadingTracksRef.current.has(url)) {
-          resolve({ url, success: false, reason: 'already_loading' })
-          return
-        }
-
-        loadingTracksRef.current.add(url)
-
-        const audio = new Audio()
-        audio.preload = 'metadata'
-        audio.crossOrigin = 'anonymous'
-
-        // Add a timeout for metadata loading
-        const timeoutId = setTimeout(() => {
-          loadingTracksRef.current.delete(url)
-          audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
-          audio.removeEventListener('error', handleError)
-          audio.src = ''
-          resolve({ url, success: false, reason: 'timeout' })
-        }, 15000) // 15 second timeout
-
-        const handleLoadedMetadata = () => {
-          clearTimeout(timeoutId)
-
-          // Capture duration before cleanup to prevent corruption
-          const capturedDuration = audio.duration
-
-          if (
-            capturedDuration &&
-            !isNaN(capturedDuration) &&
-            capturedDuration > 0
-          ) {
-            setTrackDurations((prev) => ({
-              ...prev,
-              [url]: capturedDuration,
-            }))
-            resolve({ url, success: true, duration: capturedDuration })
-          } else {
-            resolve({ url, success: false, reason: 'invalid_duration' })
-          }
-
-          loadingTracksRef.current.delete(url)
-          audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
-          audio.removeEventListener('error', handleError)
-          audio.src = ''
-        }
-
-        const handleError = (e) => {
-          clearTimeout(timeoutId)
-          loadingTracksRef.current.delete(url)
-          audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
-          audio.removeEventListener('error', handleError)
-          audio.src = ''
-          resolve({ url, success: false, reason: 'network_error', error: e })
-        }
-
-        audio.addEventListener('loadedmetadata', handleLoadedMetadata)
-        audio.addEventListener('error', handleError)
-
-        // Set src after listeners are attached
-        audio.src = url
-      })
-    })
-
-    try {
-      await Promise.all(promises)
-    } catch (error) {
-      console.error('Audio duration loading error:', error)
-    }
-
-    batchLoadingRef.current.isRunning = false
-  }
-
   // Convert tracks to context format (url instead of src)
   const contextTracks = useMemo(() => {
     // Ensure tracks is an array
@@ -422,13 +312,6 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
       postTitle,
     ]
   )
-
-  // Start loading when component mounts - run only once
-  useEffect(() => {
-    if (!hasStartedLoadingRef.current) {
-      loadAllTrackDurations()
-    }
-  }, []) // Empty dependency array - run only once on mount
 
   // Scroll current track into view when shuffle is on
   useEffect(() => {
