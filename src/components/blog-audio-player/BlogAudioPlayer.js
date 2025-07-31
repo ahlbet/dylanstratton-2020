@@ -3,6 +3,7 @@ import JSZip from 'jszip'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent } from '../../utils/plausible-analytics'
 import { useTrackDurations } from '../../hooks/use-track-durations'
+import { useScrollToTrack } from '../../hooks/use-scroll-to-track'
 import './BlogAudioPlayer.css'
 
 const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
@@ -40,8 +41,12 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
 
   // Use shared hook for track durations
   const { trackDurations } = useTrackDurations(audioUrls)
-  const trackListRef = useRef(null)
-  const trackItemRefs = useRef({})
+
+  // Use shared hook for scroll to track
+  const { trackListRef, setTrackItemRef } = useScrollToTrack(
+    currentIndex,
+    isShuffleOn
+  )
 
   // Format duration from seconds to MM:SS
   const formatDuration = (seconds) => {
@@ -313,34 +318,6 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     ]
   )
 
-  // Scroll current track into view when shuffle is on
-  useEffect(() => {
-    if (
-      isShuffleOn &&
-      currentIndex !== null &&
-      trackItemRefs.current[currentIndex]
-    ) {
-      const trackElement = trackItemRefs.current[currentIndex]
-      const trackList = trackListRef.current
-
-      if (trackElement && trackList) {
-        // Calculate if the track is visible
-        const trackRect = trackElement.getBoundingClientRect()
-        const listRect = trackList.getBoundingClientRect()
-
-        const isVisible =
-          trackRect.top >= listRect.top && trackRect.bottom <= listRect.bottom
-
-        if (!isVisible) {
-          trackElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-          })
-        }
-      }
-    }
-  }, [currentIndex, isShuffleOn])
-
   // Custom playlist component
   const CustomPlaylist = () => {
     return (
@@ -449,7 +426,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent'
                 }}
-                ref={(el) => (trackItemRefs.current[index] = el)}
+                ref={(el) => setTrackItemRef(index, el)}
               >
                 {/* Play/Pause Button */}
                 <div

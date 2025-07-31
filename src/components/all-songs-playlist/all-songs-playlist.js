@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent } from '../../utils/plausible-analytics'
 import { useTrackDurations } from '../../hooks/use-track-durations'
+import { useScrollToTrack } from '../../hooks/use-scroll-to-track'
 import './all-songs-playlist.css'
 
 const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
@@ -24,8 +25,12 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
 
   // Use shared hook for track durations
   const { trackDurations } = useTrackDurations(audioUrlsWithMetadata)
-  const trackListRef = useRef(null)
-  const trackItemRefs = useRef({})
+
+  // Use shared hook for scroll to track
+  const { trackListRef, setTrackItemRef } = useScrollToTrack(
+    currentIndex,
+    isShuffleOn
+  )
 
   // Format duration from seconds to HH:MM:SS or MM:SS
   const formatDuration = (seconds) => {
@@ -121,43 +126,30 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
     }
   }, [contextTracks, setPlaylist])
 
-  // Scroll current track into view when shuffle is on
-  useEffect(() => {
-    if (
-      isShuffleOn &&
-      currentIndex !== null &&
-      trackItemRefs.current[currentIndex]
-    ) {
-      const trackElement = trackItemRefs.current[currentIndex]
-      const trackList = trackListRef.current
-
-      if (trackElement && trackList) {
-        // Calculate if the track is visible
-        const trackRect = trackElement.getBoundingClientRect()
-        const listRect = trackList.getBoundingClientRect()
-
-        const isVisible =
-          trackRect.top >= listRect.top && trackRect.bottom <= listRect.bottom
-
-        if (!isVisible) {
-          trackElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-          })
-        }
-      }
-    }
-  }, [currentIndex, isShuffleOn])
-
   // Handle track click
   const handleTrackClick = useCallback(
     (index) => {
       if (tracks[index] && contextTracks.length > 0) {
-        playTrack(index, contextTracks)
-        trackAudioEvent.songPlay(tracks[index].title, 'All Songs')
+        if (currentIndex === index && isPlaying) {
+          // If clicking the currently playing track, pause it
+          setIsPlaying(false)
+
+          // Track pause event
+          trackAudioEvent.songPause(
+            tracks[index].title,
+            'All Songs',
+            index + 1,
+            tracks.length,
+            'all_songs_player'
+          )
+        } else {
+          // Otherwise, play the selected track
+          playTrack(index, contextTracks)
+          trackAudioEvent.songPlay(tracks[index].title, 'All Songs')
+        }
       }
     },
-    [tracks, contextTracks, playTrack]
+    [tracks, contextTracks, playTrack, currentIndex, isPlaying, setIsPlaying]
   )
 
   if (
@@ -248,7 +240,7 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
                   e.stopPropagation()
                   handleTrackClick(index)
                 }}
-                ref={(el) => (trackItemRefs.current[index] = el)}
+                ref={(el) => setTrackItemRef(index, el)}
               >
                 {/* Play/Pause Button */}
                 <div
