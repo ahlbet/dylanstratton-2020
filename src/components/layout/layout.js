@@ -3,6 +3,7 @@ import { Link } from 'gatsby'
 import { ThemeToggler } from 'gatsby-plugin-dark-mode'
 import '../../utils/global.css'
 import { rhythm, scale } from '../../utils/typography'
+import RandomDayButton from '../random-day-button/random-day-button'
 
 const Layout = ({ location, title, children }) => {
   const rootPath = `${__PATH_PREFIX__}/`
@@ -76,9 +77,10 @@ const Layout = ({ location, title, children }) => {
           </label>
         )}
       </ThemeToggler> */}
-      <header>{header}</header>
+      <header style={{ paddingRight: '72px' }}>{header}</header>
       <main>{children}</main>
       <footer>{new Date().getFullYear()}</footer>
+      <RandomDayButton />
     </div>
   )
 }

@@ -433,8 +433,8 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
           {coverArtUrl && (
             <div
               style={{
-                width: '200px',
-                height: '200px',
+                maxWidth: '100px',
+                maxHeight: '100px',
                 borderRadius: '8px',
                 overflow: 'hidden',
                 flexShrink: 0,
@@ -578,7 +578,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                 </div>
 
                 {/* Download Button */}
-                {!isMobile && (
+                {/* {!isMobile && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -609,7 +609,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                   >
                     ⬇
                   </button>
-                )}
+                )} */}
               </div>
             )
           })}
@@ -631,7 +631,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
       }}
     >
       {/* Download All Button - Positioned as overlay */}
-      {!isMobile && audioUrls.length > 1 && (
+      {/* {!isMobile && audioUrls.length > 1 && (
         <div
           style={{
             position: 'absolute',
@@ -678,7 +678,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
             {isDownloadingZip ? '⏳ Creating ZIP...' : '📦 Download ZIP'}
           </button>
         </div>
-      )}
+      )} */}
 
       <CustomPlaylist />
     </div>
