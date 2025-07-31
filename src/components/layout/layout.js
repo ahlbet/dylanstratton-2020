@@ -55,8 +55,9 @@ const Layout = ({ location, title, children }) => {
       style={{
         marginLeft: `auto`,
         marginRight: `auto`,
-        maxWidth: rhythm(56),
+        // maxWidth: rhythm(56),
         padding: `${rhythm(1.5)} ${rhythm(3 / 4)}`,
+        paddingBottom: `calc(${rhythm(1.5)} + 80px)` /* Account for fixed audio player */,
         // backgroundColor: 'var(--bg)',
         color: 'var(--textNormal)',
         transition: 'color 0.2s ease-out, background 0.2s ease-out',

@@ -37,6 +37,24 @@
   order: 4;
 }
 
+/* Wide screen layout (1530px and above) */
+@media (min-width: 1530px) {
+  .blog-layout-container {
+    gap: 3rem;
+  }
+
+  .left-column {
+    flex: 0 0 400px;
+    max-width: 400px;
+    padding-right: 0;
+  }
+
+  .right-column {
+    flex: 1;
+    max-width: none;
+  }
+}
+
 @media (max-width: 900px) {
   .blog-layout-container {
     flex-direction: column;
