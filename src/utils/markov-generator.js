@@ -39,6 +39,27 @@ class MarkovGenerator {
     supabaseKey,
     bucketName = 'markov-text'
   ) {
+    // Check for local development mode first
+    if (typeof window !== 'undefined') {
+      // Client-side: try local data first
+      const localPath = '/public/local-data/markov-source.txt'
+      try {
+        const response = await fetch(localPath)
+        if (response.ok) {
+          const text = await response.text()
+          const textArray = text
+            .split('\n')
+            .filter((line) => line.trim().length > 0)
+          this.lines = this.compileAndCleanText(textArray)
+          this.buildNgrams()
+          console.log(`✅ Loaded ${this.lines.length} lines from local source`)
+          return true
+        }
+      } catch (error) {
+        console.warn('Local source not available, trying Supabase...')
+      }
+    }
+
     if (!createClient || typeof window !== 'undefined') {
       console.warn('Supabase not available, falling back to local file')
       return this.loadTextFromFallback()
@@ -112,9 +133,15 @@ class MarkovGenerator {
       }
 
       // Process the combined text
-      this.lines = allText.split('\n').filter((line) => line.trim().length > 0)
+      const textArray = allText
+        .split('\n')
+        .filter((line) => line.trim().length > 0)
+      this.lines = this.compileAndCleanText(textArray)
       this.buildNgrams()
 
+      console.log(
+        `✅ Loaded ${this.lines.length} lines from ${successfulDownloads} Supabase files`
+      )
       return true
     } catch (error) {
       console.error(
@@ -294,13 +321,13 @@ class MarkovGenerator {
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
-      .join('\n')
       // Remove any remaining multiple spaces
-      .replace(/[ \t]+/g, ' ')
+      .map((line) => line.replace(/[ \t]+/g, ' '))
       // Ensure sentences end properly
-      .replace(/([.!?])\s*([A-Z])/g, '$1\n$2')
+      .map((line) => line.replace(/([.!?])\s*([A-Z])/g, '$1\n$2'))
       // Clean up any double spaces that might remain
-      .replace(/\s{2,}/g, ' ')
+      .map((line) => line.replace(/\s{2,}/g, ' '))
+      .filter((line) => line.length > 0)
 
     return combinedText
   }
@@ -335,7 +362,12 @@ class MarkovGenerator {
 
   // Fallback to local file (backwards compatibility)
   async loadTextFromFallback() {
-    const textFilePath = path.join(process.cwd(), 'static', '448.txt')
+    const textFilePath = path.join(
+      process.cwd(),
+      'public',
+      'local-data',
+      '448.txt'
+    )
     return this.loadTextFromFile(textFilePath)
   }
 
