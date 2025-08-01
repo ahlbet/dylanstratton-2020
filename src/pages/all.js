@@ -12,6 +12,15 @@ import AllSongsPlaylist from '../components/all-songs-playlist/all-songs-playlis
 import DynamicMarkovText from '../components/dynamic-markov-text/DynamicMarkovText'
 import { extractAudioUrls } from '../utils/extractAudioUrls'
 import AudioFFT from '../components/audio-fft/AudioFFT'
+import { convertAudioUrlsToLocal } from '../utils/local-audio-urls'
+
+// Lazy load the audio reactive grid sketch to prevent SSR issues
+const AudioReactiveGridSketch = React.lazy(
+  () =>
+    import(
+      '../components/audio-reactive-grid-sketch/audio-reactive-grid-sketch'
+    )
+)
 
 // Component to handle autopilot state on /all page
 const AllSongsAutopilotHandler = () => {
@@ -33,7 +42,7 @@ const AllSongsPage = ({ data, location }) => {
 
   // Extract all audio URLs from all posts with their source post info
   const allAudioUrlsWithMetadata = posts.reduce((urls, { node }) => {
-    const postAudioUrls = extractAudioUrls(node.html)
+    const postAudioUrls = convertAudioUrlsToLocal(extractAudioUrls(node.html))
     // Add source post info to each URL
     const urlsWithSource = postAudioUrls.map((url) => ({
       url,

@@ -13,6 +13,10 @@ import {
   extractAudioUrls,
   removeAudioFromHtml,
 } from '../../utils/extractAudioUrls'
+import {
+  convertAudioUrlsToLocal,
+  convertCoverArtUrlToLocal,
+} from '../../utils/local-audio-urls'
 import './blog-post.css'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
@@ -135,8 +139,8 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
 
   const markovText = extractMarkovText(post.html)
 
-  // Extract audio URLs from the post content
-  const audioUrls = extractAudioUrls(post.html)
+  // Extract audio URLs from the post content and convert to local URLs if in dev mode
+  const audioUrls = convertAudioUrlsToLocal(extractAudioUrls(post.html))
 
   // Remove audio elements from HTML to prevent duplicates
   const cleanedHtml = removeAudioFromHtml(post.html)
@@ -240,7 +244,10 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                     audioUrls={audioUrls}
                     postTitle={post.frontmatter.title}
                     postDate={post.frontmatter.date}
-                    coverArtUrl={post.frontmatter.cover_art}
+                    coverArtUrl={convertCoverArtUrlToLocal(
+                      post.frontmatter.cover_art,
+                      post.frontmatter.title
+                    )}
                   />
                 </div>
               )}
