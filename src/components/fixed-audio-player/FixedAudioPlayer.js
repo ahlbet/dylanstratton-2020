@@ -275,12 +275,8 @@ export const FixedAudioPlayer = () => {
           <Zap size={24} />
         </button>
         <div className="track-info">
-          <div className="track-title">
-            {currentTrack?.title || 'No track selected'}
-          </div>
-          <div className="track-artist">
-            {currentTrack?.artist || 'Select a track to start playing'}
-          </div>
+          <div className="track-title">{currentTrack?.title || '~~~'}</div>
+          <div className="track-artist">{currentTrack?.artist || '~~~'}</div>
         </div>
         <div className="player-controls">
           {playlist.length > 1 && (

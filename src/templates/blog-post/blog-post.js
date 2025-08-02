@@ -292,9 +292,11 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                 />
 
                 {/* Dynamic Markov Text Generator */}
-                <DynamicMarkovText />
+                <div style={{ marginBottom: rhythm(2) }}>
+                  <DynamicMarkovText />
+                </div>
 
-                <footer>
+                <footer style={{ marginTop: '25px' }}>
                   <Bio />
                 </footer>
               </article>
