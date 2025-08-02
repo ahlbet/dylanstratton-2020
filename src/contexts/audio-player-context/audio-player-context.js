@@ -21,6 +21,10 @@ export const AudioPlayerProvider = ({ children }) => {
   const [shuffledPlaylist, setShuffledPlaylist] = useState([])
   const audioRef = useRef(null)
 
+  // Web Audio API for audio analysis (for audio-reactive components)
+  const audioContextRef = useRef(null)
+  const audioAnalyzerRef = useRef(null)
+
   // Load volume, shuffle, and loop from localStorage on mount
   useEffect(() => {
     const savedVolume = localStorage.getItem('audioPlayerVolume')
@@ -51,6 +55,52 @@ export const AudioPlayerProvider = ({ children }) => {
       ) {
         setIsAutopilotOn(savedAutopilot === 'true')
       }
+    }
+  }, [])
+
+  // Set up Web Audio API for audio analysis when audio element is ready
+  useEffect(() => {
+    const setupAudioAnalysis = () => {
+      const audio = audioRef.current
+      if (!audio || audioAnalyzerRef.current) return // Already set up
+
+      try {
+        // Create audio context and analyzer
+        const audioContext = new (window.AudioContext ||
+          window.webkitAudioContext)()
+        const analyzer = audioContext.createAnalyser()
+        analyzer.fftSize = 256
+        analyzer.smoothingTimeConstant = 0.3 // Reduced from 0.8 for more responsiveness
+
+        // Set CORS for external audio files
+        audio.crossOrigin = 'anonymous'
+
+        // Create media element source and connect to analyzer
+        const source = audioContext.createMediaElementSource(audio)
+        source.connect(analyzer)
+        source.connect(audioContext.destination)
+
+        // Store references
+        audioContextRef.current = audioContext
+        audioAnalyzerRef.current = analyzer
+
+        // Make globally accessible for audio-reactive components
+        window.audioAnalyzer = analyzer
+      } catch (error) {
+        // Silently handle errors - audio will still play normally
+      }
+    }
+
+    // Try to set up immediately if audio element exists
+    if (audioRef.current) {
+      setupAudioAnalysis()
+    }
+
+    // Also try when audio starts loading
+    const audio = audioRef.current
+    if (audio) {
+      audio.addEventListener('loadstart', setupAudioAnalysis)
+      return () => audio.removeEventListener('loadstart', setupAudioAnalysis)
     }
   }, [])
 

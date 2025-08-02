@@ -1,31 +1,16 @@
-import React, { Suspense, lazy } from 'react'
+import React, { useState, useEffect } from 'react'
+import P5SketchComponent from '../p5-sketch/p5-sketch'
 
-// Lazy load the actual sketch component to prevent SSR issues
-const P5SketchComponent = lazy(() =>
-  import('../p5-sketch/p5-sketch').then((module) => ({
-    default: module.default,
-  }))
-)
-
-// Audio-reactive grid sketch function - only runs client-side
 const createAudioReactiveGridSketch =
-  (markovText = '', totalPlaylistDuration = 0) =>
+  (p5, markovText = '') =>
   (p) => {
-    // Global variables
     let particles = []
     let margin = 25
-    let spacing = 30
-    let radius = 300
-    let num = 2000
-    let tatShapePositions = [] // Will store positions generated from TatsSketch logic
+    let tatShapePositions = []
 
-    // Particle removal based on playlist time
-    let lastRemovalTime = 0
-    let particlesRemoved = 0
-    let totalParticlesToRemove = 0
-    let removalInterval = 0
+    // Use the global audio analyzer from the audio player context
+    let audioSetupAttempted = false
 
-    // Generate a seed from Markov text to influence sketch behavior
     const generateSeedFromText = (text) => {
       if (!text || typeof text !== 'string') return 0
 
@@ -37,19 +22,60 @@ const createAudioReactiveGridSketch =
         }
       }
 
-      // Validate final seed
       const finalSeed = seed % 10000
       return isFinite(finalSeed) ? finalSeed : 0
     }
 
     let markovSeed = generateSeedFromText(markovText)
 
-    // Validate markovSeed
+    // Generate unique color scheme based on markov seed
+    const generateColorScheme = (seed) => {
+      // Use seed to create a pseudo-random but deterministic color generator
+      const seededRandom = (s) => {
+        const x = Math.sin(s) * 10000
+        return x - Math.floor(x)
+      }
+
+      // Generate base hue rotation (0-360 degrees)
+      const baseHue = seededRandom(seed) * 360
+
+      // Generate color temperature and saturation preferences
+      const warmth = seededRandom(seed + 1000) // 0-1, affects color temperature
+      const saturation = 0.7 + seededRandom(seed + 2000) * 0.3 // 0.7-1.0, high saturation for neon
+      const brightness = 0.8 + seededRandom(seed + 3000) * 0.2 // 0.8-1.0, bright for neon
+
+      return {
+        baseHue,
+        warmth,
+        saturation,
+        brightness,
+        // Pre-calculate color zones for each frequency band
+        bass: (baseHue + seededRandom(seed + 100) * 60) % 360, // ±30° variation
+        lowMid: (baseHue + 60 + seededRandom(seed + 200) * 40) % 360, // +60° ±20°
+        mid: (baseHue + 120 + seededRandom(seed + 300) * 40) % 360, // +120° ±20°
+        highMid: (baseHue + 180 + seededRandom(seed + 400) * 40) % 360, // +180° ±20°
+        treble: (baseHue + 240 + seededRandom(seed + 500) * 40) % 360, // +240° ±20°
+      }
+    }
+
+    const colorScheme = generateColorScheme(markovSeed)
+
+    // Convert HSL to RGB for p5.js
+    const hslToRgb = (h, s, l) => {
+      h = h / 360
+      const a = s * Math.min(l, 1 - l)
+      const f = (n) => {
+        const k = (n + h * 12) % 12
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1)
+        return Math.round(255 * color)
+      }
+      return [f(0), f(8), f(4)]
+    }
+
     if (!isFinite(markovSeed)) {
       markovSeed = Math.floor(Math.random() * 10000)
     }
 
-    // TatsSketch shape generation logic adapted for particle positions - single Tat per blog post
     const generateTatShapePositions = () => {
       const shapes = [
         'horizontalLine',
@@ -58,14 +84,9 @@ const createAudioReactiveGridSketch =
         'triangle',
         'square',
       ]
-
       const positions = []
-
-      // Generate one central Tat position based on markov seed
-      const centerX = p.width / 2 + ((markovSeed % 200) - 100) // Slight offset from center
-      const centerY = p.height / 2 + (((markovSeed * 7) % 200) - 100) // Slight offset from center
-
-      // Each Tat has 1-5 shape types based on markov seed
+      const centerX = p.width / 2 + ((markovSeed % 200) - 100)
+      const centerY = p.height / 2 + (((markovSeed * 7) % 200) - 100)
       const typesCount = Math.floor(markovSeed % 5) + 1
 
       for (let i = 0; i < typesCount; i++) {
@@ -73,22 +94,18 @@ const createAudioReactiveGridSketch =
           (markovSeed * (i + 1) * 123) % shapes.length
         )
         const shapeType = shapes[shapeIndex]
-
-        // Generate positions based on shape type with full canvas dimensions
         const shapePositions = generateShapePositions(
           centerX,
           centerY,
           shapeType,
-          { width: p.width, height: p.height }, // Pass full canvas dimensions
+          { width: p.width, height: p.height },
           markovSeed * (i + 1)
         )
         positions.push(...shapePositions)
       }
-
       return positions
     }
 
-    // Generate particle positions for each shape type
     const generateShapePositions = (
       centerX,
       centerY,
@@ -97,33 +114,30 @@ const createAudioReactiveGridSketch =
       shapeSeed
     ) => {
       const positions = []
-      const numParticles = 25 + (shapeSeed % 8) // 30-37 particles per shape
+      const numParticles = 20 + (shapeSeed % 6)
       const { width, height } = canvasDimensions
-      const insetMargin = margin + 30 // Additional inset to prevent particles from getting stuck at edges
+      const insetMargin = margin + 30
 
       switch (shapeType) {
         case 'horizontalLine':
           for (let i = 0; i < numParticles; i++) {
-            const t = i / (numParticles - 1) // 0 to 1
-            const x = insetMargin + t * (width - 2 * insetMargin) // Inset width span
-            const y = centerY + (((shapeSeed * i) % 40) - 20) // Vertical variation
+            const t = i / (numParticles - 1)
+            const x = insetMargin + t * (width - 2 * insetMargin)
+            const y = centerY + (((shapeSeed * i) % 40) - 20)
             positions.push({ x, y })
           }
           break
-
         case 'verticalLine':
           for (let i = 0; i < numParticles; i++) {
-            const t = i / (numParticles - 1) // 0 to 1
-            const x = centerX + (((shapeSeed * i) % 40) - 20) // Horizontal variation
-            const y = insetMargin + t * (height - 2 * insetMargin) // Inset height span
+            const t = i / (numParticles - 1)
+            const x = centerX + (((shapeSeed * i) % 40) - 20)
+            const y = insetMargin + t * (height - 2 * insetMargin)
             positions.push({ x, y })
           }
           break
-
         case 'circle':
           for (let i = 0; i < numParticles; i++) {
             const angle = (i / numParticles) * Math.PI * 2
-            // Use ellipse with inset margins
             const radiusX = (width - 2 * insetMargin) / 2
             const radiusY = (height - 2 * insetMargin) / 2
             const x =
@@ -135,23 +149,18 @@ const createAudioReactiveGridSketch =
             positions.push({ x, y })
           }
           break
-
         case 'triangle':
           for (let i = 0; i < numParticles; i++) {
-            // Three vertices of triangle with inset margins
             const vertices = [
-              { x: centerX, y: insetMargin }, // top
-              { x: insetMargin, y: height - insetMargin }, // bottom left
-              { x: width - insetMargin, y: height - insetMargin }, // bottom right
+              { x: centerX, y: insetMargin },
+              { x: insetMargin, y: height - insetMargin },
+              { x: width - insetMargin, y: height - insetMargin },
             ]
-
             if (i < 3) {
-              // Place particles at vertices
               positions.push(vertices[i])
             } else {
-              // Place particles along edges
               const edgeIndex = (i - 3) % 3
-              const t = ((shapeSeed * i) % 100) / 100 // Random position along edge
+              const t = ((shapeSeed * i) % 100) / 100
               const start = vertices[edgeIndex]
               const end = vertices[(edgeIndex + 1) % 3]
               const x = start.x + (end.x - start.x) * t
@@ -160,38 +169,34 @@ const createAudioReactiveGridSketch =
             }
           }
           break
-
         case 'square':
           for (let i = 0; i < numParticles; i++) {
             if (i < 4) {
-              // Place particles at corners with inset margins
               const corners = [
-                { x: insetMargin, y: insetMargin }, // top left
-                { x: width - insetMargin, y: insetMargin }, // top right
-                { x: width - insetMargin, y: height - insetMargin }, // bottom right
-                { x: insetMargin, y: height - insetMargin }, // bottom left
+                { x: insetMargin, y: insetMargin },
+                { x: width - insetMargin, y: insetMargin },
+                { x: width - insetMargin, y: height - insetMargin },
+                { x: insetMargin, y: height - insetMargin },
               ]
               positions.push(corners[i])
             } else {
-              // Place particles along edges
               const side = (i - 4) % 4
               const t = ((shapeSeed * i) % 100) / 100
-
               let x, y
               switch (side) {
-                case 0: // top edge
+                case 0:
                   x = insetMargin + t * (width - 2 * insetMargin)
                   y = insetMargin
                   break
-                case 1: // right edge
+                case 1:
                   x = width - insetMargin
                   y = insetMargin + t * (height - 2 * insetMargin)
                   break
-                case 2: // bottom edge
+                case 2:
                   x = width - insetMargin - t * (width - 2 * insetMargin)
                   y = height - insetMargin
                   break
-                case 3: // left edge
+                case 3:
                   x = insetMargin
                   y = height - insetMargin - t * (height - 2 * insetMargin)
                   break
@@ -201,721 +206,453 @@ const createAudioReactiveGridSketch =
           }
           break
       }
-
       return positions
     }
 
-    // Function to create gravitational points
-    const createGravitationalPoints = () => {
-      gravitationalPoints = []
-      const canvasWidth = p.canvas ? p.canvas.width : 800
-      const canvasHeight = p.canvas ? p.canvas.height : 400
-
-      for (let i = 0; i < numGravityPoints; i++) {
-        const x = margin + Math.random() * (canvasWidth - 2 * margin)
-        const y = margin + Math.random() * (canvasHeight - 2 * margin)
-        const strength = 0.5 + Math.random() * 1.5 // Random strength between 0.5 and 2.0
-        const seed = (markovSeed + i * 123) % 10000
-        const moveSpeed =
-          (0.05 + Math.random() * 0.1) * gravityMoveSpeedMultiplier // Movement speed influenced by Markov seed
-        const moveDirection = Math.random() * Math.PI * 2 // Random initial direction
-        gravitationalPoints.push({
-          x,
-          y,
-          strength,
-          seed,
-          moveSpeed,
-          moveDirection,
-        })
-      }
-    }
-
-    // Function to update gravity points positions
-    const updateGravityPoints = () => {
-      const canvasWidth = p.canvas ? p.canvas.width : 800
-      const canvasHeight = p.canvas ? p.canvas.height : 400
-
-      for (let gravityPoint of gravitationalPoints) {
-        // Update direction with slight randomness
-        gravityPoint.moveDirection += (Math.random() - 0.5) * 0.1
-
-        // Calculate new position
-        const newX =
-          gravityPoint.x +
-          Math.cos(gravityPoint.moveDirection) * gravityPoint.moveSpeed
-        const newY =
-          gravityPoint.y +
-          Math.sin(gravityPoint.moveDirection) * gravityPoint.moveSpeed
-
-        // Bounce off edges
-        if (newX < margin || newX > canvasWidth - margin) {
-          gravityPoint.moveDirection = Math.PI - gravityPoint.moveDirection
-        }
-        if (newY < margin || newY > canvasHeight - margin) {
-          gravityPoint.moveDirection = -gravityPoint.moveDirection
-        }
-
-        // Update position with bounds checking
-        gravityPoint.x = Math.max(margin, Math.min(canvasWidth - margin, newX))
-        gravityPoint.y = Math.max(margin, Math.min(canvasHeight - margin, newY))
-      }
-    }
-
-    // Global sketch parameters influenced by Markov text - moderate impact
-    let globalSpeedMultiplier = 4 + (markovSeed % 100) / 50 // 0.6 to 2.6 (moderate range)
-    let globalColorIntensity = 0.5 + (markovSeed % 100) / 50 // 0.5 to 2.5 (moderate range)
-    let globalParticleInteraction = 0.3 + (markovSeed % 150) / 30 // 0.3 to 5.3 (moderate range)
-    let globalParticleSize = 0.8 + (markovSeed % 75) / 50 // 0.8 to 3.76 (ensures visible particles)
-    let globalParticleBirthRate = 0.5 + (markovSeed % 100) / 50 // 0.5 to 2.5 (birth rate variation)
-    let globalGravityStrength = 0.08 + (markovSeed % 100) / 10 // 0.8 to 2.8 (gravity strength variation)
-    let primaryHue = markovSeed % 360 // Primary hue for this blog post (0-359)
-    let globalSwirlStrength = 0.01 + (markovSeed % 100) / 100 // 0.3 to 1.3 (swirl strength variation)
-    let globalSwirlDirection = markovSeed % 2 === 0 ? 1 : -1 // Clockwise or counter-clockwise
-    let globalSwirlSpeed = 0.5 + (markovSeed % 100) / 100 // 0.5 to 1.5 (swirl change speed)
-
-    // Validate all global parameters
-    if (!isFinite(globalSpeedMultiplier)) globalSpeedMultiplier = 1
-    if (!isFinite(globalColorIntensity)) globalColorIntensity = 1
-    if (!isFinite(globalParticleInteraction)) globalParticleInteraction = 1
-    if (!isFinite(globalParticleSize)) globalParticleSize = 1
-    if (!isFinite(globalParticleBirthRate)) globalParticleBirthRate = 1
-    if (!isFinite(globalGravityStrength)) globalGravityStrength = 1
-    if (!isFinite(primaryHue)) primaryHue = 180
-    if (!isFinite(globalSwirlStrength)) globalSwirlStrength = 0.5
-    if (!isFinite(globalSwirlDirection)) globalSwirlDirection = 1
-    if (!isFinite(globalSwirlSpeed)) globalSwirlSpeed = 1
-
-    // Gravitational points system
-    let gravitationalPoints = []
-    let numGravityPoints = 2 + Math.floor((markovSeed % 100) / 15) // 2-8 gravity points based on seed
-    let gravityMoveSpeedMultiplier = 0.3 + (markovSeed % 100) / 100 // 0.3 to 1.3 movement speed multiplier
-
-    // Validate gravity parameters
-    if (!isFinite(numGravityPoints) || numGravityPoints < 2)
-      numGravityPoints = 2
-    if (!isFinite(gravityMoveSpeedMultiplier)) gravityMoveSpeedMultiplier = 0.5
-
-    // Audio analysis variables
-    let mic
-    let fft
-    let audioContext
-    let audioElement
-    let audioSource
-    let analyser
-    let dataArray
-    let bufferLength
-    let corsDetected = false
-
     class Particle {
       constructor(x, y, r, op, startX, startY, seed) {
-        // Validate and set position values
         this.x = isFinite(x) ? x : 0
         this.y = isFinite(y) ? y : 0
         this.r = isFinite(r) ? r : 1
         this.op = isFinite(op) ? op : 255
         this.startX = isFinite(startX) ? startX : 0
         this.startY = isFinite(startY) ? startY : 0
-
-        // Use seed to create unique particle characteristics - moderate impact
         this.seed = isFinite(seed) ? seed : Math.random() * 10000
-        this.baseMov = 0.8 + (this.seed % 150) / 60 // Movement speed varies moderately by seed (slightly reduced)
+        this.baseMov = 0.8 + (this.seed % 150) / 60
         this.mov = this.baseMov
-        this.slow = 10 + (this.seed % 200) / 2 // Noise scale varies moderately by seed
-        this.fadeRate = 0.2 + (this.seed % 100) / 100 // Fade rate varies moderately by seed
+        this.slow = 10 + (this.seed % 200) / 2
+        this.fadeRate = 0.2 + (this.seed % 100) / 100
         this.isFading = true
+        this.colorOffset = (this.seed % 360) / 360
+        this.colorSpeed = 0.3 + (this.seed % 100) / 40
 
-        // Color personality based on seed - moderate impact
-        this.colorOffset = (this.seed % 360) / 360 // Different starting color (full range)
-        this.colorSpeed = 0.3 + (this.seed % 100) / 40 // Color cycling speed varies moderately
+        // Smoothed brightness values for temporal stability
+        this.smoothedBrightness = 0
+        this.smoothedSize = this.r
+        this.smoothedOpacity = 10
+        this.brightnessSmoothing = 0.15 + (this.seed % 50) / 1000 // 0.15-0.2 range for variation
 
-        // Validate all calculated values
+        // Smoothed color values for slower color transitions
+        this.smoothedColorIntensity = 0.2
+        this.smoothedHue = 200 // Initialize with neutral blue hue
+        this.colorSmoothing = this.brightnessSmoothing * 0.25 // 75% slower than brightness
+
         if (!isFinite(this.baseMov)) this.baseMov = 1
         if (!isFinite(this.mov)) this.mov = 1
         if (!isFinite(this.slow)) this.slow = 10
         if (!isFinite(this.fadeRate)) this.fadeRate = 0.2
         if (!isFinite(this.colorOffset)) this.colorOffset = 0
         if (!isFinite(this.colorSpeed)) this.colorSpeed = 0.3
+        if (!isFinite(this.colorSmoothing)) this.colorSmoothing = 0.04
+      }
+
+      // Create organic frequency band mapping for textural variation
+      getFrequencyBand(maxBands) {
+        // Use particle position and seed to create organic frequency zones
+
+        // Distance from center creates concentric frequency rings
+        let centerX = p.width / 2
+        let centerY = p.height / 2
+        let distanceFromCenter = Math.sqrt(
+          Math.pow(this.startX - centerX, 2) +
+            Math.pow(this.startY - centerY, 2)
+        )
+        let maxDistance = Math.sqrt(Math.pow(centerX, 2) + Math.pow(centerY, 2))
+        let distanceRatio = distanceFromCenter / maxDistance // 0 to 1
+
+        // Angle from center creates radial frequency spokes
+        let angle = Math.atan2(this.startY - centerY, this.startX - centerX)
+        let normalizedAngle = (angle + Math.PI) / (2 * Math.PI) // 0 to 1
+
+        // Noise creates organic texture
+        let noiseX = this.startX * 0.01
+        let noiseY = this.startY * 0.01
+        let noiseValue = p.noise(noiseX, noiseY, this.seed * 0.001) // 0 to 1
+
+        // Seed creates particle-specific frequency affinity
+        let seedRatio = (this.seed % 1000) / 1000 // 0 to 1
+
+        // Combine different mapping strategies for complex patterns
+        let frequencyMix =
+          distanceRatio * 0.4 + // Concentric rings (bass center, treble edges) - increased
+          normalizedAngle * 0.3 + // Radial spokes - increased
+          noiseValue * 0.2 + // Organic texture - reduced
+          seedRatio * 0.1 // Random variation
+
+        // Bias towards bass frequencies for kick drum responsiveness
+        // Instead of pushing to extremes, bias towards lower frequencies
+        frequencyMix = Math.pow(frequencyMix, 0.7) // Bias towards bass (0.7 < 1)
+
+        // Map to frequency bands - emphasize bass range
+        let baseFreq = frequencyMix * maxBands
+
+        // Extra bass boost - ensure center particles get very low frequencies
+        if (distanceRatio < 0.3) {
+          // Particles near center
+          baseFreq = baseFreq * 0.6 // Force them into lower frequency range
+        }
+
+        // Add time-based slow drift for subtle animation
+        let timeDrift = Math.sin(p.frameCount * 0.01 + this.seed * 0.1) * 2
+
+        return Math.max(0, Math.min(maxBands - 1, baseFreq + timeDrift))
       }
 
       show(audioData) {
         p.noStroke()
 
-        // Validate inputs and provide safe defaults
         if (!audioData || !Array.isArray(audioData) || audioData.length === 0) {
           audioData = new Array(64).fill(0)
         }
 
-        // Get audio level for this particle with smooth interpolation
-        let audioIndexFloat = p.map(this.x, 0, p.width, 0, audioData.length - 1)
-
-        // Validate audioIndexFloat
-        if (!isFinite(audioIndexFloat)) {
-          audioIndexFloat = 0
-        }
+        // Use the same organic frequency mapping as movement
+        let audioIndexFloat = this.getFrequencyBand(audioData.length)
+        if (!isFinite(audioIndexFloat)) audioIndexFloat = 0
 
         let audioIndex1 = Math.floor(audioIndexFloat)
         let audioIndex2 = Math.min(audioIndex1 + 1, audioData.length - 1)
         let blend = audioIndexFloat - audioIndex1
-
-        // Validate blend
-        if (!isFinite(blend)) {
-          blend = 0
-        }
+        if (!isFinite(blend)) blend = 0
 
         let audioLevel1 = audioData[audioIndex1] || 0
         let audioLevel2 = audioData[audioIndex2] || 0
         let audioLevel = audioLevel1 * (1 - blend) + audioLevel2 * blend
-        let normalizedLevel = audioLevel / 255
 
-        // Validate normalizedLevel
-        if (!isFinite(normalizedLevel)) {
-          normalizedLevel = 0
-        }
+        // Apply same amplification as movement for consistent sensitivity
+        let rawNormalizedLevel = (audioLevel / 255) * 2.5
+        rawNormalizedLevel = Math.pow(rawNormalizedLevel, 0.7) // Power curve to boost quiet sounds
+        rawNormalizedLevel = Math.min(rawNormalizedLevel, 1.0) // Cap at 1.0
+        if (!isFinite(rawNormalizedLevel)) rawNormalizedLevel = 0
 
-        // Simplified color system - direct RGB calculation
-        let colorTime = p.frameCount * this.colorSpeed * 0.01
-        let audioColor = normalizedLevel * 100 * globalColorIntensity
+        // Smooth the brightness over time to reduce jarring changes
+        let targetBrightness = rawNormalizedLevel
+        this.smoothedBrightness =
+          this.smoothedBrightness +
+          (targetBrightness - this.smoothedBrightness) *
+            this.brightnessSmoothing
 
-        // Validate intermediate values
-        if (!isFinite(colorTime)) colorTime = 0
-        if (!isFinite(audioColor)) audioColor = 0
+        // Use smoothed values with gentle base levels
+        let normalizedLevel = this.smoothedBrightness
 
-        // Create color variation based on primary hue with simple math
-        let colorShift = (colorTime + audioColor + this.colorOffset * 50) % 360
-        let baseHue = (primaryHue + colorShift) % 360
+        // Smooth size changes
+        let targetSize = this.r + normalizedLevel * 0.5
+        this.smoothedSize =
+          this.smoothedSize +
+          (targetSize - this.smoothedSize) * this.brightnessSmoothing * 2
+        let audioRadius = Math.max(this.r * 2, this.smoothedSize) // Minimum size
 
-        // Validate hue values
-        if (!isFinite(colorShift)) colorShift = 0
-        if (!isFinite(baseHue)) baseHue = 0
+        // Smooth opacity changes with higher base level
+        let targetOpacity = 140 + normalizedLevel * 115 // 140-255 range (higher base)
+        this.smoothedOpacity =
+          this.smoothedOpacity +
+          (targetOpacity - this.smoothedOpacity) *
+            this.brightnessSmoothing *
+            0.1
+        let baseOpacity = this.smoothedOpacity
 
-        // Simple RGB generation based on hue ranges
-        let r, g, b
-        if (baseHue < 60) {
-          r = 255
-          g = Math.floor(baseHue * 4.25)
-          b = 50
-        } else if (baseHue < 120) {
-          r = Math.floor(255 - (baseHue - 60) * 4.25)
-          g = 255
-          b = 50
-        } else if (baseHue < 180) {
-          r = 50
-          g = 255
-          b = Math.floor((baseHue - 120) * 4.25)
-        } else if (baseHue < 240) {
-          r = 50
-          g = Math.floor(255 - (baseHue - 180) * 4.25)
-          b = 255
-        } else if (baseHue < 300) {
-          r = Math.floor((baseHue - 240) * 4.25)
-          g = 50
-          b = 255
+        // Creative frequency-based color mapping with smoothing
+        let frequencyRatio = audioIndex1 / (audioData.length - 1) // 0 to 1
+        let targetColorIntensity = normalizedLevel * 0.8 + 0.2 // 0.2 to 1.0 (never fully dark)
+
+        // Smooth color intensity changes
+        this.smoothedColorIntensity =
+          this.smoothedColorIntensity +
+          (targetColorIntensity - this.smoothedColorIntensity) *
+            this.colorSmoothing
+
+        // Determine target hue based on frequency
+        let currentTargetHue
+        if (frequencyRatio < 0.25) {
+          currentTargetHue = colorScheme.bass
+        } else if (frequencyRatio < 0.45) {
+          currentTargetHue = colorScheme.lowMid
+        } else if (frequencyRatio < 0.65) {
+          currentTargetHue = colorScheme.mid
+        } else if (frequencyRatio < 0.82) {
+          currentTargetHue = colorScheme.highMid
         } else {
-          r = 255
-          g = 50
-          b = Math.floor(255 - (baseHue - 300) * 4.25)
+          currentTargetHue = colorScheme.treble
         }
 
-        // Validate RGB values
-        r = isFinite(r) ? Math.max(0, Math.min(255, r)) : 255
-        g = isFinite(g) ? Math.max(0, Math.min(255, g)) : 255
-        b = isFinite(b) ? Math.max(0, Math.min(255, b)) : 255
-
-        // Simple radius variation based on audio and global particle size
-        let audioRadius = (this.r + normalizedLevel * 2.0) * globalParticleSize
-
-        // Validate audioRadius
-        if (!isFinite(audioRadius) || audioRadius <= 0) {
-          audioRadius = 1
+        // Initialize smoothedHue on first frame if needed
+        if (this.smoothedHue === 200) {
+          this.smoothedHue = currentTargetHue
         }
 
-        // Validate opacity
-        let opacity = this.op * 0.5
-        if (!isFinite(opacity)) {
-          opacity = 128
-        }
+        // Smooth hue transitions
+        this.smoothedHue =
+          this.smoothedHue +
+          (currentTargetHue - this.smoothedHue) * this.colorSmoothing
 
-        p.fill(r, g, b, opacity)
+        // Use smoothed values for final color calculation
+        let targetHue = this.smoothedHue
+        let saturation = colorScheme.saturation
+        let lightness = Math.min(
+          0.7,
+          colorScheme.brightness * this.smoothedColorIntensity
+        ) // Cap lightness
+        let r, g, b
+
+        // Convert HSL to RGB
+        const [red, green, blue] = hslToRgb(targetHue, saturation, lightness)
+        r = red
+        g = green
+        b = blue
+
+        // Keep colors pure - no white shimmer effect
+
+        // Keep colors within safe range - no saturation boost to avoid white
+        r = Math.min(220, Math.floor(r)) // Cap at 220 instead of 255
+        g = Math.min(220, Math.floor(g))
+        b = Math.min(220, Math.floor(b))
+
+        // Electric pulsing effect - keep within safe range
+        let pulseMultiplier = 0.7 + normalizedLevel * 0.3 // 0.7 to 1.0 (safer range)
+        r = Math.floor(r * pulseMultiplier)
+        g = Math.floor(g * pulseMultiplier)
+        b = Math.floor(b * pulseMultiplier)
+
+        // Draw main particle
+        p.fill(r, g, b, baseOpacity)
         p.ellipse(this.x, this.y, audioRadius)
+        p.ellipse(
+          this.x + p.noise(Math.sin(this.x)) * 10,
+          this.y + p.noise(Math.cos(this.y)) * 10,
+          audioRadius * 0.8
+        )
+        p.ellipse(
+          this.x - p.noise(Math.sin(this.x)) * 10,
+          this.y - p.noise(Math.cos(this.y)) * 10,
+          audioRadius * 0.6
+        )
+        p.ellipse(
+          this.x + p.noise(Math.sin(this.x)) * 20,
+          this.y + p.noise(Math.cos(this.y)) * 20,
+          audioRadius * 0.4
+        )
+        p.ellipse(
+          this.x - p.noise(Math.sin(this.x)) * 20,
+          this.y - p.noise(Math.cos(this.y)) * 20,
+          audioRadius * 0.2
+        )
+
+        // Enhanced neon glow effects - more visible with faint main particles
+        if (normalizedLevel > 0.05) {
+          // Much lower threshold for better visibility
+          let glowIntensity = Math.max(0, (normalizedLevel - 0.05) / 0.95) // 0 to 1
+
+          // Large outer glow - colored aura (always present, varies in intensity)
+          let outerGlowSize = audioRadius * (2.5 + normalizedLevel * 2.0)
+          let outerGlowOpacity = Math.max(30, glowIntensity * 100) // Higher minimum and max opacity
+          p.fill(r, g, b, outerGlowOpacity)
+          p.ellipse(this.x, this.y, outerGlowSize)
+
+          // Medium glow - more saturated (smoother threshold)
+          if (normalizedLevel > 0.15) {
+            let mediumGlowSize = audioRadius * (1.8 + normalizedLevel * 1.5)
+            let mediumGlowOpacity = Math.max(25, (normalizedLevel - 0.15) * 200) // Higher intensity
+            // Use base colors for glow - no boost to avoid white
+            let glowR = r
+            let glowG = g
+            let glowB = b
+            p.fill(glowR, glowG, glowB, mediumGlowOpacity)
+            p.ellipse(this.x, this.y, mediumGlowSize)
+          }
+
+          // Enhanced core using saturated color instead of white
+          if (normalizedLevel > 0.3) {
+            let coreOpacity = Math.max(20, (normalizedLevel - 0.3) * 180) // Higher intensity
+            let coreSize = audioRadius * 0.6
+            // Use base color for core - no boost to avoid white
+            let coreR = r
+            let coreG = g
+            let coreB = b
+            p.fill(coreR, coreG, coreB, Math.min(150, coreOpacity))
+            p.ellipse(this.x, this.y, coreSize)
+          }
+        }
+
+        // Electric neon trails for ultra-active particles
+        if (normalizedLevel > 0.8) {
+          let trailIntensity = (normalizedLevel - 0.8) * 5 // 0-1
+
+          // Multiple trail segments for electric effect
+          for (let t = 0.2; t <= 0.6; t += 0.2) {
+            let trailX = this.x + (this.startX - this.x) * t
+            let trailY = this.y + (this.startY - this.y) * t
+            let trailOpacity = 1 * trailIntensity * (1 - t) // Fixed trail opacity since main particle is now very faint
+            let trailSize = audioRadius * (0.8 - t * 0.3)
+
+            // Use base colors for trails - no boost to avoid white
+            let trailR = r
+            let trailG = g
+            let trailB = b
+
+            p.fill(trailR, trailG, trailB, trailOpacity)
+            p.ellipse(trailX, trailY, trailSize)
+            p.ellipse(trailX + 10, trailY + 10, trailSize * 0.8)
+            p.ellipse(trailX - 10, trailY - 10, trailSize * 0.6)
+            p.ellipse(trailX + 20, trailY + 20, trailSize * 0.4)
+            p.ellipse(trailX - 20, trailY - 20, trailSize * 0.2)
+          }
+        }
       }
 
-      move(i, audioData, allParticles) {
-        // Validate inputs and provide safe defaults
+      move(i, audioData, isPlaying = false) {
         if (!audioData || !Array.isArray(audioData) || audioData.length === 0) {
           audioData = new Array(64).fill(0)
         }
 
-        // Get audio data for this particle's position with smooth interpolation
-        let audioIndexFloat = p.map(
-          i,
-          0,
-          particles.length,
-          0,
-          audioData.length - 1
-        )
-
-        // Validate audioIndexFloat
-        if (!isFinite(audioIndexFloat)) {
-          audioIndexFloat = 0
+        // Only move particles if audio is actually playing
+        if (!isPlaying) {
+          return // Stay completely still when no audio is playing
         }
+
+        // Create organic frequency mapping based on particle position and seed
+        let audioIndexFloat = this.getFrequencyBand(audioData.length)
+        if (!isFinite(audioIndexFloat)) audioIndexFloat = 0
 
         let audioIndex1 = Math.floor(audioIndexFloat)
         let audioIndex2 = Math.min(audioIndex1 + 1, audioData.length - 1)
         let blend = audioIndexFloat - audioIndex1
+        if (!isFinite(blend)) blend = 0
 
-        // Validate blend
-        if (!isFinite(blend)) {
-          blend = 0
-        }
-
+        // Get the frequency level for this particle
         let audioLevel1 = audioData[audioIndex1] || 0
         let audioLevel2 = audioData[audioIndex2] || 0
+        let audioLevel = audioLevel1 * (1 - blend) + audioLevel2 * blend
 
-        // Give extra weight to low frequencies for bass drum detection
-        let lowFreqWeight = 4.0 // 4x more weight for low frequencies
-        let highFreqWeight = 1.0 // Normal weight for high frequencies
+        // Amplify audio sensitivity by 2.5x and apply power curve for better low-volume response
+        let normalizedLevel = (audioLevel / 255) * 2.5
+        normalizedLevel = Math.pow(normalizedLevel, 0.7) // Power curve to boost quiet sounds
+        normalizedLevel = Math.min(normalizedLevel, 1.0) // Cap at 1.0
+        if (!isFinite(normalizedLevel)) normalizedLevel = 0
 
-        let weight1 = audioIndex1 < 16 ? lowFreqWeight : highFreqWeight
-        let weight2 = audioIndex2 < 16 ? lowFreqWeight : highFreqWeight
+        // Free-roaming movement system based on audio energy and frequency
+        let baseMovement = (0.24 + normalizedLevel * 1.2) * 1.5 // 0.36 to 2.16 movement speed (+50%)
+        let t = p.frameCount / 60.0
 
-        let audioLevel =
-          (audioLevel1 * weight1 * (1 - blend) +
-            audioLevel2 * weight2 * blend) /
-          Math.max(weight1, weight2)
-        let normalizedLevel = Math.min(1.0, audioLevel / 255) // Clamp to prevent overflow
+        // Primary direction based on audio energy and frequency band
+        let primaryDirection =
+          (this.seed + audioIndex1 * 0.8 + normalizedLevel * 3 + t * 0.3) % // Increased direction change speed by 50%
+          (Math.PI * 2)
 
-        // Validate normalizedLevel
-        if (!isFinite(normalizedLevel)) {
-          normalizedLevel = 0
+        // Secondary direction for complex movement patterns
+        let secondaryDirection =
+          (this.seed * 2 + audioIndex1 * 1.2 + t * 0.225) % (Math.PI * 2) // Increased direction change speed by 50%
+
+        // Audio-driven movement - particles move in response to their frequency band
+        if (normalizedLevel > 0.01) {
+          // Lowered threshold from 0.05 to 0.01 for higher sensitivity
+          let audioForce = normalizedLevel * baseMovement * 0.8 // Reduced movement multiplier
+
+          // Main movement direction
+          this.x += Math.cos(primaryDirection) * audioForce
+          this.y += Math.sin(primaryDirection) * audioForce
+
+          // Add secondary movement for more complex paths
+          this.x += Math.cos(secondaryDirection) * audioForce * 0.2 // Reduced from 0.4
+          this.y += Math.sin(secondaryDirection) * audioForce * 0.2
         }
 
-        // Only move if there's significant audio
-        if (normalizedLevel < 0.1) {
-          // Reset to start position when no audio
-          this.x = this.startX
-          this.y = this.startY
-          return
-        }
+        // Perlin noise for organic, flowing movement
+        let noiseScale = 0.008
+        let noiseTime = t * 0.3 // Increased by 50% for faster noise evolution
+        let noiseStrength = (0.8 + normalizedLevel * 1.5) * 1.5 // Increased by 50%
 
-        let t = p.frameCount / 100.0
-        let wonkV = 30 // Reduced from 100 to decrease noise randomness
+        let noiseX =
+          p.noise(this.x * noiseScale, this.y * noiseScale, noiseTime) - 0.5
+        let noiseY =
+          p.noise(
+            this.x * noiseScale + 100,
+            this.y * noiseScale + 100,
+            noiseTime
+          ) - 0.5
 
-        // Validate t
-        if (!isFinite(t)) {
-          t = 0
-        }
+        this.x += noiseX * noiseStrength
+        this.y += noiseY * noiseStrength
 
-        // Adjust movement based on audio level - particles move independently
-        let audioMultiplier = 1 + normalizedLevel * 1.75 // 1x to 2.25x movement based on individual audio level
-        this.mov = this.baseMov * audioMultiplier * globalSpeedMultiplier
+        // Frequency-based flow patterns
+        let frequencyFlow =
+          Math.sin(t * 0.6 + audioIndex1 * 0.3) * normalizedLevel * 1.8 // Increased time component by 50%
+        let flowDirection = (audioIndex1 / audioData.length) * Math.PI * 2
 
-        // Validate movement values
-        if (!isFinite(this.mov)) {
-          this.mov = 1
-        }
+        this.x += Math.cos(flowDirection) * frequencyFlow
+        this.y += Math.sin(flowDirection) * frequencyFlow
 
-        // Simple directional movement based on audio (much more efficient)
-        let audioDirection = (this.seed + p.frameCount * 0.01) % (Math.PI * 2)
-
-        // Validate audioDirection
-        if (!isFinite(audioDirection)) {
-          audioDirection = 0
-        }
-
-        let moveX = Math.cos(audioDirection) * this.mov * normalizedLevel * 0.1
-        let moveY = Math.sin(audioDirection) * this.mov * normalizedLevel * 0.1
-
-        // Validate movement deltas
-        if (isFinite(moveX)) {
-          this.x += moveX
-        }
-        if (isFinite(moveY)) {
-          this.y += moveY
-        }
-
-        // Add subtle noise-based movement for organic feel (reduced randomness)
-        let wonkX = p.map(p.sin(this.startX * i), -1, 1, -wonkV, wonkV)
-        let wonkY = p.map(p.cos(this.startY * i), -1, 1, -wonkV, wonkV)
-
-        // Validate wonk values
-        if (!isFinite(wonkX)) wonkX = 0
-        if (!isFinite(wonkY)) wonkY = 0
-
-        let noiseX = p.map(
-          p.noise(wonkX / this.slow, t, i),
-          0,
-          1,
-          -this.mov * 0.08,
-          this.mov * 0.08
-        )
-        let noiseY = p.map(
-          p.noise(t, i, wonkY / this.slow),
-          0,
-          1,
-          -this.mov * 0.08,
-          this.mov * 0.08
+        // Very slight gravitational force towards center
+        let centerX = p.width / 2
+        let centerY = p.height / 2
+        let distanceToCenter = Math.sqrt(
+          Math.pow(this.x - centerX, 2) + Math.pow(this.y - centerY, 2)
         )
 
-        // Validate noise values and apply
-        if (isFinite(noiseX)) {
-          this.x += noiseX
-        }
-        if (isFinite(noiseY)) {
-          this.y += noiseY
+        if (distanceToCenter > 0) {
+          let gravityStrength = 0.002 // Very weak gravitational force
+          let gravityForce =
+            gravityStrength * Math.min(distanceToCenter / 100, 1.0) // Scale with distance
+
+          let directionToCenter = Math.atan2(centerY - this.y, centerX - this.x)
+          this.x += Math.cos(directionToCenter) * gravityForce
+          this.y += Math.sin(directionToCenter) * gravityForce
         }
 
-        // Gentle center attraction - only every 10 frames for performance
-        if (p.frameCount % 10 === 0) {
-          let centerAttractionStrength = 0.0005 // Ultra-gentle pull
-          let centerX = p.width / 2
-          let centerY = p.height / 2
-          let directionToCenterX = centerX - this.x
-          let directionToCenterY = centerY - this.y
-
-          // Validate center attraction values
-          if (isFinite(directionToCenterX) && isFinite(directionToCenterY)) {
-            // Simple attraction without expensive distance calculation
-            this.x += directionToCenterX * centerAttractionStrength
-            this.y += directionToCenterY * centerAttractionStrength
-          }
-        }
-
-        // Ensure particle position remains valid
-        if (!isFinite(this.x)) {
-          this.x = this.startX
-        }
-        if (!isFinite(this.y)) {
-          this.y = this.startY
-        }
-      }
-
-      update() {
+        // Canvas boundary handling - reset to starting position if off canvas
+        let margin = 20
         if (
-          this.x > p.width - margin ||
-          this.y > p.height - margin ||
-          this.x < margin ||
-          this.y < margin
+          this.x < -margin ||
+          this.x > p.width + margin ||
+          this.y < -margin ||
+          this.y > p.height + margin
         ) {
           this.x = this.startX
           this.y = this.startY
         }
+
+        // Final safety checks
+        if (!isFinite(this.x)) this.x = this.startX
+        if (!isFinite(this.y)) this.y = this.startY
       }
 
-      fade(audioData) {
-        // Validate inputs and provide safe defaults
-        if (!audioData || !Array.isArray(audioData) || audioData.length === 0) {
-          audioData = new Array(64).fill(0)
-        }
-
-        // Get average audio level for fade effect
-        let avgLevel =
-          audioData.reduce((sum, val) => sum + val, 0) / audioData.length
-        let normalizedAvg = avgLevel / 255
-
-        // Validate calculated values
-        if (!isFinite(avgLevel)) avgLevel = 0
-        if (!isFinite(normalizedAvg)) normalizedAvg = 0
-
-        // Adjust fade rate based on audio - make it extremely dramatic
-        let audioFadeRate = this.fadeRate * (1 + normalizedAvg * 1.1) // 1x to 11x fade rate
-
-        // Validate fade rate
-        if (!isFinite(audioFadeRate)) {
-          audioFadeRate = this.fadeRate
-        }
-
-        if (this.isFading) {
-          this.op -= audioFadeRate
-        } else {
-          this.op += audioFadeRate
-        }
-
-        // Validate opacity
-        if (!isFinite(this.op)) {
-          this.op = 128
-        }
-
-        if (this.op > 255) {
-          this.isFading = true
-        }
-
-        if (this.op < 50) {
-          // Don't let particles become completely invisible - maintain minimum opacity
-          this.op = 50
-          this.isFading = false
-        }
+      update() {
+        // No constraints - particles are free to roam!
+        // Boundary wrapping is handled in the move() method
       }
     }
 
-    // Function to calculate particle removal parameters based on playlist duration
-    const calculateParticleRemovalParams = () => {
-      // Get totalPlaylistDuration from global variable
-      const duration =
-        typeof window !== 'undefined' ? window.totalPlaylistDuration || 0 : 0
-
-      if (duration <= 0) {
-        totalParticlesToRemove = 0
-        removalInterval = 0
-        return
-      }
-
-      // Calculate how many particles to remove total (even split)
-      totalParticlesToRemove = particles.length // Remove 100% of particles
-
-      // Calculate time interval between removals
-      removalInterval = duration / totalParticlesToRemove
-
-      // Reset counters
-      particlesRemoved = 0
-      lastRemovalTime = 0
-    }
-
-    // Function to remove particles based on current playback time
-    const removeParticlesBasedOnTime = () => {
-      if (
-        totalParticlesToRemove <= 0 ||
-        particlesRemoved >= totalParticlesToRemove
-      ) {
-        return
-      }
-
-      // Get current playback time from audio element - use the same logic as getAudioData
-      const allAudioElements = document.querySelectorAll('audio')
-      let playingAudioElement = null
-
-      for (let el of allAudioElements) {
-        if (!el.paused && !el.ended && el.readyState >= 2) {
-          playingAudioElement = el
-          break
-        }
-      }
-
-      if (!playingAudioElement) {
-        return
-      }
-
-      const currentTime = playingAudioElement.currentTime
-
-      // Check if it's time to remove another particle
-      if (currentTime - lastRemovalTime >= removalInterval) {
-        // Remove one particle
-        if (particles.length > 0) {
-          const randomIndex = Math.floor(Math.random() * particles.length)
-          particles.splice(randomIndex, 1)
-          particlesRemoved++
-          lastRemovalTime = currentTime
-        }
-      }
-    }
-
-    // Function to find and analyze audio elements on the page
+    // Simple setup that uses the global analyzer from audio player context
     const setupAudioAnalysis = () => {
-      try {
-        // Find audio elements on the page
-        const audioElements = document.querySelectorAll('audio')
-
-        if (audioElements.length === 0) {
-          return
-        }
-
-        // Use the first audio element found
-        audioElement = audioElements[0]
-
-        // Since all audio files are from Supabase, always use alternative detection
-        // This avoids CORS issues and provides better performance
-        corsDetected = true
-        setupAlternativeAudioDetection()
-      } catch (error) {
-        console.error('Error setting up audio analysis:', error)
-        corsDetected = true
-        setupAlternativeAudioDetection()
-      }
+      if (typeof window === 'undefined' || audioSetupAttempted) return
+      audioSetupAttempted = true
     }
 
-    // Alternative audio detection method that works with CORS restrictions
-    const setupAlternativeAudioDetection = () => {
-      if (!audioElement) return
-
-      // Listen for audio events (no logging needed)
-      audioElement.addEventListener('play', () => {})
-      audioElement.addEventListener('pause', () => {})
-      audioElement.addEventListener('ended', () => {})
-    }
-
-    // Function to get current audio data
     const getAudioData = () => {
-      // Find any playing audio element
-      const allAudioElements = document.querySelectorAll('audio')
-      let playingAudioElement = null
+      // Use the global analyzer from audio player context
+      const analyzer = window.audioAnalyzer
 
-      for (let el of allAudioElements) {
-        if (!el.paused && !el.ended && el.readyState >= 2) {
-          playingAudioElement = el
+      if (!analyzer) {
+        return { data: new Array(64).fill(0), isPlaying: false }
+      }
+
+      const bufferLength = analyzer.frequencyBinCount
+      const dataArray = new Uint8Array(bufferLength)
+      analyzer.getByteFrequencyData(dataArray)
+
+      // Check if audio is playing by looking for audio elements
+      let isPlaying = false
+      const audioElements = document.querySelectorAll('audio')
+      for (let audio of audioElements) {
+        if (!audio.paused && !audio.ended && audio.readyState > 0) {
+          isPlaying = true
           break
         }
       }
 
-      // Update our audio element reference if we found a playing one
-      if (playingAudioElement && playingAudioElement !== audioElement) {
-        audioElement = playingAudioElement
-      }
-
-      // Always use alternative method for Supabase audio files
-      return getAlternativeAudioData()
-    }
-
-    // Function to birth new particles based on audio intensity
-    const birthParticles = (audioData) => {
-      if (!audioData || audioData.length === 0) return
-
-      // Calculate overall audio intensity with emphasis on low frequencies
-      const lowFreqAudio =
-        audioData.slice(0, 16).reduce((sum, val) => sum + val, 0) / 16
-      const highFreqAudio =
-        audioData.slice(16).reduce((sum, val) => sum + val, 0) /
-        (audioData.length - 16)
-
-      // Weight low frequencies much more heavily for bass drum detection
-      const weightedAudioLevel = (lowFreqAudio * 3 + highFreqAudio * 1) / 4
-      const normalizedAudioLevel = weightedAudioLevel / 255
-
-      // Birth rate based on audio intensity and global birth rate - reduced sensitivity
-      const birthRate = normalizedAudioLevel * globalParticleBirthRate * 0.2 // Reduced birth rate
-
-      // Multiple birth attempts per frame for more dramatic effect
-      const birthAttempts = Math.floor(birthRate * 5) + 1 // 1 to 6+ attempts based on audio
-
-      for (let attempt = 0; attempt < birthAttempts; attempt++) {
-        if (Math.random() < birthRate && tatShapePositions.length > 0) {
-          // Choose a random TatsSketch position instead of completely random position
-          const randomTatPosition =
-            tatShapePositions[
-              Math.floor(Math.random() * tatShapePositions.length)
-            ]
-
-          // Add small variation to avoid exact overlap
-          const variation = 8 // Small random offset
-          const x = randomTatPosition.x + (Math.random() - 0.5) * variation
-          const y = randomTatPosition.y + (Math.random() - 0.5) * variation
-
-          // Ensure position stays within canvas bounds
-          const clampedX = Math.max(margin, Math.min(p.width - margin, x))
-          const clampedY = Math.max(margin, Math.min(p.height - margin, y))
-
-          // Create unique seed for new particle
-          const particleSeed = (markovSeed + Math.random() * 10000) % 10000
-
-          // Create new particle with high initial opacity using TatsSketch position
-          const newParticle = new Particle(
-            clampedX,
-            clampedY,
-            0.15,
-            256,
-            clampedX,
-            clampedY,
-            particleSeed
-          )
-          particles.push(newParticle)
-        }
-      }
-    }
-
-    // Function to kill particles based on audio intensity
-    const killParticles = (audioData) => {
-      if (!audioData || audioData.length === 0) return
-
-      // Calculate overall audio intensity with emphasis on low frequencies
-      const lowFreqAudio =
-        audioData.slice(0, 16).reduce((sum, val) => sum + val, 0) / 16
-      const highFreqAudio =
-        audioData.slice(16).reduce((sum, val) => sum + val, 0) /
-        (audioData.length - 16)
-
-      // Weight low frequencies much more heavily for bass drum detection
-      const weightedAudioLevel = (lowFreqAudio * 3 + highFreqAudio * 1) / 4
-      const normalizedAudioLevel = weightedAudioLevel / 255
-
-      // Kill rate based on audio intensity (inverse relationship - more audio = less killing) - much gentler
-      const killRate = (1 - normalizedAudioLevel) * 0.05 // Much lower kill rate for longer particle life
-
-      // Single kill attempt per frame for gentler effect
-      const killAttempts = Math.floor(killRate * 2) + 1 // 1 to 3 attempts based on audio
-
-      for (let attempt = 0; attempt < killAttempts; attempt++) {
-        if (Math.random() < killRate && particles.length > 100) {
-          // Higher minimum particles to maintain population
-          // Remove a random particle
-          const randomIndex = Math.floor(Math.random() * particles.length)
-          particles.splice(randomIndex, 1)
-        }
-      }
-    }
-
-    const getAlternativeAudioData = () => {
-      if (!audioElement) {
-        return new Array(64).fill(0)
-      }
-
-      const isPlaying = !audioElement.paused && !audioElement.ended
-      const currentTime = audioElement.currentTime
-      const duration = audioElement.duration
-      const volume = audioElement.volume || 1
-
-      if (!isPlaying) {
-        return new Array(64).fill(0)
-      }
-
-      // Create simulated audio data based on playback state
-      const data = new Array(64).fill(0)
-
-      // Create more realistic frequency distribution that responds to volume
-      for (let i = 0; i < 64; i++) {
-        // Base level that responds to volume
-        let baseLevel = 60 * volume
-
-        // Add time-based variation that's more musical
-        let timeVariation = Math.sin(currentTime * 2 + i * 0.1) * 40 * volume
-
-        // Add some randomness for natural feel
-        let randomVariation = (Math.random() - 0.5) * 30 * volume
-
-        // Create frequency bands that respond differently - bass drum emphasis
-        let frequencyResponse
-        if (i < 8) {
-          // Very low frequencies (sub-bass) - bass drum territory - MUCH stronger
-          frequencyResponse =
-            Math.sin(currentTime * 0.3 + i * 0.02) * 150 * volume
-        } else if (i < 16) {
-          // Low frequencies (bass) - still strong for bass drum
-          frequencyResponse =
-            Math.sin(currentTime * 0.5 + i * 0.05) * 120 * volume
-        } else if (i < 32) {
-          // Mid frequencies - balanced
-          frequencyResponse =
-            Math.sin(currentTime * 1.5 + i * 0.08) * 60 * volume
-        } else if (i < 48) {
-          // High-mid frequencies - more active
-          frequencyResponse =
-            Math.sin(currentTime * 2.5 + i * 0.12) * 70 * volume
-        } else {
-          // High frequencies - most active
-          frequencyResponse =
-            Math.sin(currentTime * 3.5 + i * 0.15) * 80 * volume
-        }
-
-        data[i] = Math.max(
-          0,
-          Math.min(
-            255,
-            baseLevel + timeVariation + randomVariation + frequencyResponse
-          )
-        )
-      }
-
-      return data
+      return { data: Array.from(dataArray), isPlaying }
     }
 
     p.setup = () => {
+      const container = document.getElementById('sketch-container')
       // Get the container width and height dynamically
       const containerWidth =
         p.canvas && p.canvas.parentElement
@@ -925,83 +662,46 @@ const createAudioReactiveGridSketch =
         p.canvas && p.canvas.parentElement
           ? p.canvas.parentElement.offsetHeight
           : 400
-
       p.createCanvas(containerWidth, containerHeight)
       p.background(0)
-
-      // Update global variables to use full canvas dimensions
-      margin = 5 // Minimal margin
-      spacing = Math.max(100, containerWidth * 0.015) // Responsive spacing
-      radius = Math.min(containerWidth, containerHeight) * 0.4 // Responsive radius
-
-      // Generate TatsSketch-based particle positions
-      tatShapePositions = generateTatShapePositions()
-
-      // Setup audio analysis
       setupAudioAnalysis()
-
+      tatShapePositions = generateTatShapePositions()
       p.seed()
-
-      // Calculate particle removal parameters AFTER particles are created
-      calculateParticleRemovalParams()
     }
 
     p.windowResized = () => {
-      // Resize canvas when window is resized
-      const containerWidth =
-        p.canvas && p.canvas.parentElement
-          ? p.canvas.parentElement.offsetWidth
-          : 800
-      const containerHeight =
-        p.canvas && p.canvas.parentElement
-          ? p.canvas.parentElement.offsetHeight
-          : 400
-
-      p.resizeCanvas(containerWidth, containerHeight)
+      const container = document.getElementById('sketch-container')
+      p.resizeCanvas(container.offsetWidth, container.offsetHeight)
       p.background(0)
-
-      // Update global variables for new canvas dimensions
-      margin = 5 // Minimal margin
-      spacing = Math.max(100, containerWidth * 0.015) // Responsive spacing
-      radius = Math.min(containerWidth, containerHeight) * 0.4 // Responsive radius
-
-      // Regenerate TatsSketch-based particle positions for new canvas size
       tatShapePositions = generateTatShapePositions()
-
-      // Re-seed particles for new canvas size
       particles = []
       p.seed()
-
-      // Recalculate particle removal parameters for new particle count
-      calculateParticleRemovalParams()
     }
 
     p.draw = () => {
-      // Get current audio data
-      const audioData = getAudioData()
+      // p.background(0, 0, 0, 10) // Clear the background each frame
 
-      // Remove particles based on playlist time
-      removeParticlesBasedOnTime()
+      // Re-check for audio every 2 seconds if not set up
+      if (!audioSetupAttempted && p.frameCount % 120 === 0) {
+        setupAudioAnalysis()
+      }
 
-      // Birth and kill particles based on audio
-      // birthParticles(audioData)
-      // killParticles(audioData)
+      const audioInfo = getAudioData()
+      const audioData = audioInfo.data
+      const isPlaying = audioInfo.isPlaying
 
       for (let i = 0; i < particles.length; i++) {
-        particles[i].move(i, audioData, particles)
+        particles[i].move(i, audioData, isPlaying)
         particles[i].show(audioData)
         particles[i].update()
-        // particles[i].fade(audioData)
       }
     }
 
     p.seed = () => {
-      // Use TatsSketch positions as particle starting points
       if (tatShapePositions.length === 0) {
         console.warn(
           'No TatsSketch positions generated, falling back to random positioning'
         )
-        // Fallback to a simple grid if no positions were generated
         for (let y = margin; y < p.height - margin; y += 50) {
           for (let x = margin; x < p.width - margin; x += 50) {
             tatShapePositions.push({ x, y })
@@ -1009,31 +709,22 @@ const createAudioReactiveGridSketch =
         }
       }
 
-      // Create particles based on TatsSketch positions
       for (let i = 0; i < tatShapePositions.length; i++) {
         const position = tatShapePositions[i]
-
-        // Create unique seed for each particle based on position and markov seed
         let particleSeed =
           (markovSeed + position.x * position.y + i * 123) % 10000
-
-        // Ensure positions are within canvas bounds
         let startX = Math.max(margin, Math.min(p.width - margin, position.x))
         let startY = Math.max(margin, Math.min(p.height - margin, position.y))
-
-        // Add some slight variation to avoid overlapping particles
-        const variation = 5 // Small random offset
+        const variation = 5
         startX += (((particleSeed % 100) - 50) / 50) * variation
         startY += ((((particleSeed * 7) % 100) - 50) / 50) * variation
-
-        // Ensure particles stay within bounds after variation
         startX = Math.max(margin, Math.min(p.width - margin, startX))
         startY = Math.max(margin, Math.min(p.height - margin, startY))
 
         let particle = new Particle(
           startX,
           startY,
-          0.15,
+          2,
           256,
           startX,
           startY,
@@ -1044,73 +735,43 @@ const createAudioReactiveGridSketch =
     }
   }
 
-// Client-side only component that renders the sketch
-const ClientSideSketch = ({
-  className,
-  style,
-  markovText,
-  totalPlaylistDuration,
-}) => {
-  return (
-    <P5SketchComponent
-      sketch={createAudioReactiveGridSketch(markovText, totalPlaylistDuration)}
-      className={className}
-      style={style}
-    />
-  )
-}
-
-// Main component with SSR handling
 const AudioReactiveGridSketch = ({
   className = '',
   style = {},
   markovText = '',
-  totalPlaylistDuration = 0,
 }) => {
-  // Return loading placeholder during SSR
-  if (typeof window === 'undefined') {
-    return (
-      <div
-        className={className}
-        style={{
-          ...style,
-          backgroundColor: '#000',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontSize: '14px',
-          height: '400px',
-        }}
-      ></div>
-    )
-  }
+  const [sketch, setSketch] = useState(null)
+
+  useEffect(() => {
+    let isMounted = true
+
+    // Simple p5 import without p5.sound complications
+    import('p5')
+      .then((p5Module) => {
+        if (isMounted) {
+          const p5 = p5Module.default
+          setSketch(() => createAudioReactiveGridSketch(p5, markovText))
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load p5:', error)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [markovText])
 
   return (
-    <Suspense
-      fallback={
-        <div
+    <div id="sketch-container" className={className} style={style}>
+      {sketch && (
+        <P5SketchComponent
+          sketch={sketch}
           className={className}
-          style={{
-            ...style,
-            backgroundColor: '#000',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontSize: '14px',
-            height: '400px',
-          }}
-        ></div>
-      }
-    >
-      <ClientSideSketch
-        className={className}
-        style={style}
-        markovText={markovText}
-        totalPlaylistDuration={totalPlaylistDuration}
-      />
-    </Suspense>
+          style={style}
+        />
+      )}
+    </div>
   )
 }
 
