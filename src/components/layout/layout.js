@@ -89,11 +89,11 @@ const Layout = ({ location, title, children }) => {
               fontWeight: '500',
             }}
           >
-            All Songs
+            All
           </Link>
         </nav>
       </header>
-      <main>{children}</main>
+      <main style={{ marginTop: '25px' }}>{children}</main>
       <footer>{new Date().getFullYear()}</footer>
       {/* <RandomDayButton /> */}
     </div>

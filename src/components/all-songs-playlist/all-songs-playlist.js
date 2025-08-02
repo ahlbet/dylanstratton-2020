@@ -137,15 +137,15 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
           // Track pause event
           trackAudioEvent.songPause(
             tracks[index].title,
-            'All Songs',
+            'All',
             index + 1,
             tracks.length,
-            'all_songs_player'
+            'all_player'
           )
         } else {
           // Otherwise, play the selected track
           playTrack(index, contextTracks)
-          trackAudioEvent.songPlay(tracks[index].title, 'All Songs')
+          trackAudioEvent.songPlay(tracks[index].title, 'All')
         }
       }
     },
@@ -195,7 +195,7 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
                 whiteSpace: 'nowrap',
               }}
             >
-              All Songs
+              All
             </h3>
             <p
               style={{
@@ -204,7 +204,7 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
                 fontSize: '14px',
               }}
             >
-              {tracks.length} tracks • {totalDuration}
+              {tracks.length} • {totalDuration}
             </p>
           </div>
         </div>

@@ -384,7 +384,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                 fontSize: '14px',
               }}
             >
-              {tracks.length} tracks • {totalDuration}
+              {tracks.length} • {totalDuration}
             </p>
           </div>
         </div>

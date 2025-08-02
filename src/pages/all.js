@@ -63,7 +63,7 @@ const AllSongsPage = ({ data, location }) => {
     <AudioPlayerProvider>
       <AllSongsAutopilotHandler />
       <Layout location={location} title={siteTitle}>
-        <SEO title="All Songs" description="Complete playlist of all songs" />
+        <SEO title="All" description="Complete" />
 
         {/* 2-Column Layout Container */}
         <div className="blog-layout-container">
