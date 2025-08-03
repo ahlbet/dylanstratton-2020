@@ -327,13 +327,6 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                   ></div>
                 }
               >
-                {/* <AudioReactiveGridSketch
-                    markovText={markovText}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                    }}
-                  /> */}
                 {/* Single AudioFFT instance - positioned responsively */}
                 <div className="responsive-audio-fft">
                   <AudioFFT markovText={markovText} />
@@ -341,30 +334,6 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
               </React.Suspense>
             )}
           </div>
-
-          {/* Right Column - Audio Reactive Grid Sketch (Desktop only) */}
-          {/* <div className="right-column"> */}
-          {/* {typeof window !== 'undefined' && (
-              <React.Suspense
-                fallback={
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      backgroundColor: '#000',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '14px',
-                    }}
-                  ></div>
-                }
-              >
-           
-              </React.Suspense>
-            )} */}
-          {/* </div> */}
         </div>
         <FixedAudioPlayer />
       </Layout>

@@ -95,24 +95,11 @@ export const setupFFT = (P5, sourceNode, smoothing = 0.9, fftSize = 2048) => {
 
   // Use global FFT instance if available
   if (window.__globalFFTInstance) {
-    console.log('🎵 Using global FFT instance')
     const globalFFT = window.__globalFFTInstance
 
     try {
       // Update the input to the current audio source
       globalFFT.setInput(sourceNode)
-
-      // Debug: Verify FFT setup
-      console.log('🎵 FFT Setup Debug:', {
-        hasGlobalFFT: !!window.__globalFFTInstance,
-        hasSourceNode: !!sourceNode,
-        fftInput: !!globalFFT.input,
-        audioContextState: globalFFT.input?.context?.state,
-        fftMethods: {
-          hasAnalyze: typeof globalFFT.analyze === 'function',
-          hasGetEnergy: typeof globalFFT.getEnergy === 'function',
-        },
-      })
 
       return globalFFT
     } catch (error) {
@@ -126,7 +113,6 @@ export const setupFFT = (P5, sourceNode, smoothing = 0.9, fftSize = 2048) => {
   }
 
   // Fallback: create new FFT instance if global one doesn't exist
-  console.log('🎵 Creating new FFT instance (fallback)')
   try {
     const fft = new P5.FFT(smoothing, fftSize)
     fft.setInput(sourceNode)
