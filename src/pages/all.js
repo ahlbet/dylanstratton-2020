@@ -11,14 +11,7 @@ import { FixedAudioPlayer } from '../components/fixed-audio-player/FixedAudioPla
 import AllSongsPlaylist from '../components/all-songs-playlist/all-songs-playlist'
 import DynamicMarkovText from '../components/dynamic-markov-text/DynamicMarkovText'
 import { extractAudioUrls } from '../utils/extractAudioUrls'
-
-// Lazy load the audio reactive grid sketch to prevent SSR issues
-const AudioReactiveGridSketch = React.lazy(
-  () =>
-    import(
-      '../components/audio-reactive-grid-sketch/audio-reactive-grid-sketch'
-    )
-)
+import AudioFFT from '../components/audio-fft/AudioFFT'
 
 // Component to handle autopilot state on /all page
 const AllSongsAutopilotHandler = () => {
@@ -114,13 +107,7 @@ const AllSongsPage = ({ data, location }) => {
                   ></div>
                 }
               >
-                <AudioReactiveGridSketch
-                  markovText={allMarkovText}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                  }}
-                />
+                <AudioFFT markovText={allMarkovText} />
               </React.Suspense>
             )}
           </div>

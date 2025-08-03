@@ -436,7 +436,12 @@ export const FixedAudioPlayer = () => {
         />
       </div>
 
-      <audio ref={audioRef} src={currentTrack?.url} />
+      <audio
+        ref={audioRef}
+        src={currentTrack?.url}
+        preload="auto"
+        crossOrigin="anonymous"
+      />
     </div>
   )
 }

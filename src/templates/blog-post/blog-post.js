@@ -7,7 +7,6 @@ import SEO from '../../components/seo/seo'
 import Calendar from '../../components/calendar/calendar'
 import CalendarToggle from '../../components/calendar/calendar-toggle'
 import { useUserPreferences } from '../../components/calendar/user-preferences-context'
-import GridSketch from '../../components/grid-sketch/grid-sketch'
 import BlogAudioPlayer from '../../components/blog-audio-player/BlogAudioPlayer'
 import DynamicMarkovText from '../../components/dynamic-markov-text/DynamicMarkovText'
 import {
@@ -22,18 +21,11 @@ import {
   useAudioPlayer,
 } from '../../contexts/audio-player-context/audio-player-context'
 import { FixedAudioPlayer } from '../../components/fixed-audio-player/FixedAudioPlayer'
-
-// Lazy load the audio reactive grid sketch to prevent SSR issues
-const AudioReactiveGridSketch = React.lazy(
-  () =>
-    import(
-      '../../components/audio-reactive-grid-sketch/audio-reactive-grid-sketch'
-    )
-)
+import AudioFFT from '../../components/audio-fft/AudioFFT' // Add this import for the audio FFT component
 
 // Component to handle autopilot auto-play and playlist setup
 const AutopilotAutoPlay = ({ audioUrls }) => {
-  const { setPlaylist, playTrack, playlist, currentIndex } = useAudioPlayer()
+  const { setPlaylist, playlist, playTrack } = useAudioPlayer()
 
   useEffect(() => {
     // Always set up the playlist for this page's audio tracks
@@ -239,34 +231,6 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
             </div>
 
             {/* Canvas - Shows on mobile between calendar and audio player */}
-            <div className="canvas-section">
-              {typeof window !== 'undefined' && (
-                <React.Suspense
-                  fallback={
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: '#000',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: '14px',
-                      }}
-                    ></div>
-                  }
-                >
-                  <AudioReactiveGridSketch
-                    markovText={markovText}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                    }}
-                  />
-                </React.Suspense>
-              )}
-            </div>
 
             {/* Audio Player - After canvas on mobile */}
             <div className="audio-player-section">
@@ -332,7 +296,6 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
             </div>
           </div>
 
-          {/* Right Column - Audio Reactive Grid Sketch (Desktop only) */}
           <div className="right-column">
             {typeof window !== 'undefined' && (
               <React.Suspense
@@ -351,13 +314,10 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                   ></div>
                 }
               >
-                <AudioReactiveGridSketch
-                  markovText={markovText}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                  }}
-                />
+                {/* Single AudioFFT instance - positioned responsively */}
+                <div className="responsive-audio-fft">
+                  <AudioFFT markovText={markovText} />
+                </div>
               </React.Suspense>
             )}
           </div>

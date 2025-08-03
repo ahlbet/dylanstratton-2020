@@ -62,18 +62,21 @@
   }
 
   .left-column {
+    order: 2;
     flex: 1;
     max-width: 100%;
     padding-right: 0;
   }
 
   .right-column {
-    display: none; /* Hide right column on mobile */
+    order: 1;
+    position: relative;
+    max-width: 100%;
   }
 
   /* Reorder elements on mobile */
   .content-section {
-    order: 1;
+    order: 2;
   }
 
   .canvas-section {
@@ -97,5 +100,33 @@
   .canvas-section {
     height: 40vh;
     min-height: 300px;
+  }
+}
+
+/* Single AudioFFT instance - responsive positioning */
+.responsive-audio-fft {
+  width: 100%;
+  height: 100%;
+}
+
+/* Mobile: AudioFFT is in the canvas-section */
+@media (max-width: 900px) {
+  .responsive-audio-fft {
+    height: 50vh;
+    min-height: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .responsive-audio-fft {
+    height: 40vh;
+    min-height: 300px;
+  }
+}
+
+/* Desktop: AudioFFT is in the right-column */
+@media (min-width: 901px) {
+  .responsive-audio-fft {
+    height: calc(100vh - 250px);
   }
 } 
