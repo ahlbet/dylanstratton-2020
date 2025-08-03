@@ -1,6 +1,28 @@
 const path = require(`path`)
 const { createFilePath } = require(`gatsby-source-filesystem`)
 
+// Add cache headers for audio files
+exports.onCreateWebpackConfig = ({ actions }) => {
+  actions.setWebpackConfig({
+    module: {
+      rules: [
+        {
+          test: /\.(wav|mp3|ogg|m4a)$/,
+          use: [
+            {
+              loader: 'file-loader',
+              options: {
+                name: 'audio/[name].[hash].[ext]',
+                publicPath: '/static/',
+              },
+            },
+          ],
+        },
+      ],
+    },
+  })
+}
+
 exports.createPages = async ({ graphql, actions }) => {
   const { createPage } = actions
 
