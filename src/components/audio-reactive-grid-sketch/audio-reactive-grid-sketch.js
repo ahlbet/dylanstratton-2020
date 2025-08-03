@@ -1,8 +1,5 @@
 import React, { Suspense, lazy } from 'react'
-import {
-  generateSeedFromText,
-  generateTatShapePositions,
-} from '../../utils/shape-generator'
+import { generateSeedFromText, generateTatShapePositions } from '../../utils/p5'
 
 // Lazy load the actual sketch component to prevent SSR issues
 const P5SketchComponent = lazy(() =>

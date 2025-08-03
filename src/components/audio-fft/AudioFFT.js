@@ -1,30 +1,24 @@
 // src/components/AudioFFT.js
 import React, { useRef, useEffect } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
+
 import {
+  getFrequencyBands,
   generateSeedFromText,
   generateTatShapePositions,
-} from '../../utils/shape-generator'
-import {
   analyzeFrequencyBands,
-  getFrequencyBands,
-} from '../../utils/audio-analysis'
-import {
   Particle,
   calculateParticleCount,
   calculateMaxParticles,
   calculateCanvasScale,
-} from '../../utils/particle-system'
-import {
   updateTatShapePositions,
   addDynamicMovementToPositions,
   calculateSpawnPosition,
-} from '../../utils/spawn-positions'
-import {
   setupAudioReactiveCanvas,
   initializeFrequencyData,
-} from '../../utils/canvas-setup'
-import { createAudioReactiveAnimationLoop } from '../../utils/sketch-animation-loop'
+  createAudioReactiveAnimationLoop,
+} from '../../utils/p5'
+
 export default function AudioFFT({ markovText = '' }) {
   const containerRef = useRef(null)
   const p5InstanceRef = useRef(null)
