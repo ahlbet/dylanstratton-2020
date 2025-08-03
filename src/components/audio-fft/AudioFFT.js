@@ -15,6 +15,11 @@ import {
   calculateMaxParticles,
   calculateCanvasScale,
 } from '../../utils/particle-system'
+import {
+  updateTatShapePositions,
+  addDynamicMovementToPositions,
+  calculateSpawnPosition,
+} from '../../utils/spawn-positions'
 export default function AudioFFT({ markovText = '' }) {
   const containerRef = useRef(null)
   const p5InstanceRef = useRef(null)
@@ -102,14 +107,7 @@ export default function AudioFFT({ markovText = '' }) {
         )
 
         // Add dynamic movement to spawn positions
-        tatShapePositions.forEach((pos, index) => {
-          pos.originalX = pos.x
-          pos.originalY = pos.y
-          pos.movementSpeed = p.random(0.5, 2.0)
-          pos.movementRadius = p.random(20, 360)
-          pos.movementAngle = p.random(p.TWO_PI)
-          pos.movementDirection = p.random([-1, 1])
-        })
+        addDynamicMovementToPositions(tatShapePositions, p)
       }
 
       p.windowResized = () => {
@@ -134,19 +132,7 @@ export default function AudioFFT({ markovText = '' }) {
 
       // Update spawn positions dynamically
       const updateSpawnPositions = () => {
-        tatShapePositions.forEach((pos) => {
-          // Circular movement around original position
-          pos.movementAngle += pos.movementSpeed * 0.01 * pos.movementDirection
-
-          pos.x =
-            pos.originalX + Math.cos(pos.movementAngle) * pos.movementRadius
-          pos.y =
-            pos.originalY + Math.sin(pos.movementAngle) * pos.movementRadius
-
-          // Keep within canvas bounds
-          pos.x = Math.max(20, Math.min(p.width - 20, pos.x))
-          pos.y = Math.max(20, Math.min(p.height - 20, pos.y))
-        })
+        updateTatShapePositions(tatShapePositions, p)
       }
 
       p.draw = () => {
@@ -185,85 +171,27 @@ export default function AudioFFT({ markovText = '' }) {
           // Only spawn if we're under the total particle limit
           if (currentParticleCount < maxTotalParticles) {
             for (let i = 0; i < count; i++) {
-              let spawnX, spawnY
-
-              // Use Tat shape positions for spawning when available
-              if (tatShapePositions.length > 0) {
-                const positionIndex =
-                  (band.band * count + i) % tatShapePositions.length
-                const position = tatShapePositions[positionIndex]
-
-                // Add smooth noise to spawn position
-                const noiseOffsetX = position.x * 0.01 + p.frameCount * 0.005
-                const noiseOffsetY = position.y * 0.01 + p.frameCount * 0.005
-                const noiseX = (p.noise(noiseOffsetX) - 0.5) * 60 // Increased from 40
-                const noiseY = (p.noise(noiseOffsetY) - 0.5) * 60 // Increased from 40
-
-                spawnX = position.x + noiseX
-                spawnY = position.y + noiseY
-              } else {
-                // Fallback to original spawn areas with smooth noise movement
-                const time = p.frameCount * 0.01
-                let baseX, baseY
-
-                switch (band.spawnArea) {
-                  case 'center':
-                    const centerRadius = 100 + Math.sin(time * 0.5) * 30 // Increased radius
-                    const centerAngle = time * 0.3
-                    baseX = p.width / 2 + Math.cos(centerAngle) * centerRadius
-                    baseY = p.height / 2 + Math.sin(centerAngle) * centerRadius
-                    break
-                  case 'left':
-                    const leftY =
-                      p.height * 0.5 + Math.sin(time * 0.4) * p.height * 0.4 // Increased movement
-                    baseX = p.width * 0.15 + Math.sin(time * 0.6) * 50 // Increased movement
-                    baseY = leftY
-                    break
-                  case 'right':
-                    const rightY =
-                      p.height * 0.5 + Math.cos(time * 0.4) * p.height * 0.4
-                    baseX = p.width * 0.85 + Math.sin(time * 0.6) * 50
-                    baseY = rightY
-                    break
-                  case 'top':
-                    const topX =
-                      p.width * 0.5 + Math.sin(time * 0.5) * p.width * 0.4
-                    baseX = topX
-                    baseY = p.height * 0.15 + Math.sin(time * 0.7) * 50
-                    break
-                  case 'bottom':
-                    const bottomX =
-                      p.width * 0.5 + Math.cos(time * 0.5) * p.width * 0.4
-                    baseX = bottomX
-                    baseY = p.height * 0.85 + Math.sin(time * 0.7) * 50
-                    break
-                  case 'top-left':
-                    baseX = p.width * 0.2 + Math.sin(time * 0.3) * 40
-                    baseY = p.height * 0.2 + Math.cos(time * 0.4) * 40
-                    break
-                  case 'bottom-right':
-                    baseX = p.width * 0.8 + Math.sin(time * 0.3) * 40
-                    baseY = p.height * 0.8 + Math.cos(time * 0.4) * 40
-                    break
-                  default:
-                    baseX = p.random(0, p.width)
-                    baseY = p.random(0, p.height)
-                }
-
-                // Add smooth noise to fallback spawn positions
-                const noiseOffsetX =
-                  baseX * 0.01 + p.frameCount * 0.003 + band.band * 100
-                const noiseOffsetY =
-                  baseY * 0.01 + p.frameCount * 0.003 + band.band * 100
-                const noiseX = (p.noise(noiseOffsetX) - 0.5) * 50 // Increased from 30
-                const noiseY = (p.noise(noiseOffsetY) - 0.5) * 50 // Increased from 30
-
-                spawnX = baseX + noiseX
-                spawnY = baseY + noiseY
-              }
+              // Calculate spawn position using utility
+              const spawnPosition = calculateSpawnPosition(
+                tatShapePositions,
+                band.spawnArea,
+                p.width,
+                p.height,
+                p.frameCount,
+                band.band,
+                i,
+                p
+              )
 
               particles.push(
-                new Particle(p, spawnX, spawnY, band.amp, band.band, markovSeed)
+                new Particle(
+                  p,
+                  spawnPosition.x,
+                  spawnPosition.y,
+                  band.amp,
+                  band.band,
+                  markovSeed
+                )
               )
             }
           }
