@@ -10,8 +10,6 @@ export default function AudioFFT({ markovText = '' }) {
   const p5InstanceRef = useRef(null)
   const { audioRef } = useAudioPlayer()
 
-  console.log('audioRef', audioRef)
-
   useEffect(() => {
     // guard: we need the audio DOM node + global p5 loaded (via your gatsby-ssr.js script tags)
     if (typeof window === 'undefined' || !window.p5 || !audioRef.current) {
@@ -617,17 +615,6 @@ export default function AudioFFT({ markovText = '' }) {
           pt.update()
           pt.draw()
           if (pt.isDead()) particles.splice(i, 1)
-        }
-
-        // Debug info (optional - remove in production)
-        if (p.frameCount % 60 === 0) {
-          console.log(
-            'Frequency bands:',
-            frequencyBands.map((band) => ({
-              name: band.name,
-              amp: Math.round(band.amp),
-            }))
-          )
         }
       }
     }
