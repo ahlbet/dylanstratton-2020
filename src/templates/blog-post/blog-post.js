@@ -113,10 +113,6 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
   const { previous, next } = pageContext
   const { calendarVisible } = useUserPreferences()
 
-  // const { playlist, currentIndex } = useAudioPlayer()
-
-  // const currentTrack = playlist[currentIndex]
-
   // Extract Markov text from the post content
   const extractMarkovText = (html) => {
     // Find all blockquote elements in the HTML
