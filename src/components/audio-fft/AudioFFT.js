@@ -24,6 +24,7 @@ import {
   setupAudioReactiveCanvas,
   initializeFrequencyData,
 } from '../../utils/canvas-setup'
+import { createAudioReactiveAnimationLoop } from '../../utils/sketch-animation-loop'
 export default function AudioFFT({ markovText = '' }) {
   const containerRef = useRef(null)
   const p5InstanceRef = useRef(null)
@@ -88,82 +89,29 @@ export default function AudioFFT({ markovText = '' }) {
 
         // Add dynamic movement to spawn positions
         addDynamicMovementToPositions(tatShapePositions, p)
-      }
 
-      // Update spawn positions dynamically
-      const updateSpawnPositions = () => {
-        updateTatShapePositions(tatShapePositions, p)
-      }
-
-      p.draw = () => {
-        // p.background(0, 50)
-        fft.analyze() // update the spectrum
-
-        // Update spawn positions
-        updateSpawnPositions()
-
-        // Analyze frequency bands using utility functions
-        const analysis = analyzeFrequencyBands(fft, smoothedData, 0.7)
-        frequencyData = analysis.frequencyData
-        smoothedData = analysis.smoothedData
-
-        // Create particles for each frequency band with more dramatic mapping
-        const frequencyBands = getFrequencyBands(frequencyData)
-
-        // Calculate particle limits and scaling using utilities
-        const maxTotalParticles = calculateMaxParticles(p.width, p.height, 3000)
-        const currentParticleCount = particles.length
-        const canvasScale = calculateCanvasScale(p.width, p.height, 400)
-
-        frequencyBands.forEach((band) => {
-          // More dramatic particle count mapping using exponential scaling
-          const normalizedAmp = band.amp / 255
-          const exponentialAmp = Math.pow(normalizedAmp, 0.4) // More sensitive to low values
-
-          // Calculate particle count using utility
-          const maxParticles = calculateParticleCount(
-            band.band,
-            exponentialAmp,
-            canvasScale
-          )
-          const count = p.floor(maxParticles)
-
-          // Only spawn if we're under the total particle limit
-          if (currentParticleCount < maxTotalParticles) {
-            for (let i = 0; i < count; i++) {
-              // Calculate spawn position using utility
-              const spawnPosition = calculateSpawnPosition(
-                tatShapePositions,
-                band.spawnArea,
-                p.width,
-                p.height,
-                p.frameCount,
-                band.band,
-                i,
-                p
-              )
-
-              particles.push(
-                new Particle(
-                  p,
-                  spawnPosition.x,
-                  spawnPosition.y,
-                  band.amp,
-                  band.band,
-                  markovSeed
-                )
-              )
-            }
-          }
-        })
-
-        // update & draw
-        for (let i = particles.length - 1; i >= 0; i--) {
-          const pt = particles[i]
-          pt.update()
-          pt.draw()
-          if (pt.isDead()) particles.splice(i, 1)
+        // Update spawn positions dynamically
+        const updateSpawnPositions = () => {
+          updateTatShapePositions(tatShapePositions, p)
         }
+
+        // Create the main animation loop using utility (after FFT is initialized)
+        p.draw = createAudioReactiveAnimationLoop(
+          p,
+          fft,
+          particles,
+          smoothedData,
+          tatShapePositions,
+          markovSeed,
+          updateSpawnPositions,
+          analyzeFrequencyBands,
+          getFrequencyBands,
+          calculateMaxParticles,
+          calculateCanvasScale,
+          calculateParticleCount,
+          calculateSpawnPosition,
+          Particle
+        )
       }
     }
 
