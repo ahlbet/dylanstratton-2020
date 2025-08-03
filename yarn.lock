@@ -4093,7 +4093,7 @@ caniuse-lite@^1.0.0, caniuse-lite@^1.0.30001702, caniuse-lite@^1.0.30001726:
 
 canvas@^3.1.2:
   version "3.1.2"
-  resolved "https://registry.npmjs.org/canvas/-/canvas-3.1.2.tgz"
+  resolved "https://registry.yarnpkg.com/canvas/-/canvas-3.1.2.tgz#a98406ef6178d31e39eb7dc0a488b1181555b792"
   integrity sha512-Z/tzFAcBzoCvJlOSlCnoekh1Gu8YMn0J51+UAuXJAbW1Z6I9l2mZgdD7738MepoeeIcUdDtbMnOg6cC7GJxy/g==
   dependencies:
     node-addon-api "^7.0.0"
