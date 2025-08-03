@@ -1,4 +1,8 @@
 import React, { Suspense, lazy } from 'react'
+import {
+  generateSeedFromText,
+  generateTatShapePositions,
+} from '../../utils/shape-generator'
 
 // Lazy load the actual sketch component to prevent SSR issues
 const P5SketchComponent = lazy(() =>
@@ -25,22 +29,7 @@ const createAudioReactiveGridSketch =
     let totalParticlesToRemove = 0
     let removalInterval = 0
 
-    // Generate a seed from Markov text to influence sketch behavior
-    const generateSeedFromText = (text) => {
-      if (!text || typeof text !== 'string') return 0
-
-      let seed = 0
-      for (let i = 0; i < text.length; i++) {
-        const charCode = text.charCodeAt(i)
-        if (isFinite(charCode)) {
-          seed += charCode * (i + 1)
-        }
-      }
-
-      // Validate final seed
-      const finalSeed = seed % 10000
-      return isFinite(finalSeed) ? finalSeed : 0
-    }
+    // Use shared seed generation utility
 
     let markovSeed = generateSeedFromText(markovText)
 
@@ -49,161 +38,9 @@ const createAudioReactiveGridSketch =
       markovSeed = Math.floor(Math.random() * 10000)
     }
 
-    // TatsSketch shape generation logic adapted for particle positions - single Tat per blog post
-    const generateTatShapePositions = () => {
-      const shapes = [
-        'horizontalLine',
-        'verticalLine',
-        'circle',
-        'triangle',
-        'square',
-      ]
+    // Use shared Tat shape generation utility
 
-      const positions = []
-
-      // Generate one central Tat position based on markov seed
-      const centerX = p.width / 2 + ((markovSeed % 200) - 100) // Slight offset from center
-      const centerY = p.height / 2 + (((markovSeed * 7) % 200) - 100) // Slight offset from center
-
-      // Each Tat has 1-5 shape types based on markov seed
-      const typesCount = Math.floor(markovSeed % 5) + 1
-
-      for (let i = 0; i < typesCount; i++) {
-        const shapeIndex = Math.floor(
-          (markovSeed * (i + 1) * 123) % shapes.length
-        )
-        const shapeType = shapes[shapeIndex]
-
-        // Generate positions based on shape type with full canvas dimensions
-        const shapePositions = generateShapePositions(
-          centerX,
-          centerY,
-          shapeType,
-          { width: p.width, height: p.height }, // Pass full canvas dimensions
-          markovSeed * (i + 1)
-        )
-        positions.push(...shapePositions)
-      }
-
-      return positions
-    }
-
-    // Generate particle positions for each shape type
-    const generateShapePositions = (
-      centerX,
-      centerY,
-      shapeType,
-      canvasDimensions,
-      shapeSeed
-    ) => {
-      const positions = []
-      const numParticles = 25 + (shapeSeed % 8) // 30-37 particles per shape
-      const { width, height } = canvasDimensions
-      const insetMargin = margin + 30 // Additional inset to prevent particles from getting stuck at edges
-
-      switch (shapeType) {
-        case 'horizontalLine':
-          for (let i = 0; i < numParticles; i++) {
-            const t = i / (numParticles - 1) // 0 to 1
-            const x = insetMargin + t * (width - 2 * insetMargin) // Inset width span
-            const y = centerY + (((shapeSeed * i) % 40) - 20) // Vertical variation
-            positions.push({ x, y })
-          }
-          break
-
-        case 'verticalLine':
-          for (let i = 0; i < numParticles; i++) {
-            const t = i / (numParticles - 1) // 0 to 1
-            const x = centerX + (((shapeSeed * i) % 40) - 20) // Horizontal variation
-            const y = insetMargin + t * (height - 2 * insetMargin) // Inset height span
-            positions.push({ x, y })
-          }
-          break
-
-        case 'circle':
-          for (let i = 0; i < numParticles; i++) {
-            const angle = (i / numParticles) * Math.PI * 2
-            // Use ellipse with inset margins
-            const radiusX = (width - 2 * insetMargin) / 2
-            const radiusY = (height - 2 * insetMargin) / 2
-            const x =
-              centerX +
-              Math.cos(angle) * radiusX * (0.8 + ((shapeSeed * i) % 40) / 100)
-            const y =
-              centerY +
-              Math.sin(angle) * radiusY * (0.8 + ((shapeSeed * i) % 40) / 100)
-            positions.push({ x, y })
-          }
-          break
-
-        case 'triangle':
-          for (let i = 0; i < numParticles; i++) {
-            // Three vertices of triangle with inset margins
-            const vertices = [
-              { x: centerX, y: insetMargin }, // top
-              { x: insetMargin, y: height - insetMargin }, // bottom left
-              { x: width - insetMargin, y: height - insetMargin }, // bottom right
-            ]
-
-            if (i < 3) {
-              // Place particles at vertices
-              positions.push(vertices[i])
-            } else {
-              // Place particles along edges
-              const edgeIndex = (i - 3) % 3
-              const t = ((shapeSeed * i) % 100) / 100 // Random position along edge
-              const start = vertices[edgeIndex]
-              const end = vertices[(edgeIndex + 1) % 3]
-              const x = start.x + (end.x - start.x) * t
-              const y = start.y + (end.y - start.y) * t
-              positions.push({ x, y })
-            }
-          }
-          break
-
-        case 'square':
-          for (let i = 0; i < numParticles; i++) {
-            if (i < 4) {
-              // Place particles at corners with inset margins
-              const corners = [
-                { x: insetMargin, y: insetMargin }, // top left
-                { x: width - insetMargin, y: insetMargin }, // top right
-                { x: width - insetMargin, y: height - insetMargin }, // bottom right
-                { x: insetMargin, y: height - insetMargin }, // bottom left
-              ]
-              positions.push(corners[i])
-            } else {
-              // Place particles along edges
-              const side = (i - 4) % 4
-              const t = ((shapeSeed * i) % 100) / 100
-
-              let x, y
-              switch (side) {
-                case 0: // top edge
-                  x = insetMargin + t * (width - 2 * insetMargin)
-                  y = insetMargin
-                  break
-                case 1: // right edge
-                  x = width - insetMargin
-                  y = insetMargin + t * (height - 2 * insetMargin)
-                  break
-                case 2: // bottom edge
-                  x = width - insetMargin - t * (width - 2 * insetMargin)
-                  y = height - insetMargin
-                  break
-                case 3: // left edge
-                  x = insetMargin
-                  y = height - insetMargin - t * (height - 2 * insetMargin)
-                  break
-              }
-              positions.push({ x, y })
-            }
-          }
-          break
-      }
-
-      return positions
-    }
+    // Use shared shape generation utilities
 
     // Function to create gravitational points
     const createGravitationalPoints = () => {
@@ -265,7 +102,7 @@ const createAudioReactiveGridSketch =
     let globalSpeedMultiplier = 4 + (markovSeed % 100) / 50 // 0.6 to 2.6 (moderate range)
     let globalColorIntensity = 0.5 + (markovSeed % 100) / 50 // 0.5 to 2.5 (moderate range)
     let globalParticleInteraction = 0.3 + (markovSeed % 150) / 30 // 0.3 to 5.3 (moderate range)
-    let globalParticleSize = 0.8 + (markovSeed % 75) / 50 // 0.8 to 3.76 (ensures visible particles)
+    let globalParticleSize = 8 + (markovSeed % 75) / 50 // 0.8 to 3.76 (ensures visible particles)
     let globalParticleBirthRate = 0.5 + (markovSeed % 100) / 50 // 0.5 to 2.5 (birth rate variation)
     let globalGravityStrength = 0.08 + (markovSeed % 100) / 10 // 0.8 to 2.8 (gravity strength variation)
     let primaryHue = markovSeed % 360 // Primary hue for this blog post (0-359)
@@ -296,15 +133,8 @@ const createAudioReactiveGridSketch =
     if (!isFinite(gravityMoveSpeedMultiplier)) gravityMoveSpeedMultiplier = 0.5
 
     // Audio analysis variables
-    let mic
-    let fft
-    let audioContext
-    let audioElement
-    let audioSource
-    let analyser
-    let dataArray
-    let bufferLength
-    let corsDetected = false
+    let fft = null
+    let fftBins = 64
 
     class Particle {
       constructor(x, y, r, op, startX, startY, seed) {
@@ -323,6 +153,9 @@ const createAudioReactiveGridSketch =
         this.slow = 10 + (this.seed % 200) / 2 // Noise scale varies moderately by seed
         this.fadeRate = 0.2 + (this.seed % 100) / 100 // Fade rate varies moderately by seed
         this.isFading = true
+
+        // Assign frequency band based on seed (4 bands: 0-3)
+        this.frequencyBand = Math.floor(this.seed % 4)
 
         // Color personality based on seed - moderate impact
         this.colorOffset = (this.seed % 360) / 360 // Different starting color (full range)
@@ -345,26 +178,26 @@ const createAudioReactiveGridSketch =
           audioData = new Array(64).fill(0)
         }
 
-        // Get audio level for this particle with smooth interpolation
-        let audioIndexFloat = p.map(this.x, 0, p.width, 0, audioData.length - 1)
+        // Get audio level for this particle's frequency band
+        const bandsPerFrequency = Math.floor(audioData.length / 4)
+        const bandStartIndex = this.frequencyBand * bandsPerFrequency
+        const bandEndIndex = Math.min(
+          bandStartIndex + bandsPerFrequency,
+          audioData.length - 1
+        )
 
-        // Validate audioIndexFloat
-        if (!isFinite(audioIndexFloat)) {
-          audioIndexFloat = 0
+        // Calculate average audio level for this particle's frequency band
+        let bandAudioSum = 0
+        let bandAudioCount = 0
+
+        for (let j = bandStartIndex; j <= bandEndIndex; j++) {
+          if (audioData[j] !== undefined) {
+            bandAudioSum += audioData[j]
+            bandAudioCount++
+          }
         }
 
-        let audioIndex1 = Math.floor(audioIndexFloat)
-        let audioIndex2 = Math.min(audioIndex1 + 1, audioData.length - 1)
-        let blend = audioIndexFloat - audioIndex1
-
-        // Validate blend
-        if (!isFinite(blend)) {
-          blend = 0
-        }
-
-        let audioLevel1 = audioData[audioIndex1] || 0
-        let audioLevel2 = audioData[audioIndex2] || 0
-        let audioLevel = audioLevel1 * (1 - blend) + audioLevel2 * blend
+        let audioLevel = bandAudioCount > 0 ? bandAudioSum / bandAudioCount : 0
         let normalizedLevel = audioLevel / 255
 
         // Validate normalizedLevel
@@ -372,61 +205,45 @@ const createAudioReactiveGridSketch =
           normalizedLevel = 0
         }
 
-        // Simplified color system - direct RGB calculation
-        let colorTime = p.frameCount * this.colorSpeed * 0.01
-        let audioColor = normalizedLevel * 100 * globalColorIntensity
-
-        // Validate intermediate values
-        if (!isFinite(colorTime)) colorTime = 0
-        if (!isFinite(audioColor)) audioColor = 0
-
-        // Create color variation based on primary hue with simple math
-        let colorShift = (colorTime + audioColor + this.colorOffset * 50) % 360
-        let baseHue = (primaryHue + colorShift) % 360
-
-        // Validate hue values
-        if (!isFinite(colorShift)) colorShift = 0
-        if (!isFinite(baseHue)) baseHue = 0
-
-        // Simple RGB generation based on hue ranges
+        // 4-band frequency color system
         let r, g, b
-        if (baseHue < 60) {
-          r = 255
-          g = Math.floor(baseHue * 4.25)
-          b = 50
-        } else if (baseHue < 120) {
-          r = Math.floor(255 - (baseHue - 60) * 4.25)
-          g = 255
-          b = 50
-        } else if (baseHue < 180) {
-          r = 50
-          g = 255
-          b = Math.floor((baseHue - 120) * 4.25)
-        } else if (baseHue < 240) {
-          r = 50
-          g = Math.floor(255 - (baseHue - 180) * 4.25)
-          b = 255
-        } else if (baseHue < 300) {
-          r = Math.floor((baseHue - 240) * 4.25)
-          g = 50
-          b = 255
-        } else {
-          r = 255
-          g = 50
-          b = Math.floor(255 - (baseHue - 300) * 4.25)
-        }
 
-        // Validate RGB values
-        r = isFinite(r) ? Math.max(0, Math.min(255, r)) : 255
-        g = isFinite(g) ? Math.max(0, Math.min(255, g)) : 255
-        b = isFinite(b) ? Math.max(0, Math.min(255, b)) : 255
+        // Define colors for each frequency band
+        const bandColors = [
+          { r: 255, g: 100, b: 100 }, // Band 0: Red (Sub-bass/Low frequencies)
+          { r: 100, g: 255, b: 100 }, // Band 1: Green (Bass/Mid frequencies)
+          { r: 100, g: 100, b: 255 }, // Band 2: Blue (Mid/High frequencies)
+          { r: 255, g: 255, b: 100 }, // Band 3: Yellow (High frequencies)
+        ]
 
-        // Simple radius variation based on audio and global particle size
-        let audioRadius = (this.r + normalizedLevel * 2.0) * globalParticleSize
+        // Get base color for this particle's frequency band with validation
+        const frequencyBand = this.frequencyBand || 0 // Default to band 0 if undefined
+        const baseColor = bandColors[frequencyBand] || bandColors[0] // Fallback to first color if undefined
+
+        // Add audio intensity variation
+        let audioIntensity = normalizedLevel * globalColorIntensity
+        let brightnessMultiplier = 0.5 + audioIntensity * 0.5 // 0.5 to 1.0 range
+
+        // Apply brightness variation based on audio
+        r = Math.floor(baseColor.r * brightnessMultiplier)
+        g = Math.floor(baseColor.g * brightnessMultiplier)
+        b = Math.floor(baseColor.b * brightnessMultiplier)
+
+        // Add subtle color variation based on time and particle seed
+        let colorVariation =
+          Math.sin(p.frameCount * 0.01 + this.seed * 0.1) * 30
+        r = Math.max(0, Math.min(255, r + colorVariation))
+        g = Math.max(0, Math.min(255, g + colorVariation))
+        b = Math.max(0, Math.min(255, b + colorVariation))
+
+        // Dynamic radius that responds to frequency band audio intensity
+        let baseRadius = this.r * globalParticleSize * 1.2 // Increased overall radius by 20%
+        let audioRadiusMultiplier = 1 + normalizedLevel * 3.0 // Radius can grow up to 4x with loud audio
+        let audioRadius = baseRadius * audioRadiusMultiplier
 
         // Validate audioRadius
         if (!isFinite(audioRadius) || audioRadius <= 0) {
-          audioRadius = 1
+          audioRadius = baseRadius
         }
 
         // Validate opacity
@@ -445,140 +262,62 @@ const createAudioReactiveGridSketch =
           audioData = new Array(64).fill(0)
         }
 
-        // Get audio data for this particle's position with smooth interpolation
-        let audioIndexFloat = p.map(
-          i,
-          0,
-          particles.length,
-          0,
+        // Get audio data for this particle's frequency band
+        const bandsPerFrequency = Math.floor(audioData.length / 4)
+        const bandStartIndex = this.frequencyBand * bandsPerFrequency
+        const bandEndIndex = Math.min(
+          bandStartIndex + bandsPerFrequency,
           audioData.length - 1
         )
 
-        // Validate audioIndexFloat
-        if (!isFinite(audioIndexFloat)) {
-          audioIndexFloat = 0
-        }
+        // Calculate average audio level for this particle's frequency band
+        let bandAudioSum = 0
+        let bandAudioCount = 0
 
-        let audioIndex1 = Math.floor(audioIndexFloat)
-        let audioIndex2 = Math.min(audioIndex1 + 1, audioData.length - 1)
-        let blend = audioIndexFloat - audioIndex1
-
-        // Validate blend
-        if (!isFinite(blend)) {
-          blend = 0
-        }
-
-        let audioLevel1 = audioData[audioIndex1] || 0
-        let audioLevel2 = audioData[audioIndex2] || 0
-
-        // Give extra weight to low frequencies for bass drum detection
-        let lowFreqWeight = 4.0 // 4x more weight for low frequencies
-        let highFreqWeight = 1.0 // Normal weight for high frequencies
-
-        let weight1 = audioIndex1 < 16 ? lowFreqWeight : highFreqWeight
-        let weight2 = audioIndex2 < 16 ? lowFreqWeight : highFreqWeight
-
-        let audioLevel =
-          (audioLevel1 * weight1 * (1 - blend) +
-            audioLevel2 * weight2 * blend) /
-          Math.max(weight1, weight2)
-        let normalizedLevel = Math.min(1.0, audioLevel / 255) // Clamp to prevent overflow
-
-        // Validate normalizedLevel
-        if (!isFinite(normalizedLevel)) {
-          normalizedLevel = 0
-        }
-
-        // Only move if there's significant audio
-        if (normalizedLevel < 0.1) {
-          // Reset to start position when no audio
-          this.x = this.startX
-          this.y = this.startY
-          return
-        }
-
-        let t = p.frameCount / 100.0
-        let wonkV = 30 // Reduced from 100 to decrease noise randomness
-
-        // Validate t
-        if (!isFinite(t)) {
-          t = 0
-        }
-
-        // Adjust movement based on audio level - particles move independently
-        let audioMultiplier = 1 + normalizedLevel * 1.75 // 1x to 2.25x movement based on individual audio level
-        this.mov = this.baseMov * audioMultiplier * globalSpeedMultiplier
-
-        // Validate movement values
-        if (!isFinite(this.mov)) {
-          this.mov = 1
-        }
-
-        // Simple directional movement based on audio (much more efficient)
-        let audioDirection = (this.seed + p.frameCount * 0.01) % (Math.PI * 2)
-
-        // Validate audioDirection
-        if (!isFinite(audioDirection)) {
-          audioDirection = 0
-        }
-
-        let moveX = Math.cos(audioDirection) * this.mov * normalizedLevel * 0.1
-        let moveY = Math.sin(audioDirection) * this.mov * normalizedLevel * 0.1
-
-        // Validate movement deltas
-        if (isFinite(moveX)) {
-          this.x += moveX
-        }
-        if (isFinite(moveY)) {
-          this.y += moveY
-        }
-
-        // Add subtle noise-based movement for organic feel (reduced randomness)
-        let wonkX = p.map(p.sin(this.startX * i), -1, 1, -wonkV, wonkV)
-        let wonkY = p.map(p.cos(this.startY * i), -1, 1, -wonkV, wonkV)
-
-        // Validate wonk values
-        if (!isFinite(wonkX)) wonkX = 0
-        if (!isFinite(wonkY)) wonkY = 0
-
-        let noiseX = p.map(
-          p.noise(wonkX / this.slow, t, i),
-          0,
-          1,
-          -this.mov * 0.08,
-          this.mov * 0.08
-        )
-        let noiseY = p.map(
-          p.noise(t, i, wonkY / this.slow),
-          0,
-          1,
-          -this.mov * 0.08,
-          this.mov * 0.08
-        )
-
-        // Validate noise values and apply
-        if (isFinite(noiseX)) {
-          this.x += noiseX
-        }
-        if (isFinite(noiseY)) {
-          this.y += noiseY
-        }
-
-        // Gentle center attraction - only every 10 frames for performance
-        if (p.frameCount % 10 === 0) {
-          let centerAttractionStrength = 0.0005 // Ultra-gentle pull
-          let centerX = p.width / 2
-          let centerY = p.height / 2
-          let directionToCenterX = centerX - this.x
-          let directionToCenterY = centerY - this.y
-
-          // Validate center attraction values
-          if (isFinite(directionToCenterX) && isFinite(directionToCenterY)) {
-            // Simple attraction without expensive distance calculation
-            this.x += directionToCenterX * centerAttractionStrength
-            this.y += directionToCenterY * centerAttractionStrength
+        for (let j = bandStartIndex; j <= bandEndIndex; j++) {
+          if (audioData[j] !== undefined) {
+            bandAudioSum += audioData[j]
+            bandAudioCount++
           }
         }
+
+        let audioLevel = bandAudioCount > 0 ? bandAudioSum / bandAudioCount : 0
+        let normalizedLevel = Math.min(1.0, audioLevel / 255) // Clamp to prevent overflow
+
+        // Simple, smooth movement that responds to audio
+        let t = p.frameCount * 0.005 // Very slow time progression
+
+        // Adjust movement based on audio level - particles move independently
+        let audioMultiplier = 1 + normalizedLevel * 1.0 // Gentle audio response
+        this.mov = this.baseMov * audioMultiplier * globalSpeedMultiplier
+
+        // Simple circular movement pattern
+        let angle = (this.seed + t) % (Math.PI * 2)
+        let radius = 0.3 + normalizedLevel * 0.2 // Small radius that grows with audio
+
+        // Calculate smooth circular movement
+        let moveX = Math.cos(angle) * this.mov * radius
+        let moveY = Math.sin(angle) * this.mov * radius
+
+        // Add gentle center attraction
+        let centerX = p.width / 2
+        let centerY = p.height / 2
+        let toCenterX = centerX - this.x
+        let toCenterY = centerY - this.y
+        let distanceToCenter = Math.sqrt(
+          toCenterX * toCenterX + toCenterY * toCenterY
+        )
+
+        // Only apply center attraction if particle is far from center
+        if (distanceToCenter > Math.min(p.width, p.height) * 0.2) {
+          let centerPull = 0.0002 * this.mov
+          moveX += toCenterX * centerPull
+          moveY += toCenterY * centerPull
+        }
+
+        // Apply movement with smoothing
+        this.x += moveX * 0.1
+        this.y += moveY * 0.1
 
         // Ensure particle position remains valid
         if (!isFinite(this.x)) {
@@ -611,10 +350,6 @@ const createAudioReactiveGridSketch =
         let avgLevel =
           audioData.reduce((sum, val) => sum + val, 0) / audioData.length
         let normalizedAvg = avgLevel / 255
-
-        // Validate calculated values
-        if (!isFinite(avgLevel)) avgLevel = 0
-        if (!isFinite(normalizedAvg)) normalizedAvg = 0
 
         // Adjust fade rate based on audio - make it extremely dramatic
         let audioFadeRate = this.fadeRate * (1 + normalizedAvg * 1.1) // 1x to 11x fade rate
@@ -708,60 +443,277 @@ const createAudioReactiveGridSketch =
       }
     }
 
-    // Function to find and analyze audio elements on the page
-    const setupAudioAnalysis = () => {
-      try {
-        // Find audio elements on the page
-        const audioElements = document.querySelectorAll('audio')
+    // FFT setup with automatic audio connection
+    const setupFFT = () => {
+      if (typeof window !== 'undefined' && window.p5 && window.p5.FFT && !fft) {
+        try {
+          fft = new window.p5.FFT(fftBins)
+          if (fft.smooth) {
+            fft.smooth(0.8)
+          }
+          console.log('FFT initialized - always running')
 
-        if (audioElements.length === 0) {
-          return
+          // Try to connect to any playing audio
+          connectToPlayingAudio()
+        } catch (e) {
+          console.error('Failed to create FFT:', e)
         }
-
-        // Use the first audio element found
-        audioElement = audioElements[0]
-
-        // Since all audio files are from Supabase, always use alternative detection
-        // This avoids CORS issues and provides better performance
-        corsDetected = true
-        setupAlternativeAudioDetection()
-      } catch (error) {
-        console.error('Error setting up audio analysis:', error)
-        corsDetected = true
-        setupAlternativeAudioDetection()
       }
     }
 
-    // Alternative audio detection method that works with CORS restrictions
-    const setupAlternativeAudioDetection = () => {
-      if (!audioElement) return
+    // Connect FFT to any playing audio elements
+    const connectToPlayingAudio = () => {
+      if (!fft) return
 
-      // Listen for audio events (no logging needed)
-      audioElement.addEventListener('play', () => {})
-      audioElement.addEventListener('pause', () => {})
-      audioElement.addEventListener('ended', () => {})
+      const audioElements = document.querySelectorAll('audio')
+      console.log('Found audio elements:', audioElements.length)
+
+      for (let audioElement of audioElements) {
+        console.log('Checking audio element:', {
+          src: audioElement.src,
+          readyState: audioElement.readyState,
+          paused: audioElement.paused,
+          currentTime: audioElement.currentTime,
+          duration: audioElement.duration,
+        })
+
+        if (audioElement.src && audioElement.readyState >= 2) {
+          try {
+            // Check if fft.setInput method exists
+            console.log(
+              'FFT methods available:',
+              Object.getOwnPropertyNames(fft)
+            )
+            console.log('fft.setInput exists:', typeof fft.setInput)
+
+            // Try to set the audio element as input for FFT
+            if (fft.setInput) {
+              fft.setInput(audioElement)
+              console.log('Connected FFT to audio element:', audioElement.src)
+              return
+            } else {
+              console.log(
+                'fft.setInput method not available, trying Web Audio API approach'
+              )
+
+              // Try alternative approach using Web Audio API
+              try {
+                const audioContext = new (window.AudioContext ||
+                  window.webkitAudioContext)()
+                if (audioContext.state === 'suspended') {
+                  audioContext.resume()
+                }
+
+                const source =
+                  audioContext.createMediaElementSource(audioElement)
+                const analyser = audioContext.createAnalyser()
+                analyser.fftSize = fftBins * 2
+                analyser.smoothingTimeConstant = 0.8
+
+                source.connect(analyser)
+                analyser.connect(audioContext.destination)
+
+                // Store the analyser for use in getAudioData
+                fft.analyser = analyser
+                fft.audioContext = audioContext
+
+                console.log(
+                  'Connected FFT to audio element via Web Audio API:',
+                  audioElement.src
+                )
+                return
+              } catch (webAudioError) {
+                console.log(
+                  'Web Audio API connection failed:',
+                  webAudioError.message
+                )
+              }
+            }
+          } catch (e) {
+            console.log('Could not connect FFT to audio element:', e.message)
+            console.log('Error details:', e)
+          }
+        } else {
+          console.log('Audio element not ready:', {
+            hasSrc: !!audioElement.src,
+            readyState: audioElement.readyState,
+            readyStateText: [
+              'HAVE_NOTHING',
+              'HAVE_METADATA',
+              'HAVE_CURRENT_DATA',
+              'HAVE_FUTURE_DATA',
+              'HAVE_ENOUGH_DATA',
+            ][audioElement.readyState],
+          })
+        }
+      }
+
+      console.log('No suitable audio elements found for FFT connection')
     }
 
-    // Function to get current audio data
+    // Function to get audio data - handles both p5.FFT and Web Audio API
     const getAudioData = () => {
-      // Find any playing audio element
-      const allAudioElements = document.querySelectorAll('audio')
-      let playingAudioElement = null
+      if (fft) {
+        try {
+          // If we have a Web Audio API analyser, use that
+          if (fft.analyser) {
+            const frequencyData = new Uint8Array(fft.analyser.frequencyBinCount)
+            fft.analyser.getByteFrequencyData(frequencyData)
+            const data = Array.from(frequencyData)
 
-      for (let el of allAudioElements) {
-        if (!el.paused && !el.ended && el.readyState >= 2) {
-          playingAudioElement = el
-          break
+            // Debug: log FFT data occasionally
+            if (p.frameCount % 60 === 0) {
+              const avg =
+                data.slice(0, 10).reduce((sum, val) => sum + val, 0) / 10
+              console.log(
+                'Web Audio FFT data avg:',
+                avg,
+                'first 5 values:',
+                data.slice(0, 5)
+              )
+            }
+
+            return data
+          } else {
+            // Use p5.FFT analyze method
+            const data = fft.analyze()
+
+            // Debug: log FFT data occasionally
+            if (p.frameCount % 60 === 0) {
+              const avg =
+                data.slice(0, 10).reduce((sum, val) => sum + val, 0) / 10
+              console.log(
+                'p5.FFT data avg:',
+                avg,
+                'first 5 values:',
+                data.slice(0, 5)
+              )
+            }
+
+            return data
+          }
+        } catch (e) {
+          console.warn('FFT analyze failed:', e)
+          // Return zeros if FFT fails
+          return new Array(fftBins).fill(0)
         }
       }
 
-      // Update our audio element reference if we found a playing one
-      if (playingAudioElement && playingAudioElement !== audioElement) {
-        audioElement = playingAudioElement
+      // Return zeros if FFT not available
+      return new Array(fftBins).fill(0)
+    }
+
+    // Sophisticated audio-reactive data that mimics real FFT analysis
+    const getEnhancedAudioData = () => {
+      const audioEls = document.querySelectorAll('audio')
+      const playingAudio = Array.from(audioEls).find(
+        (el) => !el.paused && !el.ended && el.readyState >= 2
+      )
+
+      if (!playingAudio) {
+        return new Array(fftBins).fill(0)
       }
 
-      // Always use alternative method for Supabase audio files
-      return getAlternativeAudioData()
+      const currentTime = playingAudio.currentTime
+      const volume = playingAudio.volume || 1
+      const isPlaying = !playingAudio.paused && !playingAudio.ended
+      const duration = playingAudio.duration || 0
+
+      if (!isPlaying) {
+        return new Array(fftBins).fill(0)
+      }
+
+      // Create sophisticated frequency distribution that responds to audio characteristics
+      const data = new Array(fftBins).fill(0)
+
+      // Calculate musical timing patterns
+      const bpm = 120 // Estimated BPM - could be made dynamic
+      const beatTime = (currentTime * bpm) / 60
+      const beatPhase = (beatTime % 1) * Math.PI * 2
+
+      // Create rhythmic patterns that respond to beats
+      const kickDrum = Math.sin(beatPhase) > 0.7 ? 1 : 0
+      const snareDrum = Math.sin(beatPhase + Math.PI) > 0.7 ? 1 : 0
+      const hiHat = Math.sin(beatPhase * 4) > 0.5 ? 1 : 0
+
+      // Create dynamic spiral frequency band layout
+      const centerX = p.width / 2
+      const centerY = p.height / 2
+      const maxRadius = Math.min(p.width, p.height) * 0.4
+
+      // Spiral parameters that move with time
+      const spiralTightness = 0.3 + Math.sin(currentTime * 0.1) * 0.1 // Spiral tightness varies
+      const spiralRotation = currentTime * 0.2 // Spiral rotates over time
+      const spiralExpansion = 1 + Math.sin(currentTime * 0.3) * 0.2 // Spiral expands/contracts
+
+      for (let i = 0; i < fftBins; i++) {
+        // Calculate spiral position for this frequency band
+        const angle = (i / fftBins) * Math.PI * 4 + spiralRotation // Multiple rotations
+        const radius =
+          (i / fftBins) * maxRadius * spiralExpansion * spiralTightness
+
+        // Add some organic variation to the spiral
+        const radiusVariation = Math.sin(angle * 3 + currentTime * 0.5) * 20
+        const finalRadius = Math.max(10, radius + radiusVariation)
+
+        // Calculate position on spiral
+        const spiralX = centerX + Math.cos(angle) * finalRadius
+        const spiralY = centerY + Math.sin(angle) * finalRadius
+
+        // Base level that responds to volume and position
+        let baseLevel = 30 * volume * (1 + Math.sin(angle + currentTime) * 0.3)
+
+        // Create frequency bands based on spiral position rather than linear index
+        let rhythmicResponse = 0
+        let frequencyCharacter = 0
+
+        // Inner spiral (low frequencies) - bass and kick
+        if (finalRadius < maxRadius * 0.2) {
+          rhythmicResponse = kickDrum * 150 * volume
+          frequencyCharacter = Math.sin(currentTime * 0.2 + angle) * 80 * volume
+        }
+        // Middle spiral (mid frequencies) - snare and vocals
+        else if (finalRadius < maxRadius * 0.5) {
+          rhythmicResponse = (kickDrum * 100 + snareDrum * 80) * volume
+          frequencyCharacter = Math.sin(currentTime * 0.4 + angle) * 60 * volume
+        }
+        // Outer spiral (high frequencies) - hi-hats and cymbals
+        else {
+          rhythmicResponse = hiHat * 70 * volume
+          frequencyCharacter = Math.sin(currentTime * 1.0 + angle) * 50 * volume
+        }
+
+        // Add melodic content that follows the spiral
+        let melodicContent =
+          Math.sin(currentTime * 0.5 + angle * 2) * 40 * volume
+
+        // Add randomness that's influenced by spiral position
+        let randomVariation =
+          (Math.random() - 0.5) * 15 * volume * (1 + Math.sin(angle) * 0.5)
+
+        // Add spiral-specific movement effects
+        let spiralEffect = Math.sin(angle * 5 + currentTime * 2) * 30 * volume
+
+        data[i] = Math.max(
+          0,
+          Math.min(
+            255,
+            baseLevel +
+              rhythmicResponse +
+              melodicContent +
+              randomVariation +
+              frequencyCharacter +
+              spiralEffect
+          )
+        )
+      }
+
+      // Debug: log sophisticated audio data occasionally
+      if (p.frameCount % 60 === 0) {
+        const avg = data.slice(0, 10).reduce((sum, val) => sum + val, 0) / 10
+      }
+
+      return data
     }
 
     // Function to birth new particles based on audio intensity
@@ -779,11 +731,11 @@ const createAudioReactiveGridSketch =
       const weightedAudioLevel = (lowFreqAudio * 3 + highFreqAudio * 1) / 4
       const normalizedAudioLevel = weightedAudioLevel / 255
 
-      // Birth rate based on audio intensity and global birth rate - reduced sensitivity
-      const birthRate = normalizedAudioLevel * globalParticleBirthRate * 0.2 // Reduced birth rate
+      // Birth rate based on audio intensity and global birth rate - MUCH more dramatic!
+      const birthRate = normalizedAudioLevel * globalParticleBirthRate * 2.0 // Increased from 0.2 to 2.0 - 10x more dramatic!
 
       // Multiple birth attempts per frame for more dramatic effect
-      const birthAttempts = Math.floor(birthRate * 5) + 1 // 1 to 6+ attempts based on audio
+      const birthAttempts = Math.floor(birthRate * 15) + 1 // Increased from 5 to 15 - 3x more attempts
 
       for (let attempt = 0; attempt < birthAttempts; attempt++) {
         if (Math.random() < birthRate && tatShapePositions.length > 0) {
@@ -851,70 +803,6 @@ const createAudioReactiveGridSketch =
       }
     }
 
-    const getAlternativeAudioData = () => {
-      if (!audioElement) {
-        return new Array(64).fill(0)
-      }
-
-      const isPlaying = !audioElement.paused && !audioElement.ended
-      const currentTime = audioElement.currentTime
-      const duration = audioElement.duration
-      const volume = audioElement.volume || 1
-
-      if (!isPlaying) {
-        return new Array(64).fill(0)
-      }
-
-      // Create simulated audio data based on playback state
-      const data = new Array(64).fill(0)
-
-      // Create more realistic frequency distribution that responds to volume
-      for (let i = 0; i < 64; i++) {
-        // Base level that responds to volume
-        let baseLevel = 60 * volume
-
-        // Add time-based variation that's more musical
-        let timeVariation = Math.sin(currentTime * 2 + i * 0.1) * 40 * volume
-
-        // Add some randomness for natural feel
-        let randomVariation = (Math.random() - 0.5) * 30 * volume
-
-        // Create frequency bands that respond differently - bass drum emphasis
-        let frequencyResponse
-        if (i < 8) {
-          // Very low frequencies (sub-bass) - bass drum territory - MUCH stronger
-          frequencyResponse =
-            Math.sin(currentTime * 0.3 + i * 0.02) * 150 * volume
-        } else if (i < 16) {
-          // Low frequencies (bass) - still strong for bass drum
-          frequencyResponse =
-            Math.sin(currentTime * 0.5 + i * 0.05) * 120 * volume
-        } else if (i < 32) {
-          // Mid frequencies - balanced
-          frequencyResponse =
-            Math.sin(currentTime * 1.5 + i * 0.08) * 60 * volume
-        } else if (i < 48) {
-          // High-mid frequencies - more active
-          frequencyResponse =
-            Math.sin(currentTime * 2.5 + i * 0.12) * 70 * volume
-        } else {
-          // High frequencies - most active
-          frequencyResponse =
-            Math.sin(currentTime * 3.5 + i * 0.15) * 80 * volume
-        }
-
-        data[i] = Math.max(
-          0,
-          Math.min(
-            255,
-            baseLevel + timeVariation + randomVariation + frequencyResponse
-          )
-        )
-      }
-
-      return data
-    }
-
     p.setup = () => {
       // Get the container width and height dynamically
       const containerWidth =
@@ -927,7 +815,57 @@ const createAudioReactiveGridSketch =
           : 400
 
       p.createCanvas(containerWidth, containerHeight)
+      p.frameRate(60) // Set consistent 60 FPS for smooth animation
       p.background(0)
+
+      // Set up FFT - always running
+      setupFFT()
+
+      // Set up audio listeners to connect FFT when audio starts
+      const audioElements = document.querySelectorAll('audio')
+      audioElements.forEach((audioElement) => {
+        audioElement.addEventListener('play', () => {
+          console.log('Audio started playing, attempting FFT connection...')
+          setTimeout(connectToPlayingAudio, 100)
+        })
+      })
+
+      // Watch for new audio elements
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === 1 && node.tagName === 'AUDIO') {
+              console.log('New audio element detected, setting up listener...')
+              node.addEventListener('play', () => {
+                console.log(
+                  'New audio started playing, attempting FFT connection...'
+                )
+                setTimeout(connectToPlayingAudio, 100)
+              })
+            }
+          })
+        })
+      })
+      observer.observe(document.body, { childList: true, subtree: true })
+
+      // Periodic check for playing audio that needs FFT connection
+      setInterval(() => {
+        const playingAudio = Array.from(
+          document.querySelectorAll('audio')
+        ).find((el) => !el.paused && el.readyState >= 2 && el.src)
+        if (playingAudio && fft) {
+          // Check if FFT is getting data
+          const testData = fft.analyze()
+          const avg =
+            testData.slice(0, 10).reduce((sum, val) => sum + val, 0) / 10
+          if (avg === 0) {
+            console.log(
+              'Audio playing but FFT returning zeros, attempting connection...'
+            )
+            connectToPlayingAudio()
+          }
+        }
+      }, 2000)
 
       // Update global variables to use full canvas dimensions
       margin = 5 // Minimal margin
@@ -938,7 +876,7 @@ const createAudioReactiveGridSketch =
       tatShapePositions = generateTatShapePositions()
 
       // Setup audio analysis
-      setupAudioAnalysis()
+      setupFFT()
 
       p.seed()
 
@@ -966,7 +904,12 @@ const createAudioReactiveGridSketch =
       radius = Math.min(containerWidth, containerHeight) * 0.4 // Responsive radius
 
       // Regenerate TatsSketch-based particle positions for new canvas size
-      tatShapePositions = generateTatShapePositions()
+      tatShapePositions = generateTatShapePositions(
+        markovSeed,
+        p.width,
+        p.height,
+        margin
+      )
 
       // Re-seed particles for new canvas size
       particles = []
@@ -977,6 +920,7 @@ const createAudioReactiveGridSketch =
     }
 
     p.draw = () => {
+      // console.log('frameRate', p.frameRate())
       // Get current audio data
       const audioData = getAudioData()
 

@@ -22,6 +22,7 @@ import {
   useAudioPlayer,
 } from '../../contexts/audio-player-context/audio-player-context'
 import { FixedAudioPlayer } from '../../components/fixed-audio-player/FixedAudioPlayer'
+import AudioFFT from '../../components/audio-fft/AudioFFT' // Add this import for the audio FFT component
 
 // Lazy load the audio reactive grid sketch to prevent SSR issues
 const AudioReactiveGridSketch = React.lazy(
@@ -33,7 +34,7 @@ const AudioReactiveGridSketch = React.lazy(
 
 // Component to handle autopilot auto-play and playlist setup
 const AutopilotAutoPlay = ({ audioUrls }) => {
-  const { setPlaylist, playTrack, playlist, currentIndex } = useAudioPlayer()
+  const { setPlaylist, playlist, playTrack } = useAudioPlayer()
 
   useEffect(() => {
     // Always set up the playlist for this page's audio tracks
@@ -120,6 +121,10 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
   const siteTitle = data.site.siteMetadata.title
   const { previous, next } = pageContext
   const { calendarVisible } = useUserPreferences()
+
+  // const { playlist, currentIndex } = useAudioPlayer()
+
+  // const currentTrack = playlist[currentIndex]
 
   // Extract Markov text from the post content
   const extractMarkovText = (html) => {
@@ -257,13 +262,14 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                     ></div>
                   }
                 >
-                  <AudioReactiveGridSketch
+                  {/* <AudioReactiveGridSketch
                     markovText={markovText}
                     style={{
                       width: '100%',
                       height: '100%',
                     }}
-                  />
+                  /> */}
+                  <AudioFFT markovText={markovText} />
                 </React.Suspense>
               )}
             </div>
@@ -351,13 +357,14 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                   ></div>
                 }
               >
-                <AudioReactiveGridSketch
+                {/* <AudioReactiveGridSketch
                   markovText={markovText}
                   style={{
                     width: '100%',
                     height: '100%',
                   }}
-                />
+                /> */}
+                <AudioFFT markovText={markovText} />
               </React.Suspense>
             )}
           </div>

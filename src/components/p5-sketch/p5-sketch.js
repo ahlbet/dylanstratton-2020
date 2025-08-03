@@ -18,17 +18,34 @@ const P5Sketch = ({ sketch, className = '', style = {} }) => {
       .then((p5Module) => {
         const p5 = p5Module.default
 
+        // Ensure p5 is available globally before loading p5.sound
+        if (typeof window !== 'undefined') {
+          window.p5 = p5
+        }
+
+        // Wait a bit for p5 to be fully initialized, then load p5.sound
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            import('p5.sound')
+              .then(() => resolve(p5))
+              .catch(() => {
+                console.warn(
+                  'p5.sound failed to load, continuing without sound features'
+                )
+                resolve(p5)
+              })
+          }, 100)
+        })
+      })
+      .then((p5) => {
         // Clean up any existing p5 instance
         if (p5InstanceRef.current) {
           p5InstanceRef.current.remove()
         }
-
         // Create new p5 instance
         p5InstanceRef.current = new p5(sketch, canvasRef.current)
-
         // Apply mobile fix to prevent excessive windowResized calls
         applyMobileFix(p5InstanceRef.current)
-
         // Cleanup function
         return () => {
           if (p5InstanceRef.current) {
@@ -38,7 +55,7 @@ const P5Sketch = ({ sketch, className = '', style = {} }) => {
         }
       })
       .catch((error) => {
-        console.error('Failed to load p5.js:', error)
+        console.error('Failed to load p5.js or p5.sound:', error)
       })
   }, [sketch, isClient])
 
