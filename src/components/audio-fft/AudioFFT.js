@@ -20,6 +20,10 @@ import {
   addDynamicMovementToPositions,
   calculateSpawnPosition,
 } from '../../utils/spawn-positions'
+import {
+  setupAudioReactiveCanvas,
+  initializeFrequencyData,
+} from '../../utils/canvas-setup'
 export default function AudioFFT({ markovText = '' }) {
   const containerRef = useRef(null)
   const p5InstanceRef = useRef(null)
@@ -48,55 +52,31 @@ export default function AudioFFT({ markovText = '' }) {
       let tatShapePositions = []
 
       p.setup = () => {
-        const containerWidth =
-          p.canvas && p.canvas.parentElement
-            ? p.canvas.parentElement.offsetWidth
-            : 800
-        const containerHeight =
-          p.canvas && p.canvas.parentElement
-            ? p.canvas.parentElement.offsetHeight
-            : 400
-
-        p.createCanvas(containerWidth, containerHeight)
-
-        // Ensure canvas is properly positioned within container
-        if (p.canvas) {
-          p.canvas.style.position = 'absolute'
-          p.canvas.style.top = '0'
-          p.canvas.style.left = '0'
-          p.canvas.style.zIndex = '1'
-        }
-        // 1) grab p5.sound's AudioContext
-        const audioCtx = p.getAudioContext()
-        const audioEl = audioRef.current
-
-        // 2) ensure CORS so the context can read samples
-        audioEl.crossOrigin = 'anonymous'
-
-        // 3) resume on user "play" gesture
-        audioEl.addEventListener('play', () => {
-          if (audioCtx.state === 'suspended') {
-            audioCtx.resume()
-          }
+        // Setup canvas and audio using utilities
+        const setup = setupAudioReactiveCanvas(p, P5, audioRef.current, {
+          fftSmoothing: 0.9,
+          fftSize: 2048,
+          onResize: (width, height) => {
+            // Regenerate Tat shape positions for new canvas size
+            tatShapePositions = generateTatShapePositions(
+              markovSeed,
+              width,
+              height,
+              5
+            )
+          },
         })
 
-        // —— GUARD: only create once per element —— //
-        if (!audioEl.__p5AudioSource) {
-          sourceNode = audioCtx.createMediaElementSource(audioEl)
-          sourceNode.connect(audioCtx.destination)
-          audioEl.__p5AudioSource = sourceNode
-        } else {
-          sourceNode = audioEl.__p5AudioSource
-        }
-        // — end guard — //
-
-        // 4) set up FFT with higher resolution for more granular analysis
-        fft = new P5.FFT(0.9, 2048) // Increased from 1024 to 2048 for more detail
-        fft.setInput(sourceNode)
+        // Extract setup components
+        fft = setup.fft
+        sourceNode = setup.sourceNode
+        const { width: containerWidth, height: containerHeight } =
+          setup.dimensions
 
         // Initialize frequency data arrays
-        frequencyData = new Array(8).fill(0)
-        smoothedData = new Array(8).fill(0)
+        const frequencyDataInit = initializeFrequencyData(8)
+        frequencyData = frequencyDataInit.frequencyData
+        smoothedData = frequencyDataInit.smoothedData
 
         // Generate Tat shape positions for particle spawning
         tatShapePositions = generateTatShapePositions(
@@ -108,26 +88,6 @@ export default function AudioFFT({ markovText = '' }) {
 
         // Add dynamic movement to spawn positions
         addDynamicMovementToPositions(tatShapePositions, p)
-      }
-
-      p.windowResized = () => {
-        const containerWidth =
-          p.canvas && p.canvas.parentElement
-            ? p.canvas.parentElement.offsetWidth
-            : 800
-        const containerHeight =
-          p.canvas && p.canvas.parentElement
-            ? p.canvas.parentElement.offsetHeight
-            : 400
-        p.resizeCanvas(containerWidth, containerHeight)
-
-        // Regenerate Tat shape positions for new canvas size
-        tatShapePositions = generateTatShapePositions(
-          markovSeed,
-          containerWidth,
-          containerHeight,
-          5
-        )
       }
 
       // Update spawn positions dynamically
