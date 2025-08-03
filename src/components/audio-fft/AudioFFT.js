@@ -11,6 +11,7 @@ import {
   calculateParticleCount,
   calculateMaxParticles,
   calculateCanvasScale,
+  calculateStaggeredSpawn,
   updateTatShapePositions,
   addDynamicMovementToPositions,
   calculateSpawnPosition,
@@ -30,8 +31,11 @@ export default function AudioFFT({ markovText = '' }) {
       return
     }
 
-    // 1) Guard: if we already spun up a sketch, do nothing
-    if (p5InstanceRef.current) return
+    // Clean up any existing p5 instance before creating a new one
+    if (p5InstanceRef.current) {
+      p5InstanceRef.current.remove()
+      p5InstanceRef.current = null
+    }
 
     const P5 = window.p5
 
@@ -59,6 +63,9 @@ export default function AudioFFT({ markovText = '' }) {
               height,
               5
             )
+
+            // Re-add dynamic movement properties to new positions
+            addDynamicMovementToPositions(tatShapePositions, p)
           },
         })
 
@@ -67,6 +74,12 @@ export default function AudioFFT({ markovText = '' }) {
         sourceNode = setup.sourceNode
         const { width: containerWidth, height: containerHeight } =
           setup.dimensions
+
+        // Guard against failed FFT setup
+        if (!fft) {
+          console.warn('🎵 FFT setup failed, skipping animation loop')
+          return
+        }
 
         // Initialize frequency data arrays
         const frequencyDataInit = initializeFrequencyData(8)
@@ -86,6 +99,7 @@ export default function AudioFFT({ markovText = '' }) {
 
         // Update spawn positions dynamically
         const updateSpawnPositions = () => {
+          // Update Tat shape positions with current canvas dimensions
           updateTatShapePositions(tatShapePositions, p)
         }
 
@@ -104,6 +118,7 @@ export default function AudioFFT({ markovText = '' }) {
           calculateCanvasScale,
           calculateParticleCount,
           calculateSpawnPosition,
+          calculateStaggeredSpawn,
           Particle
         )
       }
@@ -119,7 +134,7 @@ export default function AudioFFT({ markovText = '' }) {
         p5InstanceRef.current = null
       }
     }
-  }, [audioRef])
+  }, [audioRef, markovText]) // Add markovText to dependencies
 
   return (
     <div

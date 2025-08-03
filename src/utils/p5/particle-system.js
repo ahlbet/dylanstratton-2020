@@ -42,7 +42,7 @@ export class Particle {
       .createVector(p.cos(p.random(p.TWO_PI)), p.sin(p.random(p.TWO_PI)))
       .mult(this.speed * 0.05)
     this.alpha = 1
-    this.size = this.size * 0.2
+    this.size = this.size * 0.1
     this.originalSize = this.size
     this.lifeFrames = 0
     this.maxLifeFrames = 200 + p.random(50)
@@ -52,82 +52,112 @@ export class Particle {
   configureByFrequencyBand(exponentialAmp, primaryHue) {
     const p = this.p
 
+    // Boost the exponential amplitude for more dramatic response
+    const boostedAmp = Math.pow(exponentialAmp, 0.3) // More sensitive curve
+
+    // Add random variation to lifespan to prevent synchronized death
+    const lifespanVariation = p.random(0.7, 1.3)
+
     switch (this.frequencyBand) {
-      case 0: // Sub-bass (20-60 Hz)
-        this.speed = p.map(exponentialAmp, 0, 1, 0, 8)
-        this.size = p.map(exponentialAmp, 0, 1, 5, 25)
+      case 0: // Sub-bass (20-60 Hz) - much more dramatic
+        this.speed = p.map(boostedAmp, 0, 1, 0, 15)
+        this.size = p.map(boostedAmp, 0, 1, 8, 35)
         this.alphaDecay = 1.5
+        this.maxLifeFrames = Math.floor(
+          (180 + boostedAmp * 120) * lifespanVariation
+        )
         this.colorHue = (primaryHue + p.random(-10, 10) + 360) % 360
         this.colorSaturation = p.random(90, 100)
         this.colorBrightness = p.random(90, 100)
         this.noiseStrength *= 0.3
         break
-      case 1: // Bass (60-250 Hz)
-        this.speed = p.map(exponentialAmp, 0, 1, 0, 15)
-        this.size = p.map(exponentialAmp, 0, 1, 4, 22)
+      case 1: // Bass (60-250 Hz) - most dramatic
+        this.speed = p.map(boostedAmp, 0, 1, 0, 25)
+        this.size = p.map(boostedAmp, 0, 1, 6, 32)
         this.alphaDecay = 2
+        this.maxLifeFrames = Math.floor(
+          (150 + boostedAmp * 100) * lifespanVariation
+        )
         this.colorHue = (primaryHue + 30 + p.random(-8, 8) + 360) % 360
         this.colorSaturation = p.random(85, 100)
         this.colorBrightness = p.random(85, 100)
         this.noiseStrength *= 0.6
         break
       case 2: // Low Mid (250-500 Hz)
-        this.speed = p.map(exponentialAmp, 0, 1, 0, 18)
-        this.size = p.map(exponentialAmp, 0, 1, 3, 18)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 28)
+        this.size = p.map(boostedAmp, 0, 1, 5, 28)
         this.alphaDecay = 2.5
+        this.maxLifeFrames = Math.floor(
+          (120 + boostedAmp * 80) * lifespanVariation
+        )
         this.colorHue = (primaryHue + 60 + p.random(-8, 8) + 360) % 360
         this.colorSaturation = p.random(80, 100)
         this.colorBrightness = p.random(80, 100)
         this.noiseStrength *= 1.0
         break
-      case 3: // Mid (500-2000 Hz)
-        this.speed = p.map(exponentialAmp, 0, 1, 0, 20)
-        this.size = p.map(exponentialAmp, 0, 1, 2, 15)
+      case 3: // Mid (500-2000 Hz) - very responsive
+        this.speed = p.map(boostedAmp, 0, 1, 0, 30)
+        this.size = p.map(boostedAmp, 0, 1, 4, 25)
         this.alphaDecay = 3
+        this.maxLifeFrames = Math.floor(
+          (100 + boostedAmp * 60) * lifespanVariation
+        )
         this.colorHue = (primaryHue + 90 + p.random(-8, 8) + 360) % 360
         this.colorSaturation = p.random(75, 100)
         this.colorBrightness = p.random(75, 100)
         this.noiseStrength *= 1.4
         break
       case 4: // High Mid (2000-4000 Hz)
-        this.speed = p.map(exponentialAmp, 0, 1, 0, 22)
-        this.size = p.map(exponentialAmp, 0, 1, 1, 12)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 32)
+        this.size = p.map(boostedAmp, 0, 1, 3, 22)
         this.alphaDecay = 3.5
+        this.maxLifeFrames = Math.floor(
+          (80 + boostedAmp * 40) * lifespanVariation
+        )
         this.colorHue = (primaryHue + 120 + p.random(-8, 8) + 360) % 360
         this.colorSaturation = p.random(70, 100)
         this.colorBrightness = p.random(70, 100)
         this.noiseStrength *= 1.8
         break
       case 5: // Presence (4000-6000 Hz)
-        this.speed = p.map(exponentialAmp, 0, 1, 0, 25)
-        this.size = p.map(exponentialAmp, 0, 1, 1, 10)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 35)
+        this.size = p.map(boostedAmp, 0, 1, 2, 20)
         this.alphaDecay = 4
+        this.maxLifeFrames = Math.floor(
+          (60 + boostedAmp * 30) * lifespanVariation
+        )
         this.colorHue = (primaryHue + 150 + p.random(-8, 8) + 360) % 360
         this.colorSaturation = p.random(65, 100)
         this.colorBrightness = p.random(65, 100)
         this.noiseStrength *= 2.2
         break
       case 6: // Brilliance (6000-8000 Hz)
-        this.speed = p.map(exponentialAmp, 0, 1, 0, 28)
-        this.size = p.map(exponentialAmp, 0, 1, 1, 8)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 38)
+        this.size = p.map(boostedAmp, 0, 1, 2, 18)
         this.alphaDecay = 4.5
+        this.maxLifeFrames = Math.floor(
+          (40 + boostedAmp * 20) * lifespanVariation
+        )
         this.colorHue = (primaryHue + 180 + p.random(-8, 8) + 360) % 360
         this.colorSaturation = p.random(60, 100)
         this.colorBrightness = p.random(60, 100)
         this.noiseStrength *= 2.6
         break
       case 7: // Air (8000-20000 Hz)
-        this.speed = p.map(exponentialAmp, 0, 1, 0, 30)
-        this.size = p.map(exponentialAmp, 0, 1, 1, 6)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 40)
+        this.size = p.map(boostedAmp, 0, 1, 1, 16)
         this.alphaDecay = 5
+        this.maxLifeFrames = Math.floor(
+          (30 + boostedAmp * 15) * lifespanVariation
+        )
         this.colorHue = (primaryHue + 210 + p.random(-8, 8) + 360) % 360
         this.colorSaturation = p.random(55, 100)
         this.colorBrightness = p.random(55, 100)
         this.noiseStrength *= 3.0
         break
       default:
-        this.speed = p.map(exponentialAmp, 0, 1, 0, 15)
-        this.size = p.map(exponentialAmp, 0, 1, 2, 15)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 25)
+        this.size = p.map(boostedAmp, 0, 1, 4, 25)
         this.alphaDecay = 3
         this.colorHue = (primaryHue + p.random(-20, 20) + 360) % 360
         this.colorSaturation = p.random(50, 100)
@@ -307,37 +337,70 @@ export const calculateParticleCount = (band, exponentialAmp, canvasScale) => {
   let baseParticles
   switch (band) {
     case 0:
-      baseParticles = 3
-      break // Sub-bass
+      baseParticles = 8
+      break // Sub-bass - more dramatic
     case 1:
-      baseParticles = 4
-      break // Bass
+      baseParticles = 12
+      break // Bass - most dramatic
     case 2:
-      baseParticles = 5
+      baseParticles = 10
       break // Low Mid
     case 3:
-      baseParticles = 6
-      break // Mid
+      baseParticles = 15
+      break // Mid - very responsive
     case 4:
-      baseParticles = 7
+      baseParticles = 12
       break // High Mid
     case 5:
-      baseParticles = 8
+      baseParticles = 10
       break // Presence
     case 6:
-      baseParticles = 9
+      baseParticles = 8
       break // Brilliance
     case 7:
-      baseParticles = 10
+      baseParticles = 6
       break // Air
     default:
-      baseParticles = 5
+      baseParticles = 10
   }
+
+  // Much more dramatic response to audio
+  const audioMultiplier = exponentialAmp > 0.05 ? 8 : 1 // 8x boost when audio detected
+  const dramaticResponse = Math.pow(exponentialAmp, 0.15) // Much more sensitive curve
 
   return Math.max(
     1,
-    Math.floor(baseParticles * canvasScale * exponentialAmp * 3)
+    Math.floor(baseParticles * canvasScale * dramaticResponse * audioMultiplier)
   )
+}
+
+/**
+ * Calculate staggered spawn timing for particles
+ * @param {number} band - Frequency band index (0-7)
+ * @param {number} frameCount - Current frame count
+ * @param {number} totalParticles - Total particles to spawn
+ * @returns {Object} Spawn timing information
+ */
+export const calculateStaggeredSpawn = (band, frameCount, totalParticles) => {
+  // Different spawn intervals for different frequency bands
+  const spawnIntervals = [8, 6, 7, 5, 6, 7, 8, 9] // Frames between spawns for each band
+  const interval = spawnIntervals[band] || 7
+
+  // Offset each band to prevent all spawning at once
+  const bandOffset = band * 3
+  const adjustedFrame = frameCount + bandOffset
+
+  // Check if it's time to spawn
+  const shouldSpawn = adjustedFrame % interval === 0
+
+  // Calculate which particle in the sequence to spawn
+  const spawnIndex = Math.floor(adjustedFrame / interval) % totalParticles
+
+  return {
+    shouldSpawn,
+    spawnIndex,
+    interval,
+  }
 }
 
 /**

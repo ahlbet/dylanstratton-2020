@@ -152,27 +152,46 @@ export const generateTatShapePositions = (
 
   const positions = []
 
-  // Generate one central Tat position based on markov seed
-  const centerX = canvasWidth / 2 + ((markovSeed % 200) - 100) // Slight offset from center
-  const centerY = canvasHeight / 2 + (((markovSeed * 7) % 200) - 100) // Slight offset from center
-
-  // Each Tat has 1-5 shape types based on markov seed
+  // Generate multiple Tat positions distributed across the canvas
+  const tatCount = Math.max(1, Math.floor(canvasWidth / 300)) // More Tats for wider canvases
   const typesCount = Math.floor(markovSeed % 5) + 1
 
-  for (let i = 0; i < typesCount; i++) {
-    const shapeIndex = Math.floor((markovSeed * (i + 1) * 123) % shapes.length)
-    const shapeType = shapes[shapeIndex]
+  for (let tatIndex = 0; tatIndex < tatCount; tatIndex++) {
+    // Distribute Tats across the canvas width
+    const tatX = (canvasWidth / (tatCount + 1)) * (tatIndex + 1)
+    const tatY =
+      canvasHeight / 2 + (((markovSeed * (tatIndex + 1)) % 200) - 100)
 
-    // Generate positions based on shape type with full canvas dimensions
-    const shapePositions = generateShapePositions(
-      centerX,
-      centerY,
-      shapeType,
-      { width: canvasWidth, height: canvasHeight }, // Pass full canvas dimensions
-      markovSeed * (i + 1),
-      margin
-    )
-    positions.push(...shapePositions)
+    for (let i = 0; i < typesCount; i++) {
+      const shapeIndex = Math.floor(
+        (markovSeed * (tatIndex + 1) * (i + 1) * 123) % shapes.length
+      )
+      const shapeType = shapes[shapeIndex]
+
+      // Generate positions based on shape type with full canvas dimensions
+      const shapePositions = generateShapePositions(
+        tatX,
+        tatY,
+        shapeType,
+        { width: canvasWidth, height: canvasHeight }, // Pass full canvas dimensions
+        markovSeed * (tatIndex + 1) * (i + 1),
+        margin
+      )
+      positions.push(...shapePositions)
+    }
+  }
+
+  // Add additional distributed spawn points for better coverage
+  const additionalPoints = Math.max(
+    5,
+    Math.floor((canvasWidth * canvasHeight) / 50000)
+  ) // More points for larger canvases
+
+  for (let i = 0; i < additionalPoints; i++) {
+    const seedOffset = markovSeed * (i + 100)
+    const x = margin + (seedOffset % (canvasWidth - 2 * margin))
+    const y = margin + ((seedOffset * 7) % (canvasHeight - 2 * margin))
+    positions.push({ x, y })
   }
 
   return positions

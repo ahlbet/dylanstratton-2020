@@ -87,9 +87,54 @@ export const setupAudioContext = (p, audioElement) => {
  * @returns {Object} Configured FFT analyzer
  */
 export const setupFFT = (P5, sourceNode, smoothing = 0.9, fftSize = 2048) => {
-  const fft = new P5.FFT(smoothing, fftSize)
-  fft.setInput(sourceNode)
-  return fft
+  // Validate inputs
+  if (!sourceNode) {
+    console.warn('🎵 No source node provided for FFT setup')
+    return null
+  }
+
+  // Use global FFT instance if available
+  if (window.__globalFFTInstance) {
+    console.log('🎵 Using global FFT instance')
+    const globalFFT = window.__globalFFTInstance
+
+    try {
+      // Update the input to the current audio source
+      globalFFT.setInput(sourceNode)
+
+      // Debug: Verify FFT setup
+      console.log('🎵 FFT Setup Debug:', {
+        hasGlobalFFT: !!window.__globalFFTInstance,
+        hasSourceNode: !!sourceNode,
+        fftInput: !!globalFFT.input,
+        audioContextState: globalFFT.input?.context?.state,
+        fftMethods: {
+          hasAnalyze: typeof globalFFT.analyze === 'function',
+          hasGetEnergy: typeof globalFFT.getEnergy === 'function',
+        },
+      })
+
+      return globalFFT
+    } catch (error) {
+      console.warn(
+        '🎵 Failed to set input on global FFT, creating new instance:',
+        error
+      )
+      // Clear the problematic global instance
+      window.__globalFFTInstance = null
+    }
+  }
+
+  // Fallback: create new FFT instance if global one doesn't exist
+  console.log('🎵 Creating new FFT instance (fallback)')
+  try {
+    const fft = new P5.FFT(smoothing, fftSize)
+    fft.setInput(sourceNode)
+    return fft
+  } catch (error) {
+    console.error('Failed to create FFT instance:', error)
+    throw error
+  }
 }
 
 /**

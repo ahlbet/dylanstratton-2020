@@ -25,6 +25,7 @@ export {
   calculateParticleCount,
   calculateMaxParticles,
   calculateCanvasScale,
+  calculateStaggeredSpawn,
 } from './particle-system'
 
 export {

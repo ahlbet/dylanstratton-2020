@@ -35,9 +35,16 @@ export const createAudioReactiveAnimationLoop = (
   calculateCanvasScale,
   calculateParticleCount,
   calculateSpawnPosition,
+  calculateStaggeredSpawn,
   ParticleClass
 ) => {
   return () => {
+    // Verify FFT is properly initialized
+    if (!fft || typeof fft.analyze !== 'function') {
+      console.warn('FFT not properly initialized, skipping animation frame')
+      return
+    }
+
     // Update FFT spectrum
     fft.analyze()
 
@@ -73,32 +80,37 @@ export const createAudioReactiveAnimationLoop = (
       )
       const count = p.floor(maxParticles)
 
-      // Only spawn if we're under the total particle limit
-      if (currentParticleCount < maxTotalParticles) {
-        for (let i = 0; i < count; i++) {
-          // Calculate spawn position using utility
-          const spawnPosition = calculateSpawnPosition(
-            tatShapePositions,
-            band.spawnArea,
-            p.width,
-            p.height,
-            p.frameCount,
-            band.band,
-            i,
-            p
-          )
+      // Use staggered spawning for smooth, continuous flow
+      const spawnInfo = calculateStaggeredSpawn(band.band, p.frameCount, count)
 
-          particles.push(
-            new ParticleClass(
-              p,
-              spawnPosition.x,
-              spawnPosition.y,
-              band.amp,
-              band.band,
-              markovSeed
-            )
+      // Only spawn if we're under the total particle limit and it's time to spawn
+      if (
+        currentParticleCount < maxTotalParticles &&
+        spawnInfo.shouldSpawn &&
+        count > 0
+      ) {
+        // Calculate spawn position using utility
+        const spawnPosition = calculateSpawnPosition(
+          tatShapePositions,
+          band.spawnArea,
+          p.width,
+          p.height,
+          p.frameCount,
+          band.band,
+          spawnInfo.spawnIndex,
+          p
+        )
+
+        particles.push(
+          new ParticleClass(
+            p,
+            spawnPosition.x,
+            spawnPosition.y,
+            band.amp,
+            band.band,
+            markovSeed
           )
-        }
+        )
       }
     })
 
