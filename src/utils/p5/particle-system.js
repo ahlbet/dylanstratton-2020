@@ -252,8 +252,9 @@ export class Particle {
         break
       case 5: // Presence - chaotic movement
         this.vel.add(
-          p.createVector(p.random(-0.2, 0.2), p.random(-0.2, 0.2)) *
-            this.audioReactivity
+          p
+            .createVector(p.random(-0.2, 0.2), p.random(-0.2, 0.2))
+            .mult(this.audioReactivity)
         )
         break
       case 6: // Brilliance - rapid oscillation
