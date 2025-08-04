@@ -4,24 +4,36 @@ A command-line tool for manually editing Markov-generated texts stored in your S
 
 ## Setup
 
-### 1. Add the 'edited' column to your database
+### 1. Add the required columns to your database
 
-First, run the setup script to add the required column:
+First, run the setup scripts to add the required columns:
 
 ```bash
+# Add the 'edited' column
 node scripts/add-edited-column.js
+
+# Add the 'coherency_level' column
+node scripts/add-coherency-level-column.js
 ```
 
 This will:
 - Add an `edited` boolean column to the `markov_texts` table
-- Set the default value to `false`
-- Create an index for better performance
+- Add a `coherency_level` integer column (1-100) to the `markov_texts` table
+- Set appropriate default values and constraints
+- Create indexes for better performance
 
 If the automatic setup fails, you can run this SQL manually in your Supabase SQL editor:
 
 ```sql
+-- Add edited column
 ALTER TABLE markov_texts ADD COLUMN edited BOOLEAN DEFAULT FALSE;
 CREATE INDEX idx_markov_texts_edited ON markov_texts (edited);
+
+-- Add coherency_level column
+ALTER TABLE markov_texts ADD COLUMN coherency_level INTEGER DEFAULT 1;
+ALTER TABLE markov_texts ADD CONSTRAINT check_coherency_level CHECK (coherency_level >= 1 AND coherency_level <= 100);
+CREATE INDEX idx_markov_texts_coherency_level ON markov_texts (coherency_level);
+UPDATE markov_texts SET coherency_level = 1 WHERE coherency_level IS NULL;
 ```
 
 ### 2. Start the editor
@@ -47,6 +59,7 @@ The editor will:
 
 - **Random selection**: Always fetches different texts each time
 - **Multi-line editing**: Support for multi-line text input
+- **Coherency level editing**: Assign and edit coherency levels (1-100) for each text
 - **Skip functionality**: Skip texts you don't want to edit
 - **Session summary**: Shows how many texts you edited/skipped
 - **Graceful exit**: Press Ctrl+C to exit at any time
@@ -77,12 +90,13 @@ A journey of a thousand miles begins with a single step.
 ────────────────────────────────────────
 
 Options:
-1. Edit text
-2. Skip this text
-3. Mark as edited without changes
-4. Exit editor
+1. Edit text (line by line)
+2. Edit coherency level
+3. Skip this text
+4. Mark as edited without changes
+5. Exit editor
 
-Enter your choice (1-4): 1
+Enter your choice (1-5): 1
 
 📝 Enter your edited text (press Enter twice to finish):
 💡 Tip: You can use multiple lines. Press Enter twice when done.
@@ -112,6 +126,7 @@ The `markov_texts` table should have these columns:
 - `created_at` (TIMESTAMP WITH TIME ZONE DEFAULT NOW())
 - `metadata` (JSONB DEFAULT '{}'::jsonb)
 - `edited` (BOOLEAN DEFAULT FALSE) ← Added by this tool
+- `coherency_level` (INTEGER DEFAULT 1) ← Added by this tool
 
 ## Environment Variables
 

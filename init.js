@@ -94,6 +94,9 @@ const { generateBlogPostText } = require('./src/utils/markov-generator')
 // Import the cover art generator
 const { generateCoverArt } = require('./src/utils/cover-art-generator')
 
+// Import coherency level utilities
+const { getCoherencyLevel } = require('./src/utils/coherency-level-utils')
+
 // Initialize Supabase client
 let supabase
 
@@ -358,6 +361,7 @@ const main = async () => {
   console.log('📝 Generating 5 markov texts for interactive editing...')
   const markovTexts = []
   const editedTexts = []
+  const coherencyLevels = []
 
   // Generate 5 initial texts
   for (let i = 0; i < 5; i++) {
@@ -412,8 +416,14 @@ const main = async () => {
       }
     } while (needsRegeneration)
 
+    // Get coherency level for this text
+    const coherencyLevel = await getCoherencyLevel(askQuestion, i + 1)
+    coherencyLevels.push(coherencyLevel)
+
     editedTexts.push(currentText)
-    console.log(`✅ Text ${i + 1} finalized\n`)
+    console.log(
+      `✅ Text ${i + 1} finalized with coherency level ${coherencyLevel}\n`
+    )
   }
 
   // Format for markdown
@@ -424,6 +434,7 @@ const main = async () => {
   const supabaseTexts = editedTexts.map((text, index) => ({
     text_content: text,
     text_length: text.length,
+    coherency_level: coherencyLevels[index],
     metadata: {
       generated_at: new Date().toISOString(),
       source: 'markov-generator',

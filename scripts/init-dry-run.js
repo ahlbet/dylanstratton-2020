@@ -5,6 +5,7 @@ const { execSync } = require('child_process')
 const { createClient } = require('@supabase/supabase-js')
 const { generateBlogPostText } = require('../src/utils/markov-generator')
 const { cleanText } = require('../src/utils/text-cleaner')
+const { getCoherencyLevel } = require('../src/utils/coherency-level-utils')
 require('dotenv').config()
 
 // Create readline interface for user input
@@ -128,6 +129,7 @@ const main = async () => {
 
   // Interactive editing
   const editedTexts = []
+  const coherencyLevels = []
   for (let i = 0; i < markovTexts.length; i++) {
     let currentText = markovTexts[i]
     let needsRegeneration = false
@@ -151,8 +153,14 @@ const main = async () => {
       }
     } while (needsRegeneration)
 
+    // Get coherency level for this text
+    const coherencyLevel = await getCoherencyLevel(askQuestion, i + 1)
+    coherencyLevels.push(coherencyLevel)
+
     editedTexts.push(currentText)
-    console.log(`✅ Text ${i + 1} finalized\n`)
+    console.log(
+      `✅ Text ${i + 1} finalized with coherency level ${coherencyLevel}\n`
+    )
   }
 
   // Format for markdown
@@ -165,6 +173,7 @@ const main = async () => {
   const supabaseTexts = editedTexts.map((text, index) => ({
     text_content: text,
     text_length: text.length,
+    coherency_level: coherencyLevels[index],
     metadata: {
       generated_at: new Date().toISOString(),
       source: 'markov-generator',
@@ -181,6 +190,7 @@ const main = async () => {
   supabaseTexts.forEach((textRecord, index) => {
     console.log(`\nText ${index + 1}:`)
     console.log(`  Length: ${textRecord.text_length} characters`)
+    console.log(`  Coherency Level: ${textRecord.coherency_level}/100`)
     console.log(
       `  Content: "${textRecord.text_content.substring(0, 100)}${textRecord.text_content.length > 100 ? '...' : ''}"`
     )

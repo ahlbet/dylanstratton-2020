@@ -713,3 +713,45 @@ describe('init.js script', () => {
     })
   })
 })
+
+// Test the getCoherencyLevel function from shared utils
+describe('getCoherencyLevel', () => {
+  it('should return default value of 1 when empty input is provided', async () => {
+    // Mock readline to return empty string
+    const mockQuestion = jest.fn().mockResolvedValue('')
+
+    const { getCoherencyLevel } = require('./src/utils/coherency-level-utils')
+    const result = await getCoherencyLevel(mockQuestion, 1)
+
+    expect(result).toBe(1)
+    expect(mockQuestion).toHaveBeenCalledWith(
+      'Enter coherency level (1-100, or press Enter for default 1): '
+    )
+  })
+
+  it('should return valid coherency level when valid input is provided', async () => {
+    // Mock readline to return valid number
+    const mockQuestion = jest.fn().mockResolvedValue('75')
+
+    const { getCoherencyLevel } = require('./src/utils/coherency-level-utils')
+    const result = await getCoherencyLevel(mockQuestion, 1)
+
+    expect(result).toBe(75)
+  })
+
+  it('should reject invalid inputs and ask again', async () => {
+    // Mock readline to return invalid then valid number
+    const mockQuestion = jest
+      .fn()
+      .mockResolvedValueOnce('invalid')
+      .mockResolvedValueOnce('101')
+      .mockResolvedValueOnce('0')
+      .mockResolvedValueOnce('25')
+
+    const { getCoherencyLevel } = require('./src/utils/coherency-level-utils')
+    const result = await getCoherencyLevel(mockQuestion, 1)
+
+    expect(result).toBe(25)
+    expect(mockQuestion).toHaveBeenCalledTimes(4)
+  })
+})
