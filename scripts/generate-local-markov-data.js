@@ -80,6 +80,12 @@ async function generateLocalMarkovData() {
       __dirname,
       '../static/local-data/markov-texts.json'
     )
+    // Ensure directory exists
+    const markovTextsDir = path.dirname(markovTextsPath)
+    if (!fs.existsSync(markovTextsDir)) {
+      fs.mkdirSync(markovTextsDir, { recursive: true })
+      console.log(`📁 Created directory: ${markovTextsDir}`)
+    }
     fs.writeFileSync(markovTextsPath, JSON.stringify({ texts }, null, 2))
     console.log(`💾 Saved Markov texts to: ${markovTextsPath}`)
 
@@ -123,6 +129,13 @@ async function generateLocalMarkovData() {
       '25may20',
       '25may25',
     ]
+
+    // Ensure cover art directory exists
+    const coverArtDir = path.join(__dirname, '../static/local-cover-art')
+    if (!fs.existsSync(coverArtDir)) {
+      fs.mkdirSync(coverArtDir, { recursive: true })
+      console.log(`📁 Created directory: ${coverArtDir}`)
+    }
 
     for (const postName of samplePosts) {
       try {
