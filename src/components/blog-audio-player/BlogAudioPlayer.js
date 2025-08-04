@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import JSZip from 'jszip'
+import { Play, Pause } from 'lucide-react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent } from '../../utils/plausible-analytics'
 import { useTrackDurations } from '../../hooks/use-track-durations'
@@ -434,21 +435,18 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
                     marginRight: '12px',
                     width: '24px',
                     textAlign: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
                   {isPlayingCurrent ? (
-                    <span style={{ color: '#DE3163', fontSize: '16px' }}>
-                      ⏸
-                    </span>
+                    <Pause size={16} color="#DE3163" />
                   ) : (
-                    <span
-                      style={{
-                        color: isCurrentTrack ? '#DE3163' : '#fff',
-                        fontSize: '16px',
-                      }}
-                    >
-                      ▶
-                    </span>
+                    <Play
+                      size={16}
+                      color={isCurrentTrack ? '#DE3163' : '#fff'}
+                    />
                   )}
                 </div>
 
