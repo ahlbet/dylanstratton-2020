@@ -20,7 +20,7 @@ const CustomPlaylist = ({
   setTrackItemRef,
 }) => {
   return (
-    <div className="custom-playlist" ref={trackListRef}>
+    <div className="custom-playlist">
       {/* Playlist Header */}
       <div
         className="playlist-header"
@@ -89,7 +89,7 @@ const CustomPlaylist = ({
       </div>
 
       {/* Track List */}
-      <div className="track-list">
+      <div className="track-list" ref={trackListRef}>
         {tracks.map((track, index) => {
           const isCurrentTrack = currentIndex === index
           const isPlayingCurrent = isCurrentTrack && isPlaying
