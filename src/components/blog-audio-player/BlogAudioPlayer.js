@@ -7,6 +7,223 @@ import { useTrackDurations } from '../../hooks/use-track-durations'
 import { useScrollToTrack } from '../../hooks/use-scroll-to-track'
 import './BlogAudioPlayer.css'
 
+// Custom playlist component
+const CustomPlaylist = ({
+  tracks,
+  currentIndex,
+  isPlaying,
+  handleTrackClick,
+  coverArtUrl,
+  postTitle,
+  totalDuration,
+  trackListRef,
+  setTrackItemRef,
+}) => {
+  return (
+    <div className="custom-playlist" ref={trackListRef}>
+      {/* Playlist Header */}
+      <div
+        className="playlist-header"
+        style={{
+          padding: '16px',
+          borderBottom: '1px solid #e5e7eb',
+          // backgroundColor: 'rgba(42, 42, 42, 0.9)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          color: '#fff',
+        }}
+      >
+        {/* Cover Art */}
+        {coverArtUrl && (
+          <div
+            style={{
+              maxWidth: '100px',
+              maxHeight: '100px',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            }}
+          >
+            <img
+              src={coverArtUrl}
+              alt={`Cover art for ${postTitle}`}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+              onError={(e) => {
+                e.target.style.display = 'none'
+              }}
+            />
+          </div>
+        )}
+
+        {/* Playlist Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3
+            style={{
+              margin: 0,
+              color: '#fff',
+              fontSize: '18px',
+              fontWeight: '600',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {postTitle}
+          </h3>
+          <p
+            style={{
+              margin: '4px 0 0 0',
+              color: '#fff',
+              fontSize: '14px',
+            }}
+          >
+            {tracks.length} • {totalDuration}
+          </p>
+        </div>
+      </div>
+
+      {/* Track List */}
+      <div className="track-list">
+        {tracks.map((track, index) => {
+          const isCurrentTrack = currentIndex === index
+          const isPlayingCurrent = isCurrentTrack && isPlaying
+
+          return (
+            <div
+              key={index}
+              className={`track-item ${isCurrentTrack ? 'current-track' : ''}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '12px 16px',
+                borderBottom: '1px solid #f3f4f6',
+                // backgroundColor: 'transparent',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease',
+                position: 'relative',
+                minHeight: '60px', // Ensure clickable area
+                userSelect: 'none', // Prevent text selection
+                zIndex: 10, // Ensure track items are above other content
+                borderLeft: isCurrentTrack
+                  ? '4px solid #DE3163'
+                  : '4px solid transparent',
+              }}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleTrackClick(index)
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+              }}
+              ref={(el) => setTrackItemRef(index, el)}
+            >
+              {/* Play/Pause Button */}
+              <div
+                style={{
+                  marginRight: '12px',
+                  width: '24px',
+                  textAlign: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {isPlayingCurrent ? (
+                  <Pause size={16} color="#DE3163" />
+                ) : (
+                  <Play size={16} color={isCurrentTrack ? '#DE3163' : '#fff'} />
+                )}
+              </div>
+
+              {/* Track Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontWeight: isCurrentTrack ? '600' : '500',
+                    color: isCurrentTrack ? '#DE3163' : '#fff',
+                    fontSize: '14px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {track.title}
+                </div>
+                <div
+                  style={{
+                    color: isCurrentTrack ? '#DE3163' : '#fff',
+                    fontSize: '12px',
+                    marginTop: '2px',
+                  }}
+                >
+                  {track.artist} • {track.album}
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div
+                style={{
+                  color: isCurrentTrack ? '#DE3163' : '#fff',
+                  fontSize: '12px',
+                  marginLeft: '12px',
+                  minWidth: '40px',
+                  textAlign: 'right',
+                }}
+              >
+                {track.duration}
+              </div>
+
+              {/* Download Button */}
+              {/* {!isMobile && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      downloadAudio(track.downloadUrl, track.downloadFilename)
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      padding: '4px 8px',
+                      marginLeft: '8px',
+                      borderRadius: '4px',
+                      opacity: 1,
+                      position: 'relative',
+                      zIndex: 100,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = '#DE3163'
+                      e.target.style.color = '#fff'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = 'transparent'
+                      e.target.style.color = '#fff'
+                    }}
+                    title="Download audio file"
+                  >
+                    ⬇
+                  </button>
+                )} */}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
   const [isMuted, setIsMuted] = useState(false)
   const [isDownloadingZip, setIsDownloadingZip] = useState(false)
@@ -319,216 +536,6 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     ]
   )
 
-  // Custom playlist component
-  const CustomPlaylist = () => {
-    return (
-      <div className="custom-playlist">
-        {/* Playlist Header */}
-        <div
-          className="playlist-header"
-          style={{
-            padding: '16px',
-            borderBottom: '1px solid #e5e7eb',
-            // backgroundColor: 'rgba(42, 42, 42, 0.9)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            color: '#fff',
-          }}
-        >
-          {/* Cover Art */}
-          {coverArtUrl && (
-            <div
-              style={{
-                maxWidth: '100px',
-                maxHeight: '100px',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                flexShrink: 0,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              }}
-            >
-              <img
-                src={coverArtUrl}
-                alt={`Cover art for ${postTitle}`}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                }}
-                onError={(e) => {
-                  e.target.style.display = 'none'
-                }}
-              />
-            </div>
-          )}
-
-          {/* Playlist Info */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h3
-              style={{
-                margin: 0,
-                color: '#fff',
-                fontSize: '18px',
-                fontWeight: '600',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {postTitle}
-            </h3>
-            <p
-              style={{
-                margin: '4px 0 0 0',
-                color: '#fff',
-                fontSize: '14px',
-              }}
-            >
-              {tracks.length} • {totalDuration}
-            </p>
-          </div>
-        </div>
-
-        {/* Track List */}
-        <div className="track-list" ref={trackListRef}>
-          {tracks.map((track, index) => {
-            const isCurrentTrack = currentIndex === index
-            const isPlayingCurrent = isCurrentTrack && isPlaying
-
-            return (
-              <div
-                key={index}
-                className={`track-item ${isCurrentTrack ? 'current-track' : ''}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '12px 16px',
-                  borderBottom: '1px solid #f3f4f6',
-                  // backgroundColor: 'transparent',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s ease',
-                  position: 'relative',
-                  minHeight: '60px', // Ensure clickable area
-                  userSelect: 'none', // Prevent text selection
-                  zIndex: 10, // Ensure track items are above other content
-                  borderLeft: isCurrentTrack
-                    ? '4px solid #DE3163'
-                    : '4px solid transparent',
-                }}
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  handleTrackClick(index)
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
-                ref={(el) => setTrackItemRef(index, el)}
-              >
-                {/* Play/Pause Button */}
-                <div
-                  style={{
-                    marginRight: '12px',
-                    width: '24px',
-                    textAlign: 'center',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {isPlayingCurrent ? (
-                    <Pause size={16} color="#DE3163" />
-                  ) : (
-                    <Play
-                      size={16}
-                      color={isCurrentTrack ? '#DE3163' : '#fff'}
-                    />
-                  )}
-                </div>
-
-                {/* Track Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontWeight: isCurrentTrack ? '600' : '500',
-                      color: isCurrentTrack ? '#DE3163' : '#fff',
-                      fontSize: '14px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {track.title}
-                  </div>
-                  <div
-                    style={{
-                      color: isCurrentTrack ? '#DE3163' : '#fff',
-                      fontSize: '12px',
-                      marginTop: '2px',
-                    }}
-                  >
-                    {track.artist} • {track.album}
-                  </div>
-                </div>
-
-                {/* Duration */}
-                <div
-                  style={{
-                    color: isCurrentTrack ? '#DE3163' : '#fff',
-                    fontSize: '12px',
-                    marginLeft: '12px',
-                    minWidth: '40px',
-                    textAlign: 'right',
-                  }}
-                >
-                  {track.duration}
-                </div>
-
-                {/* Download Button */}
-                {/* {!isMobile && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      downloadAudio(track.downloadUrl, track.downloadFilename)
-                    }}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      padding: '4px 8px',
-                      marginLeft: '8px',
-                      borderRadius: '4px',
-                      opacity: 1,
-                      position: 'relative',
-                      zIndex: 100,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = '#DE3163'
-                      e.target.style.color = '#fff'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = 'transparent'
-                      e.target.style.color = '#fff'
-                    }}
-                    title="Download audio file"
-                  >
-                    ⬇
-                  </button>
-                )} */}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
-
   if (!audioUrls || !Array.isArray(audioUrls) || audioUrls.length === 0) {
     return null
   }
@@ -591,7 +598,17 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
         </div>
       )} */}
 
-      <CustomPlaylist />
+      <CustomPlaylist
+        tracks={tracks}
+        currentIndex={currentIndex}
+        isPlaying={isPlaying}
+        handleTrackClick={handleTrackClick}
+        coverArtUrl={coverArtUrl}
+        postTitle={postTitle}
+        totalDuration={totalDuration}
+        trackListRef={trackListRef}
+        setTrackItemRef={setTrackItemRef}
+      />
     </div>
   )
 }
