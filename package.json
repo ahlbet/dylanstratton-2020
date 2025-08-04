@@ -76,10 +76,10 @@
   },
   "scripts": {
     "build": "gatsby build",
-    "develop": "gatsby develop",
+    "develop": "NODE_ENV=development GATSBY_USE_LOCAL_DATA=true gatsby develop",
     "develop-local": "NODE_ENV=development GATSBY_USE_LOCAL_DATA=true gatsby develop",
     "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
-    "start": "node scripts/fetch-markov-texts-from-supabase.js && npm run develop",
+    "start": " npm run develop",
     "start-local": "npm run develop-local",
     "serve": "gatsby serve",
     "clean": "gatsby clean",
