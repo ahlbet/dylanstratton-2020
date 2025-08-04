@@ -3,6 +3,7 @@
 const { createClient } = require('@supabase/supabase-js')
 const readline = require('readline')
 const path = require('path')
+const { editCoherencyLevel } = require('../src/utils/coherency-level-utils')
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
 // Initialize Supabase client
@@ -65,7 +66,7 @@ async function fetchRandomTexts(count = 5) {
 
       const { data: textData, error: textError } = await supabase
         .from('markov_texts')
-        .select('id, text_content, text_length, created_at')
+        .select('id, text_content, text_length, created_at, coherency_level')
         .eq('edited', false)
         .range(randomOffset, randomOffset)
 
@@ -95,6 +96,9 @@ async function editText(text, index, total) {
   console.log(`📝 Text ${index + 1} of ${total} (ID: ${text.id})`)
   console.log(`📏 Length: ${text.text_length} characters`)
   console.log(`📅 Created: ${new Date(text.created_at).toLocaleDateString()}`)
+  if (text.coherency_level) {
+    console.log(`📊 Coherency Level: ${text.coherency_level}/100`)
+  }
   console.log('='.repeat(80))
   console.log('\n📄 Current text:')
   console.log('─'.repeat(40))
@@ -191,6 +195,28 @@ async function editTextLineByLine(text) {
 }
 
 /**
+ * Save coherency level to the database
+ */
+async function saveCoherencyLevel(text, coherencyLevel) {
+  try {
+    const { error } = await supabase
+      .from('markov_texts')
+      .update({ coherency_level: coherencyLevel })
+      .eq('id', text.id)
+
+    if (error) {
+      throw new Error(`Failed to save coherency level: ${error.message}`)
+    }
+
+    console.log('✅ Coherency level saved successfully!')
+    return { success: true, text: { ...text, coherency_level: coherencyLevel } }
+  } catch (error) {
+    console.error('❌ Error saving coherency level:', error.message)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
  * Finish the editing process
  */
 async function finishEditing(text, lines) {
@@ -279,6 +305,19 @@ async function startEditor() {
         editedCount++
       } else if (result === null) {
         skippedCount++
+      }
+
+      // Always ask for coherency level after processing each text (unless exiting)
+      if (result !== 'exit') {
+        const coherencyResult = await editCoherencyLevel(
+          question,
+          texts[i],
+          saveCoherencyLevel
+        )
+        if (coherencyResult && coherencyResult.success) {
+          // Update the text object with new coherency level for display
+          texts[i] = coherencyResult.text
+        }
       }
     }
 

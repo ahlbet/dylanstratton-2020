@@ -84,6 +84,7 @@
     "test": "jest",
     "new-day": "node ./init.js",
     "new-day-dry-run": "node scripts/init-dry-run.js",
+    "markov-editor": "node scripts/markov-text-editor-cli.js",
     "generate-markov": "node scripts/generate-markov-data.js",
     "clean-markov-bad-words": "node scripts/clean-markov-texts-with-bad-words.js",
     "clean-asterisks": "node scripts/clean-asterisks-from-markov-texts.js"
