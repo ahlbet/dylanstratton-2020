@@ -76,9 +76,11 @@
   },
   "scripts": {
     "build": "gatsby build",
-    "develop": "gatsby develop",
+    "develop": "NODE_ENV=development GATSBY_USE_LOCAL_DATA=true gatsby develop",
+    "develop-local": "NODE_ENV=development GATSBY_USE_LOCAL_DATA=true gatsby develop",
     "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
-    "start": "npm run develop",
+    "start": " npm run develop",
+    "start-local": "npm run develop-local",
     "serve": "gatsby serve",
     "clean": "gatsby clean",
     "test": "jest",
@@ -87,6 +89,14 @@
     "markov-editor": "node scripts/markov-text-editor-cli.js",
     "generate-markov": "node scripts/generate-markov-data.js",
     "clean-markov-bad-words": "node scripts/clean-markov-texts-with-bad-words.js",
-    "clean-asterisks": "node scripts/clean-asterisks-from-markov-texts.js"
+    "clean-asterisks": "node scripts/clean-asterisks-from-markov-texts.js",
+    "generate-local-data": "node scripts/generate-local-markov-data.js",
+    "test-local-dev": "node scripts/test-local-dev.js",
+    "fetch-audio": "node scripts/fetch-all-audio-from-supabase.js",
+    "test-init-local": "node scripts/test-init-local-update.js",
+    "debug-local-dev": "node scripts/debug-local-dev.js",
+    "test-url-conversion": "node scripts/test-url-conversion.js",
+    "clean-local-markov": "node scripts/clean-local-markov-texts.js",
+    "fetch-markov-texts": "node scripts/fetch-markov-texts-from-supabase.js"
   }
 }
