@@ -14,14 +14,6 @@ import { extractAudioUrls } from '../utils/extractAudioUrls'
 import AudioFFT from '../components/audio-fft/AudioFFT'
 import { convertAudioUrlsToLocal } from '../utils/local-audio-urls'
 
-// Lazy load the audio reactive grid sketch to prevent SSR issues
-const AudioReactiveGridSketch = React.lazy(
-  () =>
-    import(
-      '../components/audio-reactive-grid-sketch/audio-reactive-grid-sketch'
-    )
-)
-
 // Component to handle autopilot state on /all page
 const AllSongsAutopilotHandler = () => {
   const { isAutopilotOn, toggleAutopilot } = useAudioPlayer()
