@@ -26,14 +26,36 @@ export default function AudioFFT({ markovText = '' }) {
   const { audioRef } = useAudioPlayer()
 
   useEffect(() => {
-    // guard: we need the audio DOM node + global p5 loaded (via your gatsby-ssr.js script tags)
-    if (typeof window === 'undefined' || !window.p5 || !audioRef.current) {
+    // Enhanced guards for proper initialization
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    // Wait for p5 to be available
+    if (!window.p5) {
+      console.warn('p5 not available, waiting...')
+      return
+    }
+
+    // Wait for audio context to be available
+    if (!audioRef || !audioRef.current) {
+      console.warn('Audio ref not available, waiting...')
+      return
+    }
+
+    // Wait for container to be available
+    if (!containerRef.current) {
+      console.warn('Container ref not available, waiting...')
       return
     }
 
     // Clean up any existing p5 instance before creating a new one
     if (p5InstanceRef.current) {
-      p5InstanceRef.current.remove()
+      try {
+        p5InstanceRef.current.remove()
+      } catch (error) {
+        console.warn('Error removing p5 instance:', error)
+      }
       p5InstanceRef.current = null
     }
 
@@ -45,92 +67,139 @@ export default function AudioFFT({ markovText = '' }) {
       let particles = []
       let frequencyData = []
       let smoothedData = []
+      let isInitialized = false
 
       // Generate seed from markov text
       const markovSeed = generateSeedFromText(markovText)
       let tatShapePositions = []
 
       p.setup = () => {
-        // Setup canvas and audio using utilities
-        const setup = setupAudioReactiveCanvas(p, P5, audioRef.current, {
-          fftSmoothing: 0.9,
-          fftSize: 2048,
-          onResize: (width, height) => {
-            // Regenerate Tat shape positions for new canvas size
-            tatShapePositions = generateTatShapePositions(
-              markovSeed,
-              width,
-              height,
-              5
+        try {
+          // Additional safety check for canvas dimensions
+          if (!containerRef.current) {
+            console.warn('Container not available in setup')
+            return
+          }
+
+          // Setup canvas and audio using utilities
+          const setup = setupAudioReactiveCanvas(p, P5, audioRef.current, {
+            fftSmoothing: 0.9,
+            fftSize: 2048,
+            onResize: (width, height) => {
+              if (!isInitialized || !width || !height) return
+
+              // Regenerate Tat shape positions for new canvas size
+              tatShapePositions = generateTatShapePositions(
+                markovSeed,
+                width,
+                height,
+                5
+              )
+
+              // Re-add dynamic movement properties to new positions
+              addDynamicMovementToPositions(tatShapePositions, p)
+            },
+          })
+
+          // Extract setup components
+          fft = setup.fft
+          sourceNode = setup.sourceNode
+          const { width: containerWidth, height: containerHeight } =
+            setup.dimensions
+
+          // Guard against failed FFT setup
+          if (!fft) {
+            console.warn('🎵 FFT setup failed, skipping animation loop')
+            return
+          }
+
+          // Guard against invalid canvas dimensions
+          if (
+            !containerWidth ||
+            !containerHeight ||
+            containerWidth <= 0 ||
+            containerHeight <= 0
+          ) {
+            console.warn('Invalid canvas dimensions:', {
+              containerWidth,
+              containerHeight,
+            })
+            return
+          }
+
+          // Initialize frequency data arrays
+          const frequencyDataInit = initializeFrequencyData(8)
+          frequencyData = frequencyDataInit.frequencyData
+          smoothedData = frequencyDataInit.smoothedData
+
+          // Generate Tat shape positions for particle spawning
+          tatShapePositions = generateTatShapePositions(
+            markovSeed,
+            containerWidth,
+            containerHeight,
+            5
+          )
+
+          // Add dynamic movement to spawn positions
+          addDynamicMovementToPositions(tatShapePositions, p)
+
+          // Update spawn positions dynamically
+          const updateSpawnPositions = () => {
+            if (
+              !isInitialized ||
+              !tatShapePositions ||
+              !p ||
+              !p.width ||
+              !p.height
             )
+              return
 
-            // Re-add dynamic movement properties to new positions
-            addDynamicMovementToPositions(tatShapePositions, p)
-          },
-        })
+            // Update Tat shape positions with current canvas dimensions
+            updateTatShapePositions(tatShapePositions, p)
+          }
 
-        // Extract setup components
-        fft = setup.fft
-        sourceNode = setup.sourceNode
-        const { width: containerWidth, height: containerHeight } =
-          setup.dimensions
+          // Create the main animation loop using utility (after FFT is initialized)
+          p.draw = createAudioReactiveAnimationLoop(
+            p,
+            fft,
+            particles,
+            smoothedData,
+            tatShapePositions,
+            markovSeed,
+            updateSpawnPositions,
+            analyzeFrequencyBands,
+            getFrequencyBands,
+            calculateMaxParticles,
+            calculateCanvasScale,
+            calculateParticleCount,
+            calculateSpawnPosition,
+            calculateStaggeredSpawn,
+            Particle
+          )
 
-        // Guard against failed FFT setup
-        if (!fft) {
-          console.warn('🎵 FFT setup failed, skipping animation loop')
-          return
+          isInitialized = true
+        } catch (error) {
+          console.error('Error in p5 setup:', error)
         }
-
-        // Initialize frequency data arrays
-        const frequencyDataInit = initializeFrequencyData(8)
-        frequencyData = frequencyDataInit.frequencyData
-        smoothedData = frequencyDataInit.smoothedData
-
-        // Generate Tat shape positions for particle spawning
-        tatShapePositions = generateTatShapePositions(
-          markovSeed,
-          containerWidth,
-          containerHeight,
-          5
-        )
-
-        // Add dynamic movement to spawn positions
-        addDynamicMovementToPositions(tatShapePositions, p)
-
-        // Update spawn positions dynamically
-        const updateSpawnPositions = () => {
-          // Update Tat shape positions with current canvas dimensions
-          updateTatShapePositions(tatShapePositions, p)
-        }
-
-        // Create the main animation loop using utility (after FFT is initialized)
-        p.draw = createAudioReactiveAnimationLoop(
-          p,
-          fft,
-          particles,
-          smoothedData,
-          tatShapePositions,
-          markovSeed,
-          updateSpawnPositions,
-          analyzeFrequencyBands,
-          getFrequencyBands,
-          calculateMaxParticles,
-          calculateCanvasScale,
-          calculateParticleCount,
-          calculateSpawnPosition,
-          calculateStaggeredSpawn,
-          Particle
-        )
       }
     }
 
-    // 4) spin up p5 with proper container
-    p5InstanceRef.current = new P5(sketch, containerRef.current)
+    // Create p5 instance with error handling
+    try {
+      p5InstanceRef.current = new P5(sketch, containerRef.current)
+    } catch (error) {
+      console.error('Error creating p5 instance:', error)
+      p5InstanceRef.current = null
+    }
 
     // cleanup
     return () => {
       if (p5InstanceRef.current) {
-        p5InstanceRef.current.remove()
+        try {
+          p5InstanceRef.current.remove()
+        } catch (error) {
+          console.warn('Error removing p5 instance during cleanup:', error)
+        }
         p5InstanceRef.current = null
       }
     }
