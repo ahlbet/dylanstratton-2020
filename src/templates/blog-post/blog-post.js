@@ -16,6 +16,7 @@ import {
 import {
   convertAudioUrlsToLocal,
   convertCoverArtUrlToLocal,
+  getCoverArtUrl,
 } from '../../utils/local-audio-urls'
 import './blog-post.css'
 import { rhythm, scale } from '../../utils/typography'
@@ -28,13 +29,14 @@ import { FixedAudioPlayer } from '../../components/fixed-audio-player/FixedAudio
 import AudioFFT from '../../components/audio-fft/AudioFFT' // Add this import for the audio FFT component
 
 // Component to handle autopilot auto-play and playlist setup
-const AutopilotAutoPlay = ({ audioUrls }) => {
+const AutopilotAutoPlay = ({ audioData }) => {
   const { setPlaylist, playlist, playTrack } = useAudioPlayer()
 
   useEffect(() => {
     // Always set up the playlist for this page's audio tracks
-    if (audioUrls.length > 0) {
-      const tracks = audioUrls.map((url, index) => {
+    if (audioData.length > 0) {
+      const tracks = audioData.map((audioItem, index) => {
+        const url = typeof audioItem === 'string' ? audioItem : audioItem.url
         const filename = url
           .split('/')
           .pop()
@@ -53,7 +55,9 @@ const AutopilotAutoPlay = ({ audioUrls }) => {
 
       // Only set playlist if it's different from current playlist
       const currentUrls = playlist.map((track) => track.url)
-      const newUrls = audioUrls
+      const newUrls = audioData.map((item) =>
+        typeof item === 'string' ? item : item.url
+      )
 
       if (JSON.stringify(currentUrls) !== JSON.stringify(newUrls)) {
         setPlaylist(tracks)
@@ -105,7 +109,7 @@ const AutopilotAutoPlay = ({ audioUrls }) => {
       // If no audio URLs, clear the playlist
       setPlaylist([])
     }
-  }, [audioUrls, setPlaylist, playTrack, playlist])
+  }, [audioData, setPlaylist, playTrack, playlist])
 
   return null
 }
@@ -114,40 +118,75 @@ const AutopilotAutoPlay = ({ audioUrls }) => {
 const BlogPostTemplate = ({ data, pageContext, location }) => {
   const post = data.markdownRemark
   const siteTitle = data.site.siteMetadata.title
-  const { previous, next } = pageContext
+  const { previous, next, markdownData, supabaseData } = pageContext
   const { calendarVisible } = useUserPreferences()
 
-  // Extract Markov text from the post content
-  const extractMarkovText = (html) => {
-    // Find all blockquote elements in the HTML
-    const blockquoteRegex = /<blockquote[^>]*>(.*?)<\/blockquote>/gs
-    const matches = html.match(blockquoteRegex)
+  // Use Supabase data if available, otherwise fall back to markdown extraction
+  let audioData = []
+  let markovText = ''
+  let cleanedHtml = post.html
 
-    if (!matches) return ''
-
-    // Extract text content from blockquotes and join them
-    const markovText = matches
-      .map((blockquote) => {
-        // Remove HTML tags and get just the text
-        return blockquote.replace(/<[^>]*>/g, '').trim()
-      })
-      .filter((text) => text.length > 0)
-      .join(' ')
-
-    return markovText
+  if (supabaseData && supabaseData.audio && supabaseData.audio.length > 0) {
+    // Use Supabase audio data
+    audioData = supabaseData.audio.map((audio) => {
+      const fullUrl = `https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/${audio.storage_path}`
+      return {
+        ...audio,
+        url: convertAudioUrlsToLocal([fullUrl])[0],
+        duration: audio.duration || null,
+        format: audio.format || 'audio/wav',
+      }
+    })
+  } else {
+    // Fall back to extracting from markdown HTML
+    const extractedUrls = convertAudioUrlsToLocal(extractAudioUrls(post.html))
+    audioData = extractedUrls.map((url) => ({
+      url,
+      duration: null,
+      format: 'audio/wav',
+    }))
   }
 
-  const markovText = extractMarkovText(post.html)
+  if (
+    supabaseData &&
+    supabaseData.markovTexts &&
+    supabaseData.markovTexts.length > 0
+  ) {
+    // Use Supabase markov texts
+    markovText = supabaseData.markovTexts
+      .map((markov) => markov.text_content)
+      .join(' ')
+  } else {
+    // Fall back to extracting from markdown HTML
+    const extractMarkovText = (html) => {
+      // Find all blockquote elements in the HTML
+      const blockquoteRegex = /<blockquote[^>]*>(.*?)<\/blockquote>/gs
+      const matches = html.match(blockquoteRegex)
 
-  // Extract audio URLs from the post content and convert to local URLs if in dev mode
-  const audioUrls = convertAudioUrlsToLocal(extractAudioUrls(post.html))
+      if (!matches) return ''
 
-  // Remove audio elements from HTML to prevent duplicates
-  const cleanedHtml = removeAudioFromHtml(post.html)
+      // Extract text content from blockquotes and join them
+      const markovText = matches
+        .map((blockquote) => {
+          // Remove HTML tags and get just the text
+          return blockquote.replace(/<[^>]*>/g, '').trim()
+        })
+        .filter((text) => text.length > 0)
+        .join(' ')
+
+      return markovText
+    }
+    markovText = extractMarkovText(post.html)
+  }
+
+  // Remove audio elements from HTML to prevent duplicates (only if we're using Supabase audio)
+  if (supabaseData && supabaseData.audio && supabaseData.audio.length > 0) {
+    cleanedHtml = removeAudioFromHtml(post.html)
+  }
 
   return (
     <AudioPlayerProvider>
-      <AutopilotAutoPlay audioUrls={audioUrls} />
+      <AutopilotAutoPlay audioData={audioData} />
       <Layout location={location} title={siteTitle}>
         <SEO
           title={post.frontmatter.title}
@@ -171,6 +210,12 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                     }}
                   >
                     {post.frontmatter.title}
+                    {supabaseData?.daily?.coherency_level && (
+                      <span style={{ fontSize: '0.8em', opacity: 0.8 }}>
+                        {' '}
+                        {supabaseData.daily.coherency_level}
+                      </span>
+                    )}
                   </h1>
 
                   {/* Date */}
@@ -238,14 +283,16 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
 
             {/* Audio Player - After canvas on mobile */}
             <div className="audio-player-section">
-              {audioUrls.length > 0 && (
+              {audioData.length > 0 && (
                 <div style={{ marginBottom: rhythm(1) }}>
                   <BlogAudioPlayer
-                    audioUrls={audioUrls}
+                    audioData={audioData}
                     postTitle={post.frontmatter.title}
                     postDate={post.frontmatter.date}
                     coverArtUrl={convertCoverArtUrlToLocal(
-                      post.frontmatter.cover_art,
+                      supabaseData?.daily?.cover_art
+                        ? getCoverArtUrl(supabaseData.daily.cover_art)
+                        : post.frontmatter.cover_art,
                       post.frontmatter.title
                     )}
                   />
@@ -257,10 +304,38 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
             <div className="post-content-section">
               <article>
                 {/* Markov Text (Post Content) */}
-                <section
-                  style={{ marginBottom: rhythm(2) }}
-                  dangerouslySetInnerHTML={{ __html: cleanedHtml }}
-                />
+                {/* Markov Texts from Supabase */}
+                {supabaseData &&
+                  supabaseData.markovTexts &&
+                  supabaseData.markovTexts.length > 0 && (
+                    <section style={{ marginBottom: rhythm(2) }}>
+                      {supabaseData.markovTexts.map((markov, index) => (
+                        <blockquote
+                          key={markov.id}
+                          style={{
+                            borderLeft: '4px solid #DE3163',
+                            margin: '1rem 0',
+                            padding: '0.5rem 1rem',
+                            fontStyle: 'italic',
+                            backgroundColor: 'rgba(222, 49, 99, 0.05)',
+                          }}
+                        >
+                          {markov.coherency_level && (
+                            <span
+                              style={{
+                                fontSize: '0.9em',
+                                opacity: 0.7,
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              {markov.coherency_level}{' '}
+                            </span>
+                          )}
+                          {markov.text_content}
+                        </blockquote>
+                      ))}
+                    </section>
+                  )}
 
                 {/* Dynamic Markov Text Generator */}
                 <div style={{ marginBottom: rhythm(2) }}>
@@ -352,6 +427,7 @@ export const pageQuery = graphql`
         title
         date(formatString: "MMMM DD, YYYY")
         cover_art
+        daily_id
       }
       fields {
         slug

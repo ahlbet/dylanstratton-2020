@@ -6807,6 +6807,11 @@ gatsby-source-filesystem@^5.14.0:
     valid-url "^1.0.9"
     xstate "^4.38.0"
 
+gatsby-source-supabase@^2.1.2:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/gatsby-source-supabase/-/gatsby-source-supabase-2.1.2.tgz#55616cb600f498b9c6f74d5d91f8328b4b9bc0fa"
+  integrity sha512-W19GKe38TRs+fNnofvmS9IIH/33UTkXndXah/1zGKy9wf6EbxmfTmW4MynxZJLU1M1KzcWFQ4K0e/wkSOY0EZw==
+
 gatsby-transformer-remark@^6.14.0:
   version "6.14.0"
   resolved "https://registry.npmjs.org/gatsby-transformer-remark/-/gatsby-transformer-remark-6.14.0.tgz"

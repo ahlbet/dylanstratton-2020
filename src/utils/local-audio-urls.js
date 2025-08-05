@@ -51,10 +51,17 @@ export const convertCoverArtUrlToLocal = (supabaseUrl, postName) => {
     // Extract post name from URL or use provided postName
     let postNameFromUrl = postName
     if (!postNameFromUrl) {
-      const url = new URL(supabaseUrl)
-      const pathParts = url.pathname.split('/')
-      const filename = pathParts[pathParts.length - 1]
-      postNameFromUrl = filename.replace('.png', '').split('?')[0]
+      // Handle both full URLs and storage paths
+      if (supabaseUrl.startsWith('http')) {
+        const url = new URL(supabaseUrl)
+        const pathParts = url.pathname.split('/')
+        const filename = pathParts[pathParts.length - 1]
+        postNameFromUrl = filename.replace('.png', '').split('?')[0]
+      } else if (supabaseUrl.includes('/')) {
+        // Handle storage path like "cover-art/25jul16.png"
+        const filename = supabaseUrl.split('/').pop()
+        postNameFromUrl = filename.replace('.png', '')
+      }
     }
 
     return `/local-cover-art/${postNameFromUrl}.png`
@@ -62,6 +69,20 @@ export const convertCoverArtUrlToLocal = (supabaseUrl, postName) => {
     console.warn('Failed to convert cover art URL to local:', error)
     return supabaseUrl
   }
+}
+
+export const getCoverArtUrl = (storagePath) => {
+  if (!storagePath) {
+    return null
+  }
+
+  // If it's already a full URL, return as is
+  if (storagePath.startsWith('http')) {
+    return storagePath
+  }
+
+  // Convert storage path to full URL
+  return `https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/${storagePath}`
 }
 
 const localAudioUrls = {

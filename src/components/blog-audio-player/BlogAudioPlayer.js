@@ -224,25 +224,25 @@ const CustomPlaylist = ({
   )
 }
 
-const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
+const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
   const [isMuted, setIsMuted] = useState(false)
   const [isDownloadingZip, setIsDownloadingZip] = useState(false)
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 
-  // Normalize audioUrls to handle both string URLs and objects with metadata
-  const normalizedAudioUrls = useMemo(() => {
-    return audioUrls.map((item) => {
+  // Normalize audioData to handle both string URLs and objects with metadata
+  const normalizedAudioData = useMemo(() => {
+    return audioData.map((item) => {
       if (typeof item === 'string') {
         return { url: item, postTitle, postDate }
       }
       return item
     })
-  }, [audioUrls, postTitle, postDate])
+  }, [audioData, postTitle, postDate])
 
   // Extract just the URLs for the audio player context
   const audioUrlStrings = useMemo(() => {
-    return normalizedAudioUrls.map((item) => item.url)
-  }, [normalizedAudioUrls])
+    return normalizedAudioData.map((item) => item.url)
+  }, [normalizedAudioData])
 
   // Get audio player context
   const {
@@ -258,7 +258,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
   } = useAudioPlayer()
 
   // Use shared hook for track durations
-  const { trackDurations } = useTrackDurations(audioUrls)
+  const { trackDurations } = useTrackDurations(audioUrlStrings)
 
   // Use shared hook for scroll to track
   const { trackListRef, setTrackItemRef } = useScrollToTrack(
@@ -336,7 +336,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     setIsDownloadingZip(true)
 
     // Capture current values to avoid dependency issues
-    const currentAudioUrls = audioUrls
+    const currentAudioData = audioData
     const currentPostTitle = postTitle
     const currentPostDate = postDate
 
@@ -349,7 +349,8 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
 
     try {
       // Fetch all files and add to ZIP
-      const fetchPromises = currentAudioUrls.map(async (url) => {
+      const fetchPromises = currentAudioData.map(async (audioItem) => {
+        const url = typeof audioItem === 'string' ? audioItem : audioItem.url
         const urlParts = url.split('/')
         const filename = urlParts[urlParts.length - 1]
 
@@ -419,19 +420,20 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     } finally {
       setIsDownloadingZip(false)
     }
-  }, [isDownloadingZip, audioUrls, postTitle, postDate]) // Dependencies for the download function
+  }, [isDownloadingZip, audioData, postTitle, postDate]) // Dependencies for the download function
 
-  // Convert audio URLs to track format
+  // Convert audio data to track format
   const tracks = useMemo(() => {
-    // Ensure audioUrls is an array
-    if (!audioUrls || !Array.isArray(audioUrls) || audioUrls.length === 0) {
+    // Ensure audioData is an array
+    if (!audioData || !Array.isArray(audioData) || audioData.length === 0) {
       return []
     }
 
-    return audioUrls
-      .map((url, index) => {
-        // Ensure url is a string
-        if (!url || typeof url !== 'string') {
+    return audioData
+      .map((audioItem, index) => {
+        // Handle both string URLs and objects
+        const url = typeof audioItem === 'string' ? audioItem : audioItem.url
+        if (!url) {
           return null
         }
 
@@ -440,10 +442,22 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
         const filename = urlParts[urlParts.length - 1]
         const trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
 
-        const duration = formatDuration(trackDurations[url])
+        // Use Supabase duration if available, otherwise fall back to trackDurations
+        let duration
+        if (audioItem.duration && typeof audioItem.duration === 'number') {
+          duration = formatDuration(audioItem.duration)
+        } else {
+          duration = formatDuration(trackDurations[url])
+        }
+
+        // Add coherency level to title if available
+        const coherencyLevel = audioItem.coherency_level
+        const titleWithCoherency = coherencyLevel
+          ? `${trackName || 'Unknown Track'} ${coherencyLevel}`
+          : trackName || 'Unknown Track'
 
         return {
-          title: trackName || 'Unknown Track',
+          title: titleWithCoherency,
           artist: postTitle || 'Unknown Artist',
           album: postDate || 'Unknown Album',
           duration: duration || '0:00',
@@ -455,7 +469,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
         }
       })
       .filter(Boolean) // Remove any null entries
-  }, [audioUrls, postTitle, postDate, trackDurations, coverArtUrl])
+  }, [audioData, postTitle, postDate, trackDurations, coverArtUrl])
 
   // Calculate total playlist duration
   const totalDuration = useMemo(() => {
@@ -536,7 +550,7 @@ const BlogAudioPlayer = ({ audioUrls, postTitle, postDate, coverArtUrl }) => {
     ]
   )
 
-  if (!audioUrls || !Array.isArray(audioUrls) || audioUrls.length === 0) {
+  if (!audioData || !Array.isArray(audioData) || audioData.length === 0) {
     return null
   }
 

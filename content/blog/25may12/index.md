@@ -1,9 +1,11 @@
 ---
 title: 25may09
-date: '2025-05-09T19:33:03.000Z'
+date: "2025-05-09T19:33:03.000Z"
 description: 
-cover_art: https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/cover-art/25may12.png?v=1753312425838
+cover_art: "https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/cover-art/25may12.png?v=1753312425838"
+daily_id: 38
 ---
+
 
 `audio: https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/audio/25may12-25may09.wav`
 

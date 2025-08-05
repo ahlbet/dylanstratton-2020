@@ -1,3 +1,5 @@
+require('dotenv').config()
+
 module.exports = {
   siteMetadata: {
     title: 'degreesminutesseconds',
@@ -127,5 +129,26 @@ module.exports = {
     // this (optional) plugin enables Progressive Web App + Offline functionality
     // To learn more, visit: https://gatsby.dev/offline
     // `gatsby-plugin-offline`,
+    {
+      resolve: 'gatsby-source-supabase',
+      options: {
+        supabaseUrl: process.env.SUPABASE_URL,
+        supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        types: [
+          {
+            type: 'Daily',
+            query: (client) => client.from('daily').select('*'),
+          },
+          {
+            type: 'DailyAudio',
+            query: (client) => client.from('daily_audio').select('*'),
+          },
+          {
+            type: 'MarkovTexts',
+            query: (client) => client.from('markov_texts').select('*'),
+          },
+        ],
+      },
+    },
   ],
 }
