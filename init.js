@@ -634,32 +634,26 @@ const main = async () => {
     )
   }
 
-  // Update local development data if in development mode
-  if (
-    process.env.NODE_ENV === 'development' &&
-    process.env.GATSBY_USE_LOCAL_DATA === 'true'
-  ) {
-    try {
-      console.log('\n🔄 Updating local development data...')
+  try {
+    console.log('\n🔄 Updating local development data...')
 
-      // Update local audio files
-      await updateLocalAudioFiles(movedFiles)
+    // Update local audio files
+    await updateLocalAudioFiles(movedFiles)
 
-      // Update local Markov texts
-      await updateLocalMarkovTexts(supabaseTexts, name)
+    // Update local Markov texts
+    await updateLocalMarkovTexts(supabaseTexts, name)
 
-      // Update local cover art
-      if (coverArtUrl) {
-        await updateLocalCoverArt(name, coverArtBuffer)
-      }
-
-      console.log('✅ Local development data updated successfully!')
-    } catch (error) {
-      console.warn('⚠️ Failed to update local development data:', error.message)
-      console.log(
-        'You can manually update local data with: yarn generate-local-data'
-      )
+    // Update local cover art
+    if (coverArtUrl) {
+      await updateLocalCoverArt(name, coverArtBuffer)
     }
+
+    console.log('✅ Local development data updated successfully!')
+  } catch (error) {
+    console.warn('⚠️ Failed to update local development data:', error.message)
+    console.log(
+      'You can manually update local data with: yarn generate-local-data'
+    )
   }
 
   // Close readline interface
