@@ -129,7 +129,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
   if (supabaseData && supabaseData.audio && supabaseData.audio.length > 0) {
     // Use Supabase audio data
     audioData = supabaseData.audio.map((audio) => {
-      const fullUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${audio.storage_path}`
+      const fullUrl = `https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/${audio.storage_path}`
       return {
         ...audio,
         url: convertAudioUrlsToLocal([fullUrl])[0],
