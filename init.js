@@ -8,6 +8,10 @@ const path = require('path')
 const readline = require('readline')
 const { execSync } = require('child_process')
 const { createClient } = require('@supabase/supabase-js')
+const https = require('https')
+const { promisify } = require('util')
+const stream = require('stream')
+const pipeline = promisify(stream.pipeline)
 
 // Create readline interface for user input
 const rl = readline.createInterface({
@@ -78,6 +82,66 @@ const editText = async (originalText, textNumber) => {
   }
 
   return lines.join('\n')
+}
+
+// Function to extract audio duration from WAV file
+const extractAudioDuration = async (filePath) => {
+  try {
+    console.log(`   📊 Extracting duration from: ${path.basename(filePath)}`)
+
+    const data = fs.readFileSync(filePath)
+
+    if (data.length < 80) {
+      console.log(`   ⚠️ File too small, using null`)
+      return null
+    }
+
+    // Check if it's actually a WAV file (should start with "RIFF")
+    const riffHeader = data.toString('ascii', 0, 4)
+    if (riffHeader !== 'RIFF') {
+      console.log(`   ⚠️ Not a valid WAV file (no RIFF header), using null`)
+      return null
+    }
+
+    // Find the format chunk ("fmt ")
+    const fmtIndex = data.indexOf('fmt ')
+    if (fmtIndex === -1) {
+      console.log(`   ⚠️ No format chunk found, using null`)
+      return null
+    }
+
+    // Find the data chunk ("data")
+    const dataIndex = data.indexOf('data')
+    if (dataIndex === -1) {
+      console.log(`   ⚠️ No data chunk found, using null`)
+      return null
+    }
+
+    // Read format chunk data
+    const sampleRate = data.readUInt32LE(fmtIndex + 12)
+    const byteRate = data.readUInt32LE(fmtIndex + 16)
+    const dataSize = data.readUInt32LE(dataIndex + 4)
+
+    if (sampleRate > 0 && byteRate > 0 && dataSize > 0) {
+      const durationSeconds = dataSize / byteRate
+      if (durationSeconds > 0 && durationSeconds < 3600) {
+        // Sanity check: between 0 and 1 hour
+        console.log(`   ✅ Duration: ${durationSeconds.toFixed(2)} seconds`)
+        return Math.round(durationSeconds)
+      } else {
+        console.log(
+          `   ⚠️ Duration out of reasonable range (${durationSeconds}s), using null`
+        )
+        return null
+      }
+    } else {
+      console.log(`   ⚠️ Invalid WAV header values, using null`)
+      return null
+    }
+  } catch (error) {
+    console.log(`   ⚠️ Duration extraction failed: ${error.message}`)
+    return null
+  }
 }
 
 // Function to strip special characters except hyphens
@@ -397,9 +461,17 @@ const main = async () => {
             : `${sanitizedName}-${index + 1}${fileExtension}`
 
         try {
+          // Extract duration before uploading
+          const duration = await extractAudioDuration(sourcePath)
+
           // Upload to Supabase instead of moving to local storage
           const supabaseUrl = await uploadToSupabase(sourcePath, uniqueFileName)
-          movedFiles.push({ fileName: uniqueFileName, url: supabaseUrl })
+          movedFiles.push({
+            fileName: uniqueFileName,
+            url: supabaseUrl,
+            duration: duration,
+            storagePath: `audio/${uniqueFileName}`,
+          })
           console.log(
             `Uploaded file '${wavFile}' to Supabase as '${uniqueFileName}'.`
           )
@@ -427,13 +499,21 @@ const main = async () => {
     console.log(`Created backup at '${backupPath}'.`)
 
     try {
+      // Extract duration before uploading
+      const duration = await extractAudioDuration(singleFilePath)
+
       // Upload to Supabase instead of moving to local storage
       const sanitizedName = sanitizeFilename(name)
       const supabaseUrl = await uploadToSupabase(
         singleFilePath,
         `${sanitizedName}.wav`
       )
-      movedFiles.push({ fileName: `${sanitizedName}.wav`, url: supabaseUrl })
+      movedFiles.push({
+        fileName: `${sanitizedName}.wav`,
+        url: supabaseUrl,
+        duration: duration,
+        storagePath: `audio/${sanitizedName}.wav`,
+      })
       console.log(
         `Uploaded file '${name}.wav' to Supabase as '${sanitizedName}.wav'.`
       )
@@ -536,9 +616,8 @@ const main = async () => {
   // Format for markdown
   const markovText = editedTexts.map((text) => `> ${text}`).join('\n\n')
 
-  // Upload edited texts to Supabase
-  console.log('📦 Uploading edited texts to Supabase...')
-  const supabaseTexts = editedTexts.map((text, index) => ({
+  // Prepare markov texts data (without daily_id for now)
+  const markovTextsData = editedTexts.map((text, index) => ({
     text_content: text,
     text_length: text.length,
     coherency_level: coherencyLevels[index],
@@ -551,19 +630,6 @@ const main = async () => {
       cleaned_with_bad_words_filter: true,
     },
   }))
-
-  try {
-    const { error } = await supabase.from('markov_texts').insert(supabaseTexts)
-    if (error) {
-      console.error('Failed to upload texts to Supabase:', error.message)
-    } else {
-      console.log(
-        `✅ Successfully uploaded ${supabaseTexts.length} texts to Supabase`
-      )
-    }
-  } catch (error) {
-    console.error('Failed to upload texts to Supabase:', error.message)
-  }
 
   // Generate cover art for the blog post
   let coverArtUrl = ''
@@ -590,12 +656,102 @@ const main = async () => {
     // Cover art is optional, continue without it
   }
 
-  // Replace {name}, {date}, {description}, {audio_files}, {cover_art}, and {markov_text} in template
+  // Create daily entry in Supabase and get daily_id
+  let dailyId = null
+  let supabaseTexts = [] // Declare outside the block so it's available for local update
+  try {
+    console.log('📝 Creating daily entry in Supabase...')
+
+    // Prepare cover art path if cover art was generated
+    const coverArtPath = coverArtUrl
+      ? `cover-art/${sanitizeFilename(name)}.png`
+      : null
+
+    const { data, error } = await supabase
+      .from('daily')
+      .insert([
+        {
+          title: name,
+          cover_art: coverArtPath,
+        },
+      ])
+      .select()
+
+    if (error) {
+      console.error('Failed to create daily entry:', error.message)
+    } else {
+      dailyId = data[0].id
+      console.log(`✅ Created daily entry with ID: ${dailyId}`)
+      if (coverArtPath) {
+        console.log(`🎨 Added cover art path: ${coverArtPath}`)
+      }
+
+      // Create daily_audio entries for uploaded files
+      if (movedFiles.length > 0) {
+        console.log('🎵 Creating daily_audio entries...')
+        for (const file of movedFiles) {
+          try {
+            const { error: audioError } = await supabase
+              .from('daily_audio')
+              .insert([
+                {
+                  daily_id: dailyId,
+                  storage_path: file.storagePath,
+                  duration: file.duration,
+                  format: 'audio/wav',
+                },
+              ])
+
+            if (audioError) {
+              console.error(
+                `Failed to create daily_audio entry for ${file.fileName}:`,
+                audioError.message
+              )
+            } else {
+              console.log(`✅ Created daily_audio entry for ${file.fileName}`)
+            }
+          } catch (error) {
+            console.error(
+              `Failed to create daily_audio entry for ${file.fileName}:`,
+              error.message
+            )
+          }
+        }
+
+        // Upload markov texts with daily_id
+        console.log('📦 Uploading edited texts to Supabase...')
+        supabaseTexts = markovTextsData.map((textData) => ({
+          ...textData,
+          daily_id: dailyId, // Now we have the daily_id
+        }))
+
+        try {
+          const { error } = await supabase
+            .from('markov_texts')
+            .insert(supabaseTexts)
+          if (error) {
+            console.error('Failed to upload texts to Supabase:', error.message)
+          } else {
+            console.log(
+              `✅ Successfully uploaded ${supabaseTexts.length} texts to Supabase`
+            )
+          }
+        } catch (error) {
+          console.error('Failed to upload texts to Supabase:', error.message)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to create daily entry:', error.message)
+  }
+
+  // Replace {name}, {date}, {description}, {audio_files}, {cover_art}, {daily_id}, and {markov_text} in template
   template = template
     .replace(/\{name\}/g, name)
     .replace(/\{date\}/g, date)
     .replace(/\{audio_files\}/g, audioFilesContent)
     .replace(/\{cover_art\}/g, coverArtUrl)
+    .replace(/\{daily_id\}/g, dailyId || '')
     .replace(/\{markov_text\}/g, markovText)
 
   fs.mkdirSync(dir, { recursive: true })
