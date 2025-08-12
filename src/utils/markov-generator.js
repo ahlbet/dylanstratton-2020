@@ -172,103 +172,13 @@ class MarkovGenerator {
     }
   }
 
-  // New method to load from Supabase markov-text bucket
-  async loadTextFromSupabase(bucketName = 'markov-text') {
-    // This method is now redundant since the logic is in the constructor
-    // Keeping it for backward compatibility but it will always fallback
-    console.warn(
-      'Using fallback method - Supabase loading is handled in constructor'
-    )
-    return this.loadTextFromFallback()
-
-    try {
-      // Initialize Supabase client
-      const supabaseUrl = process.env.SUPABASE_URL
-      const supabaseKey =
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-
-      if (!supabaseUrl || !supabaseKey) {
-        console.warn('Missing Supabase credentials, falling back to local file')
-        return this.loadTextFromFallback()
-      }
-
-      const supabase = createClient(supabaseUrl, supabaseKey)
-
-      // List all txt files in the markov-text bucket
-      const { data: files, error: listError } = await supabase.storage
-        .from(bucketName)
-        .list('', {
-          limit: 100,
-          sortBy: { column: 'name', order: 'asc' },
-        })
-
-      if (listError) {
-        console.error('Error listing files from Supabase:', listError.message)
-        return this.loadTextFromFallback()
-      }
-
-      // Filter for .txt files
-      const txtFiles = files.filter(
-        (file) =>
-          file.name.toLowerCase().endsWith('.txt') &&
-          file.name !== '.emptyFolderPlaceholder'
-      )
-
-      if (txtFiles.length === 0) {
-        console.warn(
-          'No txt files found in markov-text bucket, falling back to local file'
-        )
-        return this.loadTextFromFallback()
-      }
-
-      // Download and compile all txt files
-      const allTextContent = []
-
-      for (const file of txtFiles) {
-        try {
-          const { data: fileData, error: downloadError } =
-            await supabase.storage.from(bucketName).download(file.name)
-
-          if (downloadError) {
-            console.error(
-              `Error downloading ${file.name}:`,
-              downloadError.message
-            )
-            continue
-          }
-
-          const text = await fileData.text()
-          allTextContent.push(text)
-        } catch (error) {
-          console.error(`Error processing ${file.name}:`, error.message)
-        }
-      }
-
-      if (allTextContent.length === 0) {
-        console.warn(
-          'No files successfully downloaded, falling back to local file'
-        )
-        return this.loadTextFromFallback()
-      }
-
-      // Process the combined text
-      this.lines = this.compileAndCleanText(allTextContent)
-      this.buildNgrams()
-
-      return true
-    } catch (error) {
-      console.error('Error in loadTextFromSupabase:', error.message)
-      return this.loadTextFromFallback()
-    }
-  }
-
-  // Helper method to compile and clean multiple text sources
+  // Helper method to compile and clean multiple text sources, returns array of lines
   compileAndCleanText(textArray) {
     // Join all texts with double newlines to separate sources
-    let combinedText = textArray.join('\n\n')
+    const combinedText = textArray.join('\n\n')
 
     // Clean and normalize the text - be much more conservative
-    combinedText = combinedText
+    const cleanedText = combinedText
       // Remove Gutenberg header and metadata
       .replace(
         /The Project Gutenberg eBook.*?START OF THE PROJECT GUTENBERG EBOOK.*?by William Shakespeare\s*/gs,
@@ -295,14 +205,19 @@ class MarkovGenerator {
       .replace(/[ \t]+/g, ' ') // Normalize spaces
 
     // Split into lines and clean each line individually
-    const lines = combinedText
+    const lines = cleanedText
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
       .filter((line) => line.length > 10) // Only keep lines with substantial content
       .filter((line) => !/^[A-Z\s]+$/.test(line)) // Remove lines that are just ALL CAPS (headers)
       .filter((line) => !/^[0-9]+\s/.test(line)) // Remove numbered lines (like "1 From fairest creatures...")
-      .filter((line) => !line.match(/^(The|A|An)\s+[A-Z][a-z]+\s+[A-Z][a-z]+/)) // Remove play titles
+      .filter(
+        (line) =>
+          !line.match(
+            /^(The|A|An)\s+[A-Z][a-z]+\s+(OF|THAT|AND|OR)\s+[A-Z][a-z]+/i
+          )
+      ) // Remove play titles like "THE TRAGEDY OF MACBETH"
 
     return lines
   }
