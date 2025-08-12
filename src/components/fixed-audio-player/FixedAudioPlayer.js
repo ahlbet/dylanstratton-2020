@@ -93,29 +93,12 @@ export const FixedAudioPlayer = () => {
     const generateAudioUrl = async () => {
       if (currentTrack) {
         try {
-          // Only regenerate if we don't already have a valid URL for this track
-          if (currentAudioUrl && currentAudioUrl.includes('?token=')) {
-            // We already have a valid presigned URL, don't regenerate
-            return
-          }
-
-          // Check if this track already has a valid presigned URL
-          if (currentTrack.url && currentTrack.url.includes('?token=')) {
-            setCurrentAudioUrl(currentTrack.url)
-            return
-          }
-
-          // Check if we're already generating a URL for this track
-          if (isGenerating) {
-            return
-          }
-
           const audioUrl = await getAudioUrl(currentTrack)
           setCurrentAudioUrl(audioUrl)
         } catch (error) {
           console.error('Failed to generate audio URL:', error)
-          // Fall back to original URL or storage path
-          setCurrentAudioUrl(currentTrack.url || currentTrack.storagePath)
+          // Fall back to original URL
+          setCurrentAudioUrl(currentTrack.url)
         }
       } else {
         setCurrentAudioUrl('')
@@ -123,7 +106,7 @@ export const FixedAudioPlayer = () => {
     }
 
     generateAudioUrl()
-  }, [currentTrack?.url, currentTrack?.storagePath, isGenerating]) // Add isGenerating to prevent concurrent calls
+  }, [currentTrack, getAudioUrl])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -449,14 +432,6 @@ export const FixedAudioPlayer = () => {
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>
-        {isGenerating && (
-          <div
-            className="loading-indicator"
-            style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}
-          >
-            Generating secure URL...
-          </div>
-        )}
 
         <div
           className="progress-bar-container"
