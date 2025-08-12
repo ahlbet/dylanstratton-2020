@@ -48,7 +48,8 @@ exports.createPages = async ({ graphql, actions }) => {
     // Query daily table
     const { data: dailyData, error: dailyError } = await supabase
       .from('daily')
-      .select('id, title, created_at, coherency_level, cover_art')
+      .select('id, title, created_at, coherency_level, cover_art, date')
+      .order('date', { ascending: true })
 
     if (dailyError) {
       console.error('❌ Error querying daily table:', dailyError)
@@ -66,6 +67,16 @@ exports.createPages = async ({ graphql, actions }) => {
       console.error('❌ Error querying daily_audio table:', audioError)
       throw audioError
     }
+
+    // Sort audio entries by the daily entry dates (daily entries are already sorted by date)
+    const sortedAudioData = audioData.sort((a, b) => {
+      const dailyA = dailyData.find((d) => d.id === a.daily_id)
+      const dailyB = dailyData.find((d) => d.id === b.daily_id)
+      if (!dailyA || !dailyB) return 0
+
+      // Use the date field for sorting (ISO format sorts correctly as strings)
+      return dailyA.date.localeCompare(dailyB.date)
+    })
 
     // Query markov_texts table
     const { data: markovData, error: markovError } = await supabase
@@ -85,7 +96,7 @@ exports.createPages = async ({ graphql, actions }) => {
 
     supabaseData = {
       daily: dailyData || [],
-      audio: audioData || [],
+      audio: sortedAudioData || [],
       markovTexts: markovData || [],
     }
     console.log('✅ Supabase data loaded successfully')
@@ -152,6 +163,20 @@ exports.createPages = async ({ graphql, actions }) => {
         supabaseData: postSupabaseData,
       },
     })
+  })
+
+  // Create /all page with Supabase data
+  createPage({
+    path: '/all',
+    component: path.resolve(`./src/templates/all-songs/all-songs.js`),
+    context: {
+      // Pass all Supabase data for the /all page
+      supabaseData: {
+        daily: supabaseData.daily || [],
+        audio: supabaseData.audio || [],
+        markovTexts: supabaseData.markovTexts || [],
+      },
+    },
   })
 }
 

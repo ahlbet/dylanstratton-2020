@@ -3,7 +3,6 @@ import JSZip from 'jszip'
 import { Play, Pause } from 'lucide-react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent } from '../../utils/plausible-analytics'
-import { useTrackDurations } from '../../hooks/use-track-durations'
 import { useScrollToTrack } from '../../hooks/use-scroll-to-track'
 import './BlogAudioPlayer.css'
 
@@ -257,9 +256,6 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
     isShuffleOn,
   } = useAudioPlayer()
 
-  // Use shared hook for track durations
-  const { trackDurations } = useTrackDurations(audioUrlStrings)
-
   // Use shared hook for scroll to track
   const { trackListRef, setTrackItemRef } = useScrollToTrack(
     currentIndex,
@@ -447,7 +443,8 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
         if (audioItem.duration && typeof audioItem.duration === 'number') {
           duration = formatDuration(audioItem.duration)
         } else {
-          duration = formatDuration(trackDurations[url])
+          // Duration is now part of the audioItem object, no need to load separately
+          duration = '0:00' // Default if not available
         }
 
         // Add coherency level to title if available
@@ -469,30 +466,28 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
         }
       })
       .filter(Boolean) // Remove any null entries
-  }, [audioData, postTitle, postDate, trackDurations, coverArtUrl])
+  }, [audioData, postTitle, postDate, coverArtUrl])
 
   // Calculate total playlist duration
   const totalDuration = useMemo(() => {
-    const totalSeconds = Object.values(trackDurations).reduce(
-      (sum, duration) => sum + (duration || 0),
-      0
-    )
+    const totalSeconds = audioData
+      .filter((item) => typeof item === 'object' && item.duration)
+      .reduce((sum, item) => sum + (item.duration || 0), 0)
     return formatDuration(totalSeconds)
-  }, [trackDurations])
+  }, [audioData])
 
   // Update context with total playlist duration
   useEffect(() => {
-    const totalSeconds = Object.values(trackDurations).reduce(
-      (sum, duration) => sum + (duration || 0),
-      0
-    )
+    const totalSeconds = audioData
+      .filter((item) => typeof item === 'object' && item.duration)
+      .reduce((sum, item) => sum + (item.duration || 0), 0)
     updateTotalPlaylistDuration(totalSeconds)
 
     // Also set a global variable for the sketch to access
     if (typeof window !== 'undefined') {
       window.totalPlaylistDuration = totalSeconds
     }
-  }, [trackDurations, updateTotalPlaylistDuration])
+  }, [audioData, updateTotalPlaylistDuration])
 
   // Convert tracks to context format (url instead of src)
   const contextTracks = useMemo(() => {
@@ -518,15 +513,19 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
 
   // Handle track selection and play/pause - let FixedAudioPlayer handle playback
   const handleTrackClick = useCallback(
-    (index) => {
+    async (index) => {
       if (index >= 0 && index < tracks.length) {
+        const track = tracks[index]
+
+        // Duration is now part of the audioItem object, no need to load separately
+
         if (currentIndex === index && isPlaying) {
           // If clicking the currently playing track, pause it
           setIsPlaying(false)
 
           // Track pause event
           trackAudioEvent.songPause(
-            tracks[index],
+            track,
             postTitle,
             index + 1,
             tracks.length,
