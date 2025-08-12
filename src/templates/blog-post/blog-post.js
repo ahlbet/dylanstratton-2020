@@ -383,12 +383,22 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
                     audioData={audioData}
                     postTitle={post.frontmatter.title}
                     postDate={post.frontmatter.date}
-                    coverArtUrl={convertCoverArtUrlToLocal(
-                      supabaseData?.daily?.cover_art
+                    coverArtUrl={(() => {
+                      const coverArtSource = supabaseData?.daily?.cover_art
                         ? getCoverArtUrl(supabaseData.daily.cover_art)
-                        : post.frontmatter.cover_art,
-                      post.frontmatter.title
-                    )}
+                        : post.frontmatter.cover_art
+
+                      // Only convert to local URLs in development mode
+                      if (isLocalDev()) {
+                        return convertCoverArtUrlToLocal(
+                          coverArtSource,
+                          post.frontmatter.title
+                        )
+                      }
+
+                      // In production, return the original URL unchanged
+                      return coverArtSource
+                    })()}
                   />
                 </div>
               )}
