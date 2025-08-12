@@ -106,7 +106,7 @@ export const FixedAudioPlayer = () => {
     }
 
     generateAudioUrl()
-  }, [currentTrack, getAudioUrl])
+  }, [currentTrack?.url, currentTrack?.storagePath, getAudioUrl]) // Use specific properties to detect actual track changes
 
   useEffect(() => {
     const audio = audioRef.current
