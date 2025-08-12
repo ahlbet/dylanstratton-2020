@@ -10,8 +10,12 @@ import { FixedAudioPlayer } from '../../components/fixed-audio-player/FixedAudio
 import AllSongsPlaylist from '../../components/all-songs-playlist/all-songs-playlist'
 import DynamicMarkovText from '../../components/dynamic-markov-text/DynamicMarkovText'
 import AudioFFT from '../../components/audio-fft/AudioFFT'
-import { convertAudioUrlsToLocal } from '../../utils/local-audio-urls'
 import { SUPABASE_PUBLIC_URL_DOMAIN } from '../../utils/supabase-config'
+import { isLocalDev } from '../../utils/local-dev-utils'
+import {
+  removeBucketPrefix,
+  extractFilenameFromStoragePath,
+} from '../../utils/presigned-urls'
 
 // Component to handle autopilot state on /all page
 const AllSongsAutopilotHandler = () => {
@@ -45,10 +49,19 @@ const AllSongsPage = ({ pageContext, location }) => {
         (daily) => daily.id === audio.daily_id
       )
 
-      const fullUrl = `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${audio.storage_path}`
+      // Handle audio URLs based on environment
+      let audioUrl
+      if (isLocalDev()) {
+        // In development, use local audio files
+        const filename = extractFilenameFromStoragePath(audio.storage_path)
+        audioUrl = `/local-audio/${filename}.wav`
+      } else {
+        // In production, use public Supabase URLs
+        audioUrl = `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${audio.storage_path}`
+      }
 
       return {
-        url: convertAudioUrlsToLocal([fullUrl])[0],
+        url: audioUrl,
         duration:
           audio.duration !== null && audio.duration !== undefined
             ? audio.duration
