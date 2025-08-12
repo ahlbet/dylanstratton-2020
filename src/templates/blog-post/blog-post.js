@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { Link, graphql } from 'gatsby'
 
 import Bio from '../../components/bio/bio'
@@ -151,78 +151,28 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
   const { previous, next, markdownData, supabaseData } = pageContext
   const { calendarVisible } = useUserPreferences()
 
-  // State for audio data with pre-signed URLs
-  const [audioData, setAudioData] = useState([])
-
   let markovText = ''
   let cleanedHtml = post.html
 
-  // Generate audio URLs (local or presigned based on environment)
-  useEffect(() => {
-    const generateAudioUrls = () => {
-      if (supabaseData && supabaseData.audio && supabaseData.audio.length > 0) {
-        try {
-          // Check if we should use local audio files
-          const isLocalDevMode = isLocalDev()
+  // Generate audio URLs (local or presigned based on environment) - use useMemo for stability
+  const audioData = useMemo(() => {
+    if (supabaseData && supabaseData.audio && supabaseData.audio.length > 0) {
+      try {
+        // Check if we should use local audio files
+        const isLocalDevMode = isLocalDev()
 
-          let processedAudio
-
-          if (isLocalDevMode) {
-            // Use local audio files for development
-            processedAudio = supabaseData.audio.map((audio) => {
-              // Extract clean filename from storage_path
-              const filename = extractFilenameFromStoragePath(
-                audio.storage_path
-              )
-
-              // Convert to local audio URL
-              const localUrl = `/local-audio/${filename}.wav`
-
-              return {
-                ...audio,
-                url: localUrl,
-                duration: audio.duration || null,
-                format: audio.format || 'audio/wav',
-                title: filename, // Clean title without extension
-                artist: 'Daily Audio',
-                album: post.frontmatter.title,
-              }
-            })
-          } else {
-            // Production mode: store storage paths, generate presigned URLs on-demand when played
-            processedAudio = supabaseData.audio.map((audio) => {
-              // Use the display filename that was already extracted
-              const filename =
-                audio.displayFilename ||
-                extractFilenameFromStoragePath(audio.storage_path)
-
-              return {
-                ...audio,
-                // No initial URL - will be generated on-demand when track is played
-                url: null,
-                // Store storage path for on-demand presigned URL generation
-                storagePath: audio.storage_path,
-                duration: audio.duration || null,
-                format: audio.format || 'audio/wav',
-                title: filename, // Clean title without extension
-                artist: 'Daily Audio',
-                album: post.frontmatter.title,
-              }
-            })
-          }
-
-          setAudioData(processedAudio)
-        } catch (error) {
-          console.error('Error generating audio URLs:', error)
-          // Fall back to storage paths only on error
-          const fallbackAudio = supabaseData.audio.map((audio) => {
+        if (isLocalDevMode) {
+          // Use local audio files for development
+          return supabaseData.audio.map((audio) => {
             // Extract clean filename from storage_path
             const filename = extractFilenameFromStoragePath(audio.storage_path)
 
+            // Convert to local audio URL
+            const localUrl = `/local-audio/${filename}.wav`
+
             return {
               ...audio,
-              url: null, // No URL - will be generated on-demand
-              storagePath: audio.storage_path, // Keep storage path for on-demand generation
+              url: localUrl,
               duration: audio.duration || null,
               format: audio.format || 'audio/wav',
               title: filename, // Clean title without extension
@@ -230,33 +180,66 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
               album: post.frontmatter.title,
             }
           })
-          setAudioData(fallbackAudio)
+        } else {
+          // Production mode: store storage paths, generate presigned URLs on-demand when played
+          return supabaseData.audio.map((audio) => {
+            // Use the display filename that was already extracted
+            const filename =
+              audio.displayFilename ||
+              extractFilenameFromStoragePath(audio.storage_path)
+
+            return {
+              ...audio,
+              // No initial URL - will be generated on-demand when track is played
+              url: null,
+              // Store storage path for on-demand presigned URL generation
+              storagePath: audio.storage_path,
+              duration: audio.duration || null,
+              format: audio.format || 'audio/wav',
+              title: filename, // Clean title without extension
+              artist: 'Daily Audio',
+              album: post.frontmatter.title,
+            }
+          })
         }
-      } else {
-        // Fall back to extracting from markdown HTML
-        const extractedUrls = convertAudioUrlsToLocal(
-          extractAudioUrls(post.html)
-        )
-        const fallbackAudio = extractedUrls.map((url) => {
-          // Extract filename from URL
-          const urlParts = url.split('/')
-          const filename = urlParts[urlParts.length - 1].replace(/\.wav$/, '')
+      } catch (error) {
+        console.error('Error generating audio URLs:', error)
+        // Fall back to storage paths only on error
+        return supabaseData.audio.map((audio) => {
+          // Extract clean filename from storage_path
+          const filename = extractFilenameFromStoragePath(audio.storage_path)
 
           return {
-            url,
-            duration: null,
-            format: 'audio/wav',
+            ...audio,
+            url: null, // No URL - will be generated on-demand
+            storagePath: audio.storage_path, // Keep storage path for on-demand generation
+            duration: audio.duration || null,
+            format: audio.format || 'audio/wav',
             title: filename, // Clean title without extension
             artist: 'Daily Audio',
             album: post.frontmatter.title,
           }
         })
-        setAudioData(fallbackAudio)
       }
-    }
+    } else {
+      // Fall back to extracting from markdown HTML
+      const extractedUrls = convertAudioUrlsToLocal(extractAudioUrls(post.html))
+      return extractedUrls.map((url) => {
+        // Extract filename from URL
+        const urlParts = url.split('/')
+        const filename = urlParts[urlParts.length - 1].replace(/\.wav$/, '')
 
-    generateAudioUrls()
-  }, [supabaseData, post.html])
+        return {
+          url,
+          duration: null,
+          format: 'audio/wav',
+          title: filename, // Clean title without extension
+          artist: 'Daily Audio',
+          album: post.frontmatter.title,
+        }
+      })
+    }
+  }, [supabaseData?.audio, post.html, post.frontmatter.title]) // Stable dependencies
 
   if (
     supabaseData &&

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { generatePresignedUrlOnDemand } from '../utils/presigned-urls'
 import { isLocalDev } from '../utils/local-dev-utils'
 
@@ -9,6 +9,10 @@ import { isLocalDev } from '../utils/local-dev-utils'
 export const usePresignedUrl = () => {
   const [urlCache, setUrlCache] = useState(new Map())
   const [isGenerating, setIsGenerating] = useState(false)
+  const urlCacheRef = useRef(urlCache)
+
+  // Keep ref in sync with state
+  urlCacheRef.current = urlCache
 
   const getAudioUrl = useCallback(
     async (track) => {
@@ -31,8 +35,8 @@ export const usePresignedUrl = () => {
         const cacheKey = track.storagePath
 
         // Check if we have a cached presigned URL
-        if (urlCache.has(cacheKey)) {
-          const cached = urlCache.get(cacheKey)
+        if (urlCacheRef.current.has(cacheKey)) {
+          const cached = urlCacheRef.current.get(cacheKey)
           if (cached.expiresAt > Date.now()) {
             return cached.url
           }
@@ -73,7 +77,7 @@ export const usePresignedUrl = () => {
       // Fall back to original URL
       return track.url
     },
-    [urlCache]
+    [] // Remove urlCache dependency to prevent function recreation
   )
 
   return {

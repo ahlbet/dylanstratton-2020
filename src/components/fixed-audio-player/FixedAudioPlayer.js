@@ -93,12 +93,29 @@ export const FixedAudioPlayer = () => {
     const generateAudioUrl = async () => {
       if (currentTrack) {
         try {
+          // Only regenerate if we don't already have a valid URL for this track
+          if (currentAudioUrl && currentAudioUrl.includes('?token=')) {
+            // We already have a valid presigned URL, don't regenerate
+            return
+          }
+
+          // Check if this track already has a valid presigned URL
+          if (currentTrack.url && currentTrack.url.includes('?token=')) {
+            setCurrentAudioUrl(currentTrack.url)
+            return
+          }
+
+          // Check if we're already generating a URL for this track
+          if (isGenerating) {
+            return
+          }
+
           const audioUrl = await getAudioUrl(currentTrack)
           setCurrentAudioUrl(audioUrl)
         } catch (error) {
           console.error('Failed to generate audio URL:', error)
-          // Fall back to original URL
-          setCurrentAudioUrl(currentTrack.url)
+          // Fall back to original URL or storage path
+          setCurrentAudioUrl(currentTrack.url || currentTrack.storagePath)
         }
       } else {
         setCurrentAudioUrl('')
@@ -106,7 +123,7 @@ export const FixedAudioPlayer = () => {
     }
 
     generateAudioUrl()
-  }, [currentTrack, getAudioUrl])
+  }, [currentTrack?.url, currentTrack?.storagePath, isGenerating]) // Add isGenerating to prevent concurrent calls
 
   useEffect(() => {
     const audio = audioRef.current
