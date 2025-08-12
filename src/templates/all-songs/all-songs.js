@@ -67,8 +67,8 @@ const AllSongsPage = ({ pageContext, location }) => {
                   audio.duration !== null && audio.duration !== undefined
                     ? audio.duration
                     : null,
-                // Use clean filename as title (without extension)
-                postTitle: filename || dailyEntry?.title || 'Unknown',
+                title: filename, // Clean title without extension (same as blog posts)
+                postTitle: dailyEntry?.title || 'Unknown', // Keep for other uses
                 postDate: dailyEntry?.created_at
                   ? new Date(dailyEntry.created_at).toLocaleDateString(
                       'en-US',
@@ -110,7 +110,8 @@ const AllSongsPage = ({ pageContext, location }) => {
                   audio.duration !== null && audio.duration !== undefined
                     ? audio.duration
                     : null,
-                postTitle: filename, // Clean title without extension
+                title: filename, // Clean title without extension (same as blog posts)
+                postTitle: dailyEntry?.title || 'Unknown', // Keep for other uses
                 postDate: dailyEntry?.created_at
                   ? new Date(dailyEntry.created_at).toLocaleDateString(
                       'en-US',
@@ -144,7 +145,8 @@ const AllSongsPage = ({ pageContext, location }) => {
                 audio.duration !== null && audio.duration !== undefined
                   ? audio.duration
                   : null,
-              postTitle: dailyEntry?.title || 'Unknown',
+              title: extractFilenameFromStoragePath(audio.storage_path), // Clean title without extension
+              postTitle: dailyEntry?.title || 'Unknown', // Keep for other uses
               postDate: dailyEntry?.created_at
                 ? new Date(dailyEntry.created_at).toLocaleDateString('en-US', {
                     month: 'long',

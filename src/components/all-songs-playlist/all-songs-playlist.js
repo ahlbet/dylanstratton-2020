@@ -46,10 +46,18 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
           return null
         }
 
-        // Extract filename from URL for display
-        const urlParts = item.url.split('/')
-        const filename = urlParts[urlParts.length - 1]
-        const trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
+        // Use title from metadata if available, otherwise extract from URL
+        let trackName, filename
+        if (item.title) {
+          // Use the clean metadata we provided
+          trackName = item.title
+          filename = `${item.title}.wav` // For download filename
+        } else {
+          // Fall back to URL extraction for backward compatibility
+          const urlParts = item.url.split('/')
+          filename = urlParts[urlParts.length - 1]
+          trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
+        }
 
         // Use duration from metadata if available, otherwise show 0:00
         const duration =
