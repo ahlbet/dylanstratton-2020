@@ -67,7 +67,8 @@ const AllSongsPage = ({ pageContext, location }) => {
                   audio.duration !== null && audio.duration !== undefined
                     ? audio.duration
                     : null,
-                postTitle: dailyEntry?.title || 'Unknown',
+                // Use clean filename as title (without extension)
+                postTitle: filename || dailyEntry?.title || 'Unknown',
                 postDate: dailyEntry?.created_at
                   ? new Date(dailyEntry.created_at).toLocaleDateString(
                       'en-US',
@@ -98,13 +99,17 @@ const AllSongsPage = ({ pageContext, location }) => {
                 (daily) => daily.id === audio.daily_id
               )
 
+              // Use displayFilename from presigned URL generation (clean filename without extension)
+              const cleanTitle =
+                audio.displayFilename || dailyEntry?.title || 'Unknown'
+
               return {
                 url: audio.url, // Use presigned URL directly
                 duration:
                   audio.duration !== null && audio.duration !== undefined
                     ? audio.duration
                     : null,
-                postTitle: dailyEntry?.title || 'Unknown',
+                postTitle: cleanTitle,
                 postDate: dailyEntry?.created_at
                   ? new Date(dailyEntry.created_at).toLocaleDateString(
                       'en-US',
@@ -160,7 +165,7 @@ const AllSongsPage = ({ pageContext, location }) => {
       } else {
         // No Supabase data available
         setAllAudioUrlsWithMetadata([])
-        setAllMarkovText('No audio data available')
+        setAllMarkovText('~~~')
       }
     }
 
@@ -186,7 +191,7 @@ const AllSongsPage = ({ pageContext, location }) => {
             >
               {isLoadingAudio ? (
                 <div style={{ marginBottom: rhythm(1), color: '#666' }}>
-                  Loading audio data...
+                  ~~~
                 </div>
               ) : allAudioUrlsWithMetadata.length > 0 ? (
                 <div style={{ marginBottom: rhythm(1) }}>
@@ -195,9 +200,7 @@ const AllSongsPage = ({ pageContext, location }) => {
                   />
                 </div>
               ) : (
-                <div style={{ marginBottom: rhythm(1), color: '#ff6b6b' }}>
-                  No audio data available. Please check the build process.
-                </div>
+                <div></div>
               )}
             </div>
 
