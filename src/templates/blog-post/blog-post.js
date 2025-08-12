@@ -43,11 +43,25 @@ const AutopilotAutoPlay = ({ audioData }) => {
     // Always set up the playlist for this page's audio tracks
     if (audioData.length > 0) {
       const tracks = audioData.map((audioItem, index) => {
-        const url = typeof audioItem === 'string' ? audioItem : audioItem.url
-        const filename = url
-          .split('/')
-          .pop()
-          .replace(/\.[^/.]+$/, '')
+        // Handle both old string format and new object format
+        let url, filename
+
+        if (typeof audioItem === 'string') {
+          url = audioItem
+          filename = url
+            .split('/')
+            .pop()
+            .replace(/\.[^/.]+$/, '')
+        } else {
+          // New format: use title if available, otherwise extract from storage path
+          url = audioItem.url
+          filename =
+            audioItem.title ||
+            (audioItem.storagePath
+              ? extractFilenameFromStoragePath(audioItem.storagePath)
+              : 'Unknown Track')
+        }
+
         return {
           title: filename || 'Unknown Track',
           artist: 'degreesminutesseconds',
@@ -57,14 +71,23 @@ const AutopilotAutoPlay = ({ audioData }) => {
           src: url,
           downloadUrl: url,
           downloadFilename: filename,
+          // Store storage path for on-demand presigned URL generation
+          storagePath:
+            typeof audioItem === 'object' ? audioItem.storagePath : null,
         }
       })
 
       // Only set playlist if it's different from current playlist
+      // Compare using storage paths for new format, URLs for old format
       const currentUrls = playlist.map((track) => track.url)
-      const newUrls = audioData.map((item) =>
-        typeof item === 'string' ? item : item.url
-      )
+      const newUrls = audioData.map((item) => {
+        if (typeof item === 'string') {
+          return item
+        } else {
+          // For new format, use storage path as identifier since URL might be null
+          return item.storagePath || item.url
+        }
+      })
 
       if (JSON.stringify(currentUrls) !== JSON.stringify(newUrls)) {
         setPlaylist(tracks)

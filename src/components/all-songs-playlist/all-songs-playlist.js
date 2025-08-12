@@ -42,16 +42,31 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
 
     return audioUrlsWithMetadata
       .map((item, index) => {
-        if (!item || !item.url || typeof item.url !== 'string') {
+        // Handle both old format (with url) and new format (with storagePath)
+        if (!item) {
           return null
         }
 
-        // Use title from metadata if available, otherwise extract from URL
+        // Check if item has either url or storagePath
+        const hasUrl = item.url && typeof item.url === 'string'
+        const hasStoragePath =
+          item.storagePath && typeof item.storagePath === 'string'
+
+        if (!hasUrl && !hasStoragePath) {
+          return null
+        }
+
+        // Use title from metadata if available, otherwise extract from storage path
         let trackName, filename
         if (item.title) {
           // Use the clean metadata we provided
           trackName = item.title
           filename = `${item.title}.wav` // For download filename
+        } else if (hasStoragePath) {
+          // Extract from storage path for new format
+          const pathParts = item.storagePath.split('/')
+          filename = pathParts[pathParts.length - 1]
+          trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
         } else {
           // Fall back to URL extraction for backward compatibility
           const urlParts = item.url.split('/')
@@ -70,9 +85,11 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
           artist: item.postTitle || 'Unknown Artist',
           album: item.postDate || 'Unknown Album',
           duration: duration,
-          src: item.url,
-          downloadUrl: item.url,
+          src: item.url || item.storagePath, // Use URL if available, otherwise storage path
+          downloadUrl: item.url || item.storagePath, // Use URL if available, otherwise storage path
           downloadFilename: filename,
+          // Store storage path for on-demand presigned URL generation
+          storagePath: item.storagePath,
         }
       })
       .filter(Boolean)
@@ -110,6 +127,8 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
       url: track.src,
       title: track.title,
       artist: track.artist,
+      // Store storage path for on-demand presigned URL generation
+      storagePath: track.storagePath,
     }))
   }, [tracks])
 
