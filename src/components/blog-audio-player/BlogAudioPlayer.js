@@ -429,16 +429,28 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
       .map((audioItem, index) => {
         // Handle both string URLs and objects
         const url = typeof audioItem === 'string' ? audioItem : audioItem.url
-        if (!url) {
+        const hasUrl = url && typeof url === 'string'
+        const hasStoragePath =
+          typeof audioItem === 'object' &&
+          audioItem.storagePath &&
+          typeof audioItem.storagePath === 'string'
+
+        // Check if item has either url or storagePath
+        if (!hasUrl && !hasStoragePath) {
           return null
         }
 
-        // Use metadata if available, otherwise extract from URL
+        // Use metadata if available, otherwise extract from storage path or URL
         let trackName, filename
         if (typeof audioItem === 'object' && audioItem.title) {
           // Use the clean metadata we provided
           trackName = audioItem.title
           filename = `${audioItem.title}.wav` // For download filename
+        } else if (hasStoragePath) {
+          // Extract from storage path for new format
+          const pathParts = audioItem.storagePath.split('/')
+          filename = pathParts[pathParts.length - 1]
+          trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
         } else {
           // Fall back to URL extraction for backward compatibility
           const urlParts = url.split('/')
@@ -466,11 +478,14 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
           artist: postTitle || 'Unknown Artist',
           album: postDate || 'Unknown Album',
           duration: duration || '0:00',
-          src: url,
+          src: url || audioItem.storagePath, // Use URL if available, otherwise storage path
           imageSrc: coverArtUrl || null, // Use cover art from blog post
           // Add custom data for download
-          downloadUrl: url,
+          downloadUrl: url || audioItem.storagePath, // Use URL if available, otherwise storage path
           downloadFilename: filename,
+          // Store storage path for on-demand presigned URL generation
+          storagePath:
+            typeof audioItem === 'object' ? audioItem.storagePath : null,
         }
       })
       .filter(Boolean) // Remove any null entries
@@ -514,6 +529,8 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
         return {
           ...track,
           url: track.src, // Convert src to url for context
+          // Store storage path for on-demand presigned URL generation
+          storagePath: track.storagePath,
         }
       })
       .filter(Boolean) // Remove any null entries

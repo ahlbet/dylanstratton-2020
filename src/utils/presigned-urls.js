@@ -123,6 +123,12 @@ async function generatePresignedUrl(
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Generate pre-signed URL
+    console.log('generatePresignedUrl debug:', {
+      bucketName,
+      storagePath,
+      expiresIn,
+    })
+
     const { data, error } = await supabase.storage
       .from(bucketName)
       .createSignedUrl(storagePath, expiresIn)
@@ -301,8 +307,19 @@ export async function generatePresignedUrlOnDemand(
     }
 
     // Generate new presigned URL
+    // The storagePath includes the bucket name (e.g., 'audio/filename.wav'),
+    // but generatePresignedUrl expects just the file path
+    const filePath = storagePath.replace(/^audio\//, '') // Remove 'audio/' prefix
+
+    console.log('generatePresignedUrlOnDemand debug:', {
+      originalStoragePath: storagePath,
+      extractedFilePath: filePath,
+      bucketName: 'audio',
+      expiresIn,
+    })
+
     const presignedUrl = await generatePresignedUrl(
-      storagePath,
+      filePath,
       'audio',
       expiresIn
     )
