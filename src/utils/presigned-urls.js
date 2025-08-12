@@ -281,6 +281,49 @@ function getCacheStats() {
   }
 }
 
+/**
+ * Generate a presigned URL for a single audio file on-demand
+ * @param {string} storagePath - The storage path (e.g., 'audio/filename.wav')
+ * @param {number} expiresIn - Expiration time in seconds (default: 1 hour)
+ * @returns {Promise<string>} Presigned URL
+ */
+export async function generatePresignedUrlOnDemand(
+  storagePath,
+  expiresIn = 3600
+) {
+  try {
+    // Check cache first
+    const cacheKey = `${storagePath}_${expiresIn}`
+    const cached = urlCache.get(cacheKey)
+
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.url
+    }
+
+    // Generate new presigned URL
+    const presignedUrl = await generatePresignedUrl(
+      storagePath,
+      'audio',
+      expiresIn
+    )
+
+    // Cache the result
+    urlCache.set(cacheKey, {
+      url: presignedUrl,
+      expiresAt: Date.now() + expiresIn * 1000 - CACHE_CONFIG.bufferTime,
+    })
+
+    return presignedUrl
+  } catch (error) {
+    console.error(
+      'Failed to generate presigned URL on-demand:',
+      storagePath,
+      error
+    )
+    throw error
+  }
+}
+
 // ES6 exports for Gatsby components
 export {
   generatePresignedUrl,

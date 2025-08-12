@@ -130,16 +130,14 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
 
   // State for audio data with pre-signed URLs
   const [audioData, setAudioData] = useState([])
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false)
 
   let markovText = ''
   let cleanedHtml = post.html
 
   // Generate audio URLs (local or presigned based on environment)
   useEffect(() => {
-    const generateAudioUrls = async () => {
+    const generateAudioUrls = () => {
       if (supabaseData && supabaseData.audio && supabaseData.audio.length > 0) {
-        setIsLoadingAudio(true)
         try {
           // Check if we should use local audio files
           const isLocalDevMode = isLocalDev()
@@ -168,13 +166,8 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
               }
             })
           } else {
-            // Generate pre-signed URLs for production
-            const audioWithUrls = await generatePresignedUrlsForAudio(
-              supabaseData.audio,
-              3600
-            ) // 1 hour expiry
-
-            processedAudio = audioWithUrls.map((audio) => {
+            // Production mode: store storage paths, generate presigned URLs on-demand when played
+            processedAudio = supabaseData.audio.map((audio) => {
               // Use the display filename that was already extracted
               const filename =
                 audio.displayFilename ||
@@ -182,7 +175,10 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
 
               return {
                 ...audio,
-                url: audio.url, // Use pre-signed URL directly
+                // No initial URL - will be generated on-demand when track is played
+                url: null,
+                // Store storage path for on-demand presigned URL generation
+                storagePath: audio.storage_path,
                 duration: audio.duration || null,
                 format: audio.format || 'audio/wav',
                 title: filename, // Clean title without extension
@@ -195,15 +191,15 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
           setAudioData(processedAudio)
         } catch (error) {
           console.error('Error generating audio URLs:', error)
-          // Fall back to public URLs on error
+          // Fall back to storage paths only on error
           const fallbackAudio = supabaseData.audio.map((audio) => {
-            const fullUrl = `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${audio.storage_path}`
             // Extract clean filename from storage_path
             const filename = extractFilenameFromStoragePath(audio.storage_path)
 
             return {
               ...audio,
-              url: fullUrl, // Use public URL directly (no local conversion needed)
+              url: null, // No URL - will be generated on-demand
+              storagePath: audio.storage_path, // Keep storage path for on-demand generation
               duration: audio.duration || null,
               format: audio.format || 'audio/wav',
               title: filename, // Clean title without extension
@@ -212,8 +208,6 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
             }
           })
           setAudioData(fallbackAudio)
-        } finally {
-          setIsLoadingAudio(false)
         }
       } else {
         // Fall back to extracting from markdown HTML
@@ -377,7 +371,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
 
             {/* Audio Player - After canvas on mobile */}
             <div className="audio-player-section">
-              {audioData.length > 0 && !isLoadingAudio && (
+              {audioData.length > 0 && (
                 <div style={{ marginBottom: rhythm(1) }}>
                   <BlogAudioPlayer
                     audioData={audioData}
