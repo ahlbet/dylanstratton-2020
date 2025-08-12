@@ -433,10 +433,18 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
           return null
         }
 
-        // Extract filename from URL for display
-        const urlParts = url.split('/')
-        const filename = urlParts[urlParts.length - 1]
-        const trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
+        // Use metadata if available, otherwise extract from URL
+        let trackName, filename
+        if (typeof audioItem === 'object' && audioItem.title) {
+          // Use the clean metadata we provided
+          trackName = audioItem.title
+          filename = `${audioItem.title}.wav` // For download filename
+        } else {
+          // Fall back to URL extraction for backward compatibility
+          const urlParts = url.split('/')
+          filename = urlParts[urlParts.length - 1]
+          trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
+        }
 
         // Use Supabase duration if available, otherwise fall back to trackDurations
         let duration

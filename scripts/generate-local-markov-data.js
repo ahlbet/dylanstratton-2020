@@ -101,34 +101,21 @@ async function generateLocalMarkovData() {
     fs.writeFileSync(markovSourcePath, sourceText)
     console.log(`💾 Saved source text to: ${markovSourcePath}`)
 
-    // 4. Generate some sample cover art for local development
-    console.log('🎨 Generating sample cover art...')
+    // 4. Generate cover art for all existing blog posts
+    console.log('🎨 Generating cover art for all blog posts...')
     const { generateCoverArt } = require('../src/utils/cover-art-generator')
 
-    // Generate cover art for more posts to cover common ones
-    const samplePosts = [
-      '25jul27',
-      '25jul25',
-      '25jul24',
-      '25jul23',
-      '25jul22',
-      '25jul01',
-      '25jul14',
-      '25jul15',
-      '25jul16',
-      '25jul17',
-      '25jul18',
-      '25jul20',
-      '25jun14',
-      '25jun30',
-      '25may12',
-      '25may13',
-      '25may14',
-      '25may16',
-      '25may18',
-      '25may20',
-      '25may25',
-    ]
+    // Get all blog post directories dynamically
+    const blogContentDir = path.join(__dirname, '../content/blog')
+    const blogPostDirs = fs
+      .readdirSync(blogContentDir, { withFileTypes: true })
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => dirent.name)
+      .sort() // Sort alphabetically for consistent ordering
+
+    console.log(
+      `📚 Found ${blogPostDirs.length} blog posts to generate cover art for`
+    )
 
     // Ensure cover art directory exists
     const coverArtDir = path.join(__dirname, '../static/local-cover-art')
@@ -137,7 +124,7 @@ async function generateLocalMarkovData() {
       console.log(`📁 Created directory: ${coverArtDir}`)
     }
 
-    for (const postName of samplePosts) {
+    for (const postName of blogPostDirs) {
       try {
         const coverArtBuffer = await generateCoverArt(postName)
         const coverArtPath = path.join(

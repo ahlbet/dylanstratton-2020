@@ -94,6 +94,7 @@
     "generate-local-data": "node scripts/generate-local-markov-data.js",
     "test-local-dev": "node scripts/test-local-dev.js",
     "fetch-audio": "node scripts/fetch-all-audio-from-supabase.js",
+    "test-presigned-urls": "node scripts/test-presigned-urls.js",
     "test-init-local": "node scripts/test-init-local-update.js",
     "debug-local-dev": "node scripts/debug-local-dev.js",
     "test-url-conversion": "node scripts/test-url-conversion.js",
