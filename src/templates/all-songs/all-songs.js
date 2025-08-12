@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import Layout from '../../components/layout/layout'
 import SEO from '../../components/seo/seo'
 import { rhythm } from '../../utils/typography'
@@ -15,6 +15,7 @@ import { isLocalDev } from '../../utils/local-dev-utils'
 import {
   removeBucketPrefix,
   extractFilenameFromStoragePath,
+  generatePresignedUrlsForAudio,
 } from '../../utils/presigned-urls'
 
 // Component to handle autopilot state on /all page
@@ -33,59 +34,138 @@ const AllSongsAutopilotHandler = () => {
 
 const AllSongsPage = ({ pageContext, location }) => {
   const { supabaseData } = pageContext
+  const [allAudioUrlsWithMetadata, setAllAudioUrlsWithMetadata] = useState([])
+  const [allMarkovText, setAllMarkovText] = useState('')
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false)
 
-  // Use Supabase data if available, otherwise fall back to markdown
-  let allAudioUrlsWithMetadata = []
-  let allMarkovText = ''
+  // Generate audio URLs using useEffect (similar to blog post template)
+  useEffect(() => {
+    const generateAudioUrls = async () => {
+      if (supabaseData && supabaseData.audio && supabaseData.daily) {
+        setIsLoadingAudio(true)
 
-  if (supabaseData && supabaseData.audio && supabaseData.daily) {
-    // Use Supabase data with proper integer IDs (same pattern as blog posts)
-    const dailyAudio = supabaseData.audio
-    const dailyEntries = supabaseData.daily
+        // Define variables at the top so they're available in all scopes
+        const dailyAudio = supabaseData.audio
+        const dailyEntries = supabaseData.daily
 
-    allAudioUrlsWithMetadata = dailyAudio.map((audio) => {
-      // Find the corresponding daily entry (both IDs are integers)
-      const dailyEntry = dailyEntries.find(
-        (daily) => daily.id === audio.daily_id
-      )
+        try {
+          if (isLocalDev()) {
+            // Development mode: use local audio files
+            const localAudio = dailyAudio.map((audio) => {
+              const dailyEntry = dailyEntries.find(
+                (daily) => daily.id === audio.daily_id
+              )
 
-      // Handle audio URLs based on environment
-      let audioUrl
-      if (isLocalDev()) {
-        // In development, use local audio files
-        const filename = extractFilenameFromStoragePath(audio.storage_path)
-        audioUrl = `/local-audio/${filename}.wav`
-      } else {
-        // In production, use public Supabase URLs
-        audioUrl = `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${audio.storage_path}`
-      }
+              const filename = extractFilenameFromStoragePath(
+                audio.storage_path
+              )
+              const audioUrl = `/local-audio/${filename}.wav`
 
-      return {
-        url: audioUrl,
-        duration:
-          audio.duration !== null && audio.duration !== undefined
-            ? audio.duration
-            : null,
-        postTitle: dailyEntry?.title || 'Unknown',
-        postDate: dailyEntry?.created_at
-          ? new Date(dailyEntry.created_at).toLocaleDateString('en-US', {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
+              return {
+                url: audioUrl,
+                duration:
+                  audio.duration !== null && audio.duration !== undefined
+                    ? audio.duration
+                    : null,
+                postTitle: dailyEntry?.title || 'Unknown',
+                postDate: dailyEntry?.created_at
+                  ? new Date(dailyEntry.created_at).toLocaleDateString(
+                      'en-US',
+                      {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                      }
+                    )
+                  : 'Unknown Date',
+                postSlug: `/${dailyEntry?.title || 'unknown'}`,
+              }
             })
-          : 'Unknown Date',
-        postSlug: `/${dailyEntry?.title || 'unknown'}`,
-      }
-    })
 
-    // Create markov text from daily entries
-    allMarkovText = dailyEntries.map((entry) => entry.title || '').join(' ')
-  } else {
-    // Fall back to markdown data (legacy support)
-    // For now, show a message that no data is available
-    allAudioUrlsWithMetadata = []
-    allMarkovText = 'No audio data available'
-  }
+            setAllAudioUrlsWithMetadata(localAudio)
+            setAllMarkovText(
+              dailyEntries.map((entry) => entry.title || '').join(' ')
+            )
+          } else {
+            // Production mode: generate presigned URLs
+            const audioWithUrls = await generatePresignedUrlsForAudio(
+              dailyAudio,
+              3600 // 1 hour expiry
+            )
+
+            const presignedAudio = audioWithUrls.map((audio) => {
+              const dailyEntry = dailyEntries.find(
+                (daily) => daily.id === audio.daily_id
+              )
+
+              return {
+                url: audio.url, // Use presigned URL directly
+                duration:
+                  audio.duration !== null && audio.duration !== undefined
+                    ? audio.duration
+                    : null,
+                postTitle: dailyEntry?.title || 'Unknown',
+                postDate: dailyEntry?.created_at
+                  ? new Date(dailyEntry.created_at).toLocaleDateString(
+                      'en-US',
+                      {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                      }
+                    )
+                  : 'Unknown Date',
+                postSlug: `/${dailyEntry?.title || 'unknown'}`,
+              }
+            })
+
+            setAllAudioUrlsWithMetadata(presignedAudio)
+            setAllMarkovText(
+              dailyEntries.map((entry) => entry.title || '').join(' ')
+            )
+          }
+        } catch (error) {
+          console.error('Error generating audio URLs:', error)
+          // Fall back to public URLs on error
+          const fallbackAudio = supabaseData.audio.map((audio) => {
+            const dailyEntry = dailyEntries.find(
+              (daily) => daily.id === audio.daily_id
+            )
+
+            return {
+              url: `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${audio.storage_path}`,
+              duration:
+                audio.duration !== null && audio.duration !== undefined
+                  ? audio.duration
+                  : null,
+              postTitle: dailyEntry?.title || 'Unknown',
+              postDate: dailyEntry?.created_at
+                ? new Date(dailyEntry.created_at).toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })
+                : 'Unknown Date',
+              postSlug: `/${dailyEntry?.title || 'unknown'}`,
+            }
+          })
+
+          setAllAudioUrlsWithMetadata(fallbackAudio)
+          setAllMarkovText(
+            supabaseData.daily.map((entry) => entry.title || '').join(' ')
+          )
+        } finally {
+          setIsLoadingAudio(false)
+        }
+      } else {
+        // No Supabase data available
+        setAllAudioUrlsWithMetadata([])
+        setAllMarkovText('No audio data available')
+      }
+    }
+
+    generateAudioUrls()
+  }, [supabaseData])
 
   return (
     <AudioPlayerProvider>
@@ -104,7 +184,11 @@ const AllSongsPage = ({ pageContext, location }) => {
               className="audio-player-section"
               style={{ marginTop: rhythm(1) }}
             >
-              {allAudioUrlsWithMetadata.length > 0 ? (
+              {isLoadingAudio ? (
+                <div style={{ marginBottom: rhythm(1), color: '#666' }}>
+                  Loading audio data...
+                </div>
+              ) : allAudioUrlsWithMetadata.length > 0 ? (
                 <div style={{ marginBottom: rhythm(1) }}>
                   <AllSongsPlaylist
                     audioUrlsWithMetadata={allAudioUrlsWithMetadata}
