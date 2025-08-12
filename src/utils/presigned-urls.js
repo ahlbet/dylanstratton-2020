@@ -123,6 +123,12 @@ async function generatePresignedUrl(
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Generate pre-signed URL
+    console.log('generatePresignedUrl debug:', {
+      bucketName,
+      storagePath,
+      expiresIn,
+    })
+
     const { data, error } = await supabase.storage
       .from(bucketName)
       .createSignedUrl(storagePath, expiresIn)
@@ -278,6 +284,60 @@ function getCacheStats() {
     cleanupInterval: CACHE_CONFIG.cleanupInterval,
     lastCleanup: lastCleanupTime,
     timeSinceLastCleanup: now - lastCleanupTime,
+  }
+}
+
+/**
+ * Generate a presigned URL for a single audio file on-demand
+ * @param {string} storagePath - The storage path (e.g., 'audio/filename.wav')
+ * @param {number} expiresIn - Expiration time in seconds (default: 1 hour)
+ * @returns {Promise<string>} Presigned URL
+ */
+export async function generatePresignedUrlOnDemand(
+  storagePath,
+  expiresIn = 3600
+) {
+  try {
+    // Check cache first
+    const cacheKey = `${storagePath}_${expiresIn}`
+    const cached = urlCache.get(cacheKey)
+
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.url
+    }
+
+    // Generate new presigned URL
+    // The storagePath includes the bucket name (e.g., 'audio/filename.wav'),
+    // but generatePresignedUrl expects just the file path
+    const filePath = storagePath.replace(/^audio\//, '') // Remove 'audio/' prefix
+
+    console.log('generatePresignedUrlOnDemand debug:', {
+      originalStoragePath: storagePath,
+      extractedFilePath: filePath,
+      bucketName: 'audio',
+      expiresIn,
+    })
+
+    const presignedUrl = await generatePresignedUrl(
+      filePath,
+      'audio',
+      expiresIn
+    )
+
+    // Cache the result
+    urlCache.set(cacheKey, {
+      url: presignedUrl,
+      expiresAt: Date.now() + expiresIn * 1000 - CACHE_CONFIG.bufferTime,
+    })
+
+    return presignedUrl
+  } catch (error) {
+    console.error(
+      'Failed to generate presigned URL on-demand:',
+      storagePath,
+      error
+    )
+    throw error
   }
 }
 

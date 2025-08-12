@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent, getPostName } from '../../utils/plausible-analytics'
 import { navigate, useStaticQuery, graphql } from 'gatsby'
+import { usePresignedUrl } from '../../hooks/use-presigned-url'
 import './FixedAudioPlayer.css'
 import {
   Pause,
@@ -54,9 +55,13 @@ export const FixedAudioPlayer = () => {
     getPreviousTrackIndex,
   } = useAudioPlayer()
 
+  // Hook for on-demand presigned URL generation
+  const { getAudioUrl, isGenerating } = usePresignedUrl()
+
   const progressRef = useRef(null)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [currentAudioUrl, setCurrentAudioUrl] = useState('')
 
   const currentTrack = playlist[currentIndex]
 
@@ -82,6 +87,26 @@ export const FixedAudioPlayer = () => {
       }, 50)
     }
   }
+
+  // Generate presigned URL when current track changes
+  useEffect(() => {
+    const generateAudioUrl = async () => {
+      if (currentTrack) {
+        try {
+          const audioUrl = await getAudioUrl(currentTrack)
+          setCurrentAudioUrl(audioUrl)
+        } catch (error) {
+          console.error('Failed to generate audio URL:', error)
+          // Fall back to original URL
+          setCurrentAudioUrl(currentTrack.url)
+        }
+      } else {
+        setCurrentAudioUrl('')
+      }
+    }
+
+    generateAudioUrl()
+  }, [currentTrack?.url, currentTrack?.storagePath, getAudioUrl]) // Use specific properties to detect actual track changes
 
   useEffect(() => {
     const audio = audioRef.current
@@ -438,7 +463,7 @@ export const FixedAudioPlayer = () => {
 
       <audio
         ref={audioRef}
-        src={currentTrack?.url}
+        src={currentAudioUrl}
         preload="auto"
         crossOrigin="anonymous"
       />

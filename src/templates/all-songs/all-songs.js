@@ -36,14 +36,11 @@ const AllSongsPage = ({ pageContext, location }) => {
   const { supabaseData } = pageContext
   const [allAudioUrlsWithMetadata, setAllAudioUrlsWithMetadata] = useState([])
   const [allMarkovText, setAllMarkovText] = useState('')
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false)
 
   // Generate audio URLs using useEffect (similar to blog post template)
   useEffect(() => {
-    const generateAudioUrls = async () => {
+    const generateAudioUrls = () => {
       if (supabaseData && supabaseData.audio && supabaseData.daily) {
-        setIsLoadingAudio(true)
-
         // Define variables at the top so they're available in all scopes
         const dailyAudio = supabaseData.audio
         const dailyEntries = supabaseData.daily
@@ -88,13 +85,8 @@ const AllSongsPage = ({ pageContext, location }) => {
               dailyEntries.map((entry) => entry.title || '').join(' ')
             )
           } else {
-            // Production mode: generate presigned URLs
-            const audioWithUrls = await generatePresignedUrlsForAudio(
-              dailyAudio,
-              3600 // 1 hour expiry
-            )
-
-            const presignedAudio = audioWithUrls.map((audio) => {
+            // Production mode: store storage paths, generate presigned URLs on-demand when played
+            const productionAudio = dailyAudio.map((audio) => {
               const dailyEntry = dailyEntries.find(
                 (daily) => daily.id === audio.daily_id
               )
@@ -105,7 +97,10 @@ const AllSongsPage = ({ pageContext, location }) => {
                 extractFilenameFromStoragePath(audio.storage_path)
 
               return {
-                url: audio.url, // Use presigned URL directly
+                // No initial URL - will be generated on-demand when track is played
+                url: null,
+                // Store storage path for on-demand presigned URL generation
+                storagePath: audio.storage_path,
                 duration:
                   audio.duration !== null && audio.duration !== undefined
                     ? audio.duration
@@ -126,7 +121,7 @@ const AllSongsPage = ({ pageContext, location }) => {
               }
             })
 
-            setAllAudioUrlsWithMetadata(presignedAudio)
+            setAllAudioUrlsWithMetadata(productionAudio)
             setAllMarkovText(
               dailyEntries.map((entry) => entry.title || '').join(' ')
             )
@@ -140,7 +135,8 @@ const AllSongsPage = ({ pageContext, location }) => {
             )
 
             return {
-              url: `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${audio.storage_path}`,
+              url: null, // No URL - will be generated on-demand
+              storagePath: audio.storage_path, // Keep storage path for on-demand generation
               duration:
                 audio.duration !== null && audio.duration !== undefined
                   ? audio.duration
@@ -162,8 +158,6 @@ const AllSongsPage = ({ pageContext, location }) => {
           setAllMarkovText(
             supabaseData.daily.map((entry) => entry.title || '').join(' ')
           )
-        } finally {
-          setIsLoadingAudio(false)
         }
       } else {
         // No Supabase data available
@@ -192,11 +186,7 @@ const AllSongsPage = ({ pageContext, location }) => {
               className="audio-player-section"
               style={{ marginTop: rhythm(1) }}
             >
-              {isLoadingAudio ? (
-                <div style={{ marginBottom: rhythm(1), color: '#666' }}>
-                  ~~~
-                </div>
-              ) : allAudioUrlsWithMetadata.length > 0 ? (
+              {allAudioUrlsWithMetadata.length > 0 ? (
                 <div style={{ marginBottom: rhythm(1) }}>
                   <AllSongsPlaylist
                     audioUrlsWithMetadata={allAudioUrlsWithMetadata}
