@@ -4,6 +4,7 @@ import React, {
   useState,
   useRef,
   useEffect,
+  useCallback,
 } from 'react'
 import { trackAudioEvent, getPostName } from '../../utils/plausible-analytics'
 
@@ -87,24 +88,31 @@ export const AudioPlayerProvider = ({ children }) => {
     }
   }, [isShuffleOn, playlist])
 
-  const playTrack = (index, newPlaylist) => {
-    if (newPlaylist) setPlaylist(newPlaylist)
-    setCurrentIndex(index)
-    setIsPlaying(true)
+  const playTrack = useCallback(
+    async (index, newPlaylist) => {
+      if (newPlaylist) setPlaylist(newPlaylist)
 
-    // Track song play with Plausible Analytics
-    const track = newPlaylist ? newPlaylist[index] : playlist[index]
-    if (track) {
-      const postName = getPostName(track)
-      trackAudioEvent.songPlay(
-        track,
-        postName,
-        index + 1,
-        newPlaylist ? newPlaylist.length : playlist.length,
-        'context_player'
-      )
-    }
-  }
+      const trackToPlay = newPlaylist ? newPlaylist[index] : playlist[index]
+      if (!trackToPlay) return
+
+      // No need to lazy load audio metadata - durations are already available from Supabase
+      setCurrentIndex(index)
+      setIsPlaying(true)
+
+      // Track song play with Plausible Analytics
+      if (trackToPlay) {
+        const postName = getPostName(trackToPlay)
+        trackAudioEvent.songPlay(
+          trackToPlay,
+          postName,
+          index + 1,
+          newPlaylist ? newPlaylist.length : playlist.length,
+          'context_player'
+        )
+      }
+    },
+    [playlist]
+  )
 
   const updateVolume = (newVolume) => {
     setVolume(newVolume)

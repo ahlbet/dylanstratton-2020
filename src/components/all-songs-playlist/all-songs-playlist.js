@@ -1,49 +1,32 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent } from '../../utils/plausible-analytics'
-import { useTrackDurations } from '../../hooks/use-track-durations'
-import { useScrollToTrack } from '../../hooks/use-scroll-to-track'
 import './all-songs-playlist.css'
 
 const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
   const [isMuted, setIsMuted] = useState(false)
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-
-  // Get audio player context
   const {
     playlist,
     currentIndex,
     isPlaying,
     setIsPlaying,
-    audioRef,
     playTrack,
-    totalPlaylistDuration,
-    updateTotalPlaylistDuration,
     setPlaylist,
-    isShuffleOn,
+    updateTotalPlaylistDuration,
   } = useAudioPlayer()
 
-  // Use shared hook for track durations
-  const { trackDurations } = useTrackDurations(audioUrlsWithMetadata)
-
-  // Use shared hook for scroll to track
-  const { trackListRef, setTrackItemRef } = useScrollToTrack(
-    currentIndex,
-    isShuffleOn
-  )
-
-  // Format duration from seconds to HH:MM:SS or MM:SS
   const formatDuration = (seconds) => {
     if (!seconds || isNaN(seconds)) return '0:00'
-
     const hours = Math.floor(seconds / 3600)
     const mins = Math.floor((seconds % 3600) / 60)
     const secs = Math.floor(seconds % 60)
 
     if (hours > 0) {
       return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-    } else {
+    } else if (mins > 0) {
       return `${mins}:${secs.toString().padStart(2, '0')}`
+    } else {
+      return `0:${secs.toString().padStart(2, '0')}`
     }
   }
 
@@ -68,42 +51,46 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
         const filename = urlParts[urlParts.length - 1]
         const trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
 
-        const duration = formatDuration(trackDurations[item.url])
+        // Use duration from metadata if available, otherwise show 0:00
+        const duration =
+          item.duration !== null && item.duration !== undefined
+            ? formatDuration(item.duration)
+            : '0:00'
 
         return {
           title: trackName || 'Unknown Track',
           artist: item.postTitle || 'Unknown Artist',
           album: item.postDate || 'Unknown Album',
-          duration: duration || '0:00',
+          duration: duration,
           src: item.url,
           downloadUrl: item.url,
           downloadFilename: filename,
         }
       })
       .filter(Boolean)
-  }, [audioUrlsWithMetadata, trackDurations])
+  }, [audioUrlsWithMetadata])
 
-  // Calculate total playlist duration
+  // Calculate total playlist duration from track metadata
   const totalDuration = useMemo(() => {
-    const totalSeconds = Object.values(trackDurations).reduce(
-      (sum, duration) => sum + (duration || 0),
-      0
-    )
+    const totalSeconds =
+      audioUrlsWithMetadata?.reduce((sum, item) => {
+        return sum + (item.duration || 0)
+      }, 0) || 0
     return formatDuration(totalSeconds)
-  }, [trackDurations])
+  }, [audioUrlsWithMetadata])
 
   // Update context with total playlist duration
   useEffect(() => {
-    const totalSeconds = Object.values(trackDurations).reduce(
-      (sum, duration) => sum + (duration || 0),
-      0
-    )
+    const totalSeconds =
+      audioUrlsWithMetadata?.reduce((sum, item) => {
+        return sum + (item.duration || 0)
+      }, 0) || 0
     updateTotalPlaylistDuration(totalSeconds)
 
     if (typeof window !== 'undefined') {
       window.totalPlaylistDuration = totalSeconds
     }
-  }, [trackDurations, updateTotalPlaylistDuration])
+  }, [audioUrlsWithMetadata, updateTotalPlaylistDuration])
 
   // Convert tracks to context format
   const contextTracks = useMemo(() => {
@@ -210,7 +197,7 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
         </div>
 
         {/* Track List */}
-        <div className="track-list" ref={trackListRef}>
+        <div className="track-list">
           {tracks.map((track, index) => {
             const isCurrentTrack = currentIndex === index
             const isPlayingCurrent = isCurrentTrack && isPlaying
@@ -240,7 +227,6 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
                   e.stopPropagation()
                   handleTrackClick(index)
                 }}
-                ref={(el) => setTrackItemRef(index, el)}
               >
                 {/* Play/Pause Button */}
                 <div
