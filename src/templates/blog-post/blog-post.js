@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, graphql } from 'gatsby'
 
 import Bio from '../../components/bio/bio'
@@ -18,6 +18,13 @@ import {
   convertCoverArtUrlToLocal,
   getCoverArtUrl,
 } from '../../utils/local-audio-urls'
+import {
+  generatePresignedUrlsForAudio,
+  removeBucketPrefix,
+  extractFilenameFromStoragePath,
+} from '../../utils/presigned-urls'
+import { SUPABASE_PUBLIC_URL_DOMAIN } from '../../utils/supabase-config'
+import { isLocalDev } from '../../utils/local-dev-utils'
 import './blog-post.css'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
@@ -121,31 +128,118 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
   const { previous, next, markdownData, supabaseData } = pageContext
   const { calendarVisible } = useUserPreferences()
 
-  // Use Supabase data if available, otherwise fall back to markdown extraction
-  let audioData = []
+  // State for audio data with pre-signed URLs
+  const [audioData, setAudioData] = useState([])
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false)
+
   let markovText = ''
   let cleanedHtml = post.html
 
-  if (supabaseData && supabaseData.audio && supabaseData.audio.length > 0) {
-    // Use Supabase audio data
-    audioData = supabaseData.audio.map((audio) => {
-      const fullUrl = `https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/${audio.storage_path}`
-      return {
-        ...audio,
-        url: convertAudioUrlsToLocal([fullUrl])[0],
-        duration: audio.duration || null,
-        format: audio.format || 'audio/wav',
+  // Generate audio URLs (local or presigned based on environment)
+  useEffect(() => {
+    const generateAudioUrls = async () => {
+      if (supabaseData && supabaseData.audio && supabaseData.audio.length > 0) {
+        setIsLoadingAudio(true)
+        try {
+          // Check if we should use local audio files
+          const isLocalDevMode = isLocalDev()
+
+          let processedAudio
+
+          if (isLocalDevMode) {
+            // Use local audio files for development
+            processedAudio = supabaseData.audio.map((audio) => {
+              // Extract clean filename from storage_path
+              const filename = extractFilenameFromStoragePath(
+                audio.storage_path
+              )
+
+              // Convert to local audio URL
+              const localUrl = `/local-audio/${filename}.wav`
+
+              return {
+                ...audio,
+                url: localUrl,
+                duration: audio.duration || null,
+                format: audio.format || 'audio/wav',
+                title: filename, // Clean title without extension
+                artist: 'Daily Audio',
+                album: post.frontmatter.title,
+              }
+            })
+          } else {
+            // Generate pre-signed URLs for production
+            const audioWithUrls = await generatePresignedUrlsForAudio(
+              supabaseData.audio,
+              3600
+            ) // 1 hour expiry
+
+            processedAudio = audioWithUrls.map((audio) => {
+              // Use the display filename that was already extracted
+              const filename =
+                audio.displayFilename ||
+                extractFilenameFromStoragePath(audio.storage_path)
+
+              return {
+                ...audio,
+                url: audio.url, // Use pre-signed URL directly
+                duration: audio.duration || null,
+                format: audio.format || 'audio/wav',
+                title: filename, // Clean title without extension
+                artist: 'Daily Audio',
+                album: post.frontmatter.title,
+              }
+            })
+          }
+
+          setAudioData(processedAudio)
+        } catch (error) {
+          console.error('Error generating audio URLs:', error)
+          // Fall back to public URLs on error
+          const fallbackAudio = supabaseData.audio.map((audio) => {
+            const fullUrl = `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${audio.storage_path}`
+            // Extract clean filename from storage_path
+            const filename = extractFilenameFromStoragePath(audio.storage_path)
+
+            return {
+              ...audio,
+              url: fullUrl, // Use public URL directly (no local conversion needed)
+              duration: audio.duration || null,
+              format: audio.format || 'audio/wav',
+              title: filename, // Clean title without extension
+              artist: 'Daily Audio',
+              album: post.frontmatter.title,
+            }
+          })
+          setAudioData(fallbackAudio)
+        } finally {
+          setIsLoadingAudio(false)
+        }
+      } else {
+        // Fall back to extracting from markdown HTML
+        const extractedUrls = convertAudioUrlsToLocal(
+          extractAudioUrls(post.html)
+        )
+        const fallbackAudio = extractedUrls.map((url) => {
+          // Extract filename from URL
+          const urlParts = url.split('/')
+          const filename = urlParts[urlParts.length - 1].replace(/\.wav$/, '')
+
+          return {
+            url,
+            duration: null,
+            format: 'audio/wav',
+            title: filename, // Clean title without extension
+            artist: 'Daily Audio',
+            album: post.frontmatter.title,
+          }
+        })
+        setAudioData(fallbackAudio)
       }
-    })
-  } else {
-    // Fall back to extracting from markdown HTML
-    const extractedUrls = convertAudioUrlsToLocal(extractAudioUrls(post.html))
-    audioData = extractedUrls.map((url) => ({
-      url,
-      duration: null,
-      format: 'audio/wav',
-    }))
-  }
+    }
+
+    generateAudioUrls()
+  }, [supabaseData, post.html])
 
   if (
     supabaseData &&
@@ -283,7 +377,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
 
             {/* Audio Player - After canvas on mobile */}
             <div className="audio-player-section">
-              {audioData.length > 0 && (
+              {audioData.length > 0 && !isLoadingAudio && (
                 <div style={{ marginBottom: rhythm(1) }}>
                   <BlogAudioPlayer
                     audioData={audioData}

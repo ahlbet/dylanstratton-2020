@@ -11,6 +11,7 @@ import AllSongsPlaylist from '../../components/all-songs-playlist/all-songs-play
 import DynamicMarkovText from '../../components/dynamic-markov-text/DynamicMarkovText'
 import AudioFFT from '../../components/audio-fft/AudioFFT'
 import { convertAudioUrlsToLocal } from '../../utils/local-audio-urls'
+import { SUPABASE_PUBLIC_URL_DOMAIN } from '../../utils/supabase-config'
 
 // Component to handle autopilot state on /all page
 const AllSongsAutopilotHandler = () => {
@@ -44,7 +45,7 @@ const AllSongsPage = ({ pageContext, location }) => {
         (daily) => daily.id === audio.daily_id
       )
 
-      const fullUrl = `https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/${audio.storage_path}`
+      const fullUrl = `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${audio.storage_path}`
 
       return {
         url: convertAudioUrlsToLocal([fullUrl])[0],

@@ -1,9 +1,6 @@
 // Local Development Configuration
 // This utility helps switch between local and Supabase data sources
-
-const isLocalDev =
-  process.env.NODE_ENV === 'development' &&
-  process.env.GATSBY_USE_LOCAL_DATA === 'true'
+import { isLocalDev } from './local-dev-utils'
 
 export const LOCAL_DEV_CONFIG = {
   // Enable local development mode
