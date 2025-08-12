@@ -2,12 +2,19 @@
 
 require('dotenv').config()
 
-const {
-  generatePresignedUrl,
-  generatePresignedUrlsForAudio,
-} = require('../src/utils/presigned-urls')
+// Dynamic import for ES6 modules
+let generatePresignedUrl, generatePresignedUrlsForAudio
+
+async function loadModules() {
+  const presignedUrls = await import('../src/utils/presigned-urls.js')
+  generatePresignedUrl = presignedUrls.generatePresignedUrl
+  generatePresignedUrlsForAudio = presignedUrls.generatePresignedUrlsForAudio
+}
 
 async function testPresignedUrls() {
+  // Load ES6 modules first
+  await loadModules()
+
   console.log('🧪 Testing Pre-signed URL Generation')
   console.log('='.repeat(50))
 
