@@ -1,7 +1,36 @@
 import { createClient } from '@supabase/supabase-js'
+import { SUPABASE_PUBLIC_URL_DOMAIN } from './supabase-config'
 
 // Cache for pre-signed URLs to avoid regenerating them unnecessarily
 const urlCache = new Map()
+
+/**
+ * Remove bucket prefix from storage path
+ * @param {string} storagePath - The storage path (e.g., 'audio/24mar10.wav')
+ * @param {string} bucketName - The bucket name (e.g., 'audio')
+ * @returns {string} The filename without bucket prefix (e.g., '24mar10.wav')
+ */
+export function removeBucketPrefix(storagePath, bucketName) {
+  const prefix = `${bucketName}/`
+  if (storagePath.startsWith(prefix)) {
+    return storagePath.substring(prefix.length)
+  }
+  return storagePath
+}
+
+/**
+ * Extract clean filename from storage path (removes bucket prefix and file extension)
+ * @param {string} storagePath - The storage path (e.g., 'audio/25aug05.wav')
+ * @param {string} bucketName - The bucket name (e.g., 'audio')
+ * @returns {string} The clean filename without bucket prefix or extension (e.g., '25aug05')
+ */
+export function extractFilenameFromStoragePath(
+  storagePath,
+  bucketName = 'audio'
+) {
+  const withoutPrefix = removeBucketPrefix(storagePath, bucketName)
+  return withoutPrefix.replace(/\.wav$/, '')
+}
 
 /**
  * Generate a pre-signed URL for a Supabase storage object
@@ -38,7 +67,7 @@ export async function generatePresignedUrl(
     if (!supabaseUrl || !supabaseKey) {
       console.warn('Missing Supabase credentials for pre-signed URL generation')
       // Fall back to public URL if credentials not available
-      return `https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/${bucketName}/${storagePath}`
+      return `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${bucketName}/${storagePath}`
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -51,7 +80,7 @@ export async function generatePresignedUrl(
     if (error) {
       console.error('Error generating pre-signed URL:', error.message)
       // Fall back to public URL on error
-      return `https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/${bucketName}/${storagePath}`
+      return `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${bucketName}/${storagePath}`
     }
 
     // Cache the URL
@@ -65,7 +94,7 @@ export async function generatePresignedUrl(
   } catch (error) {
     console.error('Error in generatePresignedUrl:', error.message)
     // Fall back to public URL on any error
-    return `https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/${bucketName}/${storagePath}`
+    return `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${bucketName}/${storagePath}`
   }
 }
 
@@ -86,11 +115,26 @@ export async function generatePresignedUrlsForAudio(
   try {
     const audioWithUrls = await Promise.all(
       audioFiles.map(async (audio) => {
-        // Extract filename from storage_path (e.g., 'audio/24mar10.wav' -> '24mar10.wav')
-        const filename = audio.storage_path.replace(/^audio\//, '')
+        // Extract clean filename for display purposes
+        const displayFilename = extractFilenameFromStoragePath(
+          audio.storage_path
+        )
+
+        // For presigned URL generation, we need the full storage path with extension
+        const storagePathForUrl = removeBucketPrefix(
+          audio.storage_path,
+          'audio'
+        )
+
+        // Debug logging
+        console.log('Presigned URL generation:', {
+          original: audio.storage_path,
+          displayFilename,
+          storagePathForUrl,
+        })
 
         const presignedUrl = await generatePresignedUrl(
-          filename,
+          storagePathForUrl,
           'audio',
           expiresIn
         )
@@ -100,6 +144,8 @@ export async function generatePresignedUrlsForAudio(
           url: presignedUrl,
           // Keep the original storage_path for reference
           storage_path: audio.storage_path,
+          // Add the clean display filename for convenience
+          displayFilename: displayFilename,
         }
       })
     )
@@ -110,7 +156,7 @@ export async function generatePresignedUrlsForAudio(
     // Fall back to public URLs on error
     return audioFiles.map((audio) => ({
       ...audio,
-      url: `https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/${audio.storage_path}`,
+      url: `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${audio.storage_path}`,
       storage_path: audio.storage_path,
     }))
   }

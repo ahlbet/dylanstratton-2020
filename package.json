@@ -82,7 +82,7 @@
     "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
     "start": " npm run develop",
     "start-local": "npm run develop-local",
-    "serve": "gatsby serve",
+    "serve": "gatsby clean && gatsby build && gatsby serve",
     "clean": "gatsby clean",
     "test": "jest",
     "new-day": "node ./init.js",

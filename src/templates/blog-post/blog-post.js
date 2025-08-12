@@ -18,7 +18,12 @@ import {
   convertCoverArtUrlToLocal,
   getCoverArtUrl,
 } from '../../utils/local-audio-urls'
-import { generatePresignedUrlsForAudio } from '../../utils/presigned-urls'
+import {
+  generatePresignedUrlsForAudio,
+  removeBucketPrefix,
+  extractFilenameFromStoragePath,
+} from '../../utils/presigned-urls'
+import { SUPABASE_PUBLIC_URL_DOMAIN } from '../../utils/supabase-config'
 import './blog-post.css'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
@@ -145,10 +150,10 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
           if (isLocalDev) {
             // Use local audio files for development
             processedAudio = supabaseData.audio.map((audio) => {
-              // Extract clean filename from storage_path (e.g., 'audio/25aug05.wav' -> '25aug05.wav')
-              const filename = audio.storage_path
-                .replace(/^audio\//, '')
-                .replace(/\.wav$/, '')
+              // Extract clean filename from storage_path
+              const filename = extractFilenameFromStoragePath(
+                audio.storage_path
+              )
 
               // Convert to local audio URL
               const localUrl = `/local-audio/${filename}.wav`
@@ -171,10 +176,10 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
             ) // 1 hour expiry
 
             processedAudio = audioWithUrls.map((audio) => {
-              // Extract clean filename from storage_path (e.g., 'audio/25aug05.wav' -> '25aug05.wav')
-              const filename = audio.storage_path
-                .replace(/^audio\//, '')
-                .replace(/\.wav$/, '')
+              // Use the display filename that was already extracted
+              const filename =
+                audio.displayFilename ||
+                extractFilenameFromStoragePath(audio.storage_path)
 
               return {
                 ...audio,
@@ -193,11 +198,9 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
           console.error('Error generating audio URLs:', error)
           // Fall back to public URLs on error
           const fallbackAudio = supabaseData.audio.map((audio) => {
-            const fullUrl = `https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/${audio.storage_path}`
+            const fullUrl = `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${audio.storage_path}`
             // Extract clean filename from storage_path
-            const filename = audio.storage_path
-              .replace(/^audio\//, '')
-              .replace(/\.wav$/, '')
+            const filename = extractFilenameFromStoragePath(audio.storage_path)
 
             return {
               ...audio,

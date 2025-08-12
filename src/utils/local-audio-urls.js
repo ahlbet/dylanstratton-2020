@@ -1,4 +1,5 @@
 // Utility to convert Supabase audio URLs to local URLs for development
+import { SUPABASE_PUBLIC_URL_DOMAIN } from './supabase-config'
 
 const isLocalDev =
   process.env.NODE_ENV === 'development' &&
@@ -82,7 +83,7 @@ export const getCoverArtUrl = (storagePath) => {
   }
 
   // Convert storage path to full URL
-  return `https://uzsnbfnteazzwirbqgzb.supabase.co/storage/v1/object/public/${storagePath}`
+  return `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${storagePath}`
 }
 
 const localAudioUrls = {
