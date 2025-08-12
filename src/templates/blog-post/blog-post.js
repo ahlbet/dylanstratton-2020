@@ -24,6 +24,7 @@ import {
   extractFilenameFromStoragePath,
 } from '../../utils/presigned-urls'
 import { SUPABASE_PUBLIC_URL_DOMAIN } from '../../utils/supabase-config'
+import { isLocalDev } from '../../utils/local-dev-utils'
 import './blog-post.css'
 import { rhythm, scale } from '../../utils/typography'
 import '../../utils/audio-player.css'
@@ -141,13 +142,11 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
         setIsLoadingAudio(true)
         try {
           // Check if we should use local audio files
-          const isLocalDev =
-            process.env.NODE_ENV === 'development' &&
-            process.env.GATSBY_USE_LOCAL_DATA === 'true'
+          const isLocalDevMode = isLocalDev()
 
           let processedAudio
 
-          if (isLocalDev) {
+          if (isLocalDevMode) {
             // Use local audio files for development
             processedAudio = supabaseData.audio.map((audio) => {
               // Extract clean filename from storage_path

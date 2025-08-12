@@ -1,9 +1,6 @@
 // Utility to convert Supabase audio URLs to local URLs for development
 import { SUPABASE_PUBLIC_URL_DOMAIN } from './supabase-config'
-
-const isLocalDev =
-  process.env.NODE_ENV === 'development' &&
-  process.env.GATSBY_USE_LOCAL_DATA === 'true'
+import { isLocalDev } from './local-dev-utils'
 
 export const convertToLocalAudioUrl = (supabaseUrl) => {
   if (!isLocalDev || !supabaseUrl) {

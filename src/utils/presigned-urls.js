@@ -3,10 +3,11 @@ import { SUPABASE_PUBLIC_URL_DOMAIN } from './supabase-config'
 
 // Cache configuration
 const CACHE_CONFIG = {
-  maxSize: parseInt(process.env.SUPABASE_CACHE_MAX_SIZE) || 1000, // Maximum number of cached URLs
+  maxSize: parseInt(process.env.SUPABASE_CACHE_MAX_SIZE, 10) || 1000, // Maximum number of cached URLs
   cleanupInterval:
-    parseInt(process.env.SUPABASE_CACHE_CLEANUP_INTERVAL) || 5 * 60 * 1000, // Clean up expired entries every 5 minutes
-  bufferTime: parseInt(process.env.SUPABASE_CACHE_BUFFER_TIME) || 5 * 60 * 1000, // 5 minute buffer before considering URLs expired
+    parseInt(process.env.SUPABASE_CACHE_CLEANUP_INTERVAL, 10) || 5 * 60 * 1000, // Clean up expired entries every 5 minutes
+  bufferTime:
+    parseInt(process.env.SUPABASE_CACHE_BUFFER_TIME, 10) || 5 * 60 * 1000, // 5 minute buffer before considering URLs expired
 }
 
 // Cache for pre-signed URLs to avoid regenerating them unnecessarily
@@ -231,16 +232,16 @@ function clearUrlCache() {
  */
 function updateCacheConfig(newConfig) {
   if (newConfig.maxSize !== undefined) {
-    CACHE_CONFIG.maxSize = Math.max(1, parseInt(newConfig.maxSize))
+    CACHE_CONFIG.maxSize = Math.max(1, parseInt(newConfig.maxSize, 10))
   }
   if (newConfig.cleanupInterval !== undefined) {
     CACHE_CONFIG.cleanupInterval = Math.max(
       1000,
-      parseInt(newConfig.cleanupInterval)
+      parseInt(newConfig.cleanupInterval, 10)
     )
   }
   if (newConfig.bufferTime !== undefined) {
-    CACHE_CONFIG.bufferTime = Math.max(1000, parseInt(newConfig.bufferTime))
+    CACHE_CONFIG.bufferTime = Math.max(1000, parseInt(newConfig.bufferTime, 10))
   }
 
   // Force cleanup if new config is more restrictive
