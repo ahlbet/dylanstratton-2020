@@ -41,9 +41,26 @@ class MarkovGenerator {
   ) {
     // Check for local development mode first
     if (typeof window !== 'undefined') {
-      // Client-side: try local data first
-      const localPath = '/public/local-data/markov-source.txt'
+      // Client-side: try Supabase first, fallback to local data
       try {
+        // Try to fetch from Supabase bucket first
+        const supabaseResponse = await fetch('/api/markov-text')
+        if (supabaseResponse.ok) {
+          const supabaseData = await supabaseResponse.json()
+          if (supabaseData.texts && supabaseData.texts.length > 0) {
+            this.lines = this.compileAndCleanText(supabaseData.texts)
+            this.buildNgrams()
+            console.log(`✅ Loaded ${this.lines.length} lines from Supabase`)
+            return true
+          }
+        }
+      } catch (error) {
+        console.warn('Supabase fetch failed, trying local source...')
+      }
+
+      // Fallback to local data if Supabase fails
+      try {
+        const localPath = '/public/local-data/markov-source.txt'
         const response = await fetch(localPath)
         if (response.ok) {
           const text = await response.text()
@@ -52,112 +69,117 @@ class MarkovGenerator {
             .filter((line) => line.trim().length > 0)
           this.lines = this.compileAndCleanText(textArray)
           this.buildNgrams()
-          console.log(`✅ Loaded ${this.lines.length} lines from local source`)
+          console.log(
+            `✅ Loaded ${this.lines.length} lines from local source (fallback)`
+          )
           return true
         }
       } catch (error) {
-        console.warn('Local source not available, trying Supabase...')
+        console.warn('Local source also failed')
       }
     }
 
-    if (!createClient || typeof window !== 'undefined') {
-      console.warn('Supabase not available, falling back to local file')
-      return this.loadTextFromFallback()
-    }
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn(
-        'Missing Supabase credentials passed directly, falling back to local file'
-      )
-      return this.loadTextFromFallback()
-    }
-
-    try {
-      const supabase = createClient(supabaseUrl, supabaseKey)
-
-      // List all txt files in the markov-text bucket
-      const { data: files, error: listError } = await supabase.storage
-        .from(bucketName)
-        .list('', {
-          limit: 100,
-          sortBy: { column: 'name', order: 'asc' },
-        })
-
-      if (listError) {
-        console.error('Error listing files from Supabase:', listError.message)
+    // Node.js environment: try Supabase first, then fallback
+    if (typeof window === 'undefined') {
+      if (!supabaseUrl || !supabaseKey) {
+        console.warn('Missing Supabase credentials, falling back to local file')
         return this.loadTextFromFallback()
       }
 
-      // Filter for .txt files
-      const txtFiles = files.filter(
-        (file) =>
-          file.name.toLowerCase().endsWith('.txt') &&
-          file.name !== '.emptyFolderPlaceholder'
-      )
+      // Try to load from Supabase directly
+      try {
+        const supabase = createClient(supabaseUrl, supabaseKey)
 
-      if (txtFiles.length === 0) {
-        console.warn(
-          'No txt files found in markov-text bucket, falling back to local file'
-        )
-        return this.loadTextFromFallback()
-      }
+        // List all txt files in the markov-text bucket
+        const { data: files, error: listError } = await supabase.storage
+          .from(bucketName)
+          .list('', {
+            limit: 100,
+            sortBy: { column: 'name', order: 'asc' },
+          })
 
-      // Download and combine all txt files
-      let allText = ''
-      let successfulDownloads = 0
-
-      for (const file of txtFiles) {
-        try {
-          const { data, error } = await supabase.storage
-            .from(bucketName)
-            .download(file.name)
-
-          if (error) {
-            console.error(`Error downloading ${file.name}:`, error.message)
-            continue
-          }
-
-          const text = await data.text()
-          allText += text + '\n'
-          successfulDownloads++
-        } catch (error) {
-          console.error(`Error processing ${file.name}:`, error.message)
+        if (listError) {
+          console.error('Error listing files from Supabase:', listError.message)
+          return this.loadTextFromFallback()
         }
-      }
 
-      if (successfulDownloads === 0) {
-        console.warn(
-          'No files successfully downloaded, falling back to local file'
+        // Filter for .txt files
+        const txtFiles = files.filter(
+          (file) =>
+            file.name.toLowerCase().endsWith('.txt') &&
+            file.name !== '.emptyFolderPlaceholder'
         )
+
+        if (txtFiles.length === 0) {
+          console.warn(
+            'No txt files found in markov-text bucket, falling back to local file'
+          )
+          return this.loadTextFromFallback()
+        }
+
+        // Download and combine all txt files
+        let allText = ''
+        let successfulDownloads = 0
+
+        for (const file of txtFiles) {
+          try {
+            const { data, error } = await supabase.storage
+              .from(bucketName)
+              .download(file.name)
+
+            if (error) {
+              console.error(`Error downloading ${file.name}:`, error.message)
+              continue
+            }
+
+            const text = await data.text()
+            allText += text + '\n'
+            successfulDownloads++
+          } catch (error) {
+            console.error(`Error processing ${file.name}:`, error.message)
+          }
+        }
+
+        if (successfulDownloads === 0) {
+          console.warn(
+            'No files successfully downloaded, falling back to local file'
+          )
+          return this.loadTextFromFallback()
+        }
+
+        // Process the combined text
+        const textArray = allText
+          .split('\n')
+          .filter((line) => line.trim().length > 0)
+
+        this.lines = this.compileAndCleanText(textArray)
+        this.buildNgrams()
+
+        console.log(
+          `✅ Loaded ${this.lines.length} lines from ${successfulDownloads} Supabase files`
+        )
+        return true
+      } catch (error) {
+        console.error('Error loading from Supabase:', error.message)
         return this.loadTextFromFallback()
       }
+    }
 
-      // Process the combined text
-      const textArray = allText
-        .split('\n')
-        .filter((line) => line.trim().length > 0)
-      this.lines = this.compileAndCleanText(textArray)
-      this.buildNgrams()
-
-      console.log(
-        `✅ Loaded ${this.lines.length} lines from ${successfulDownloads} Supabase files`
-      )
-      return true
-    } catch (error) {
-      console.error(
-        'Error in loadTextFromSupabaseWithCredentials:',
-        error.message
-      )
+    // Browser environment but no createClient: fallback to local file
+    if (!createClient) {
+      console.warn('Supabase not available, falling back to local file')
       return this.loadTextFromFallback()
     }
   }
 
   // New method to load from Supabase markov-text bucket
   async loadTextFromSupabase(bucketName = 'markov-text') {
-    if (!createClient || typeof window !== 'undefined') {
-      console.warn('Supabase not available, falling back to local file')
-      return this.loadTextFromFallback()
-    }
+    // This method is now redundant since the logic is in the constructor
+    // Keeping it for backward compatibility but it will always fallback
+    console.warn(
+      'Using fallback method - Supabase loading is handled in constructor'
+    )
+    return this.loadTextFromFallback()
 
     try {
       // Initialize Supabase client
@@ -245,7 +267,7 @@ class MarkovGenerator {
     // Join all texts with double newlines to separate sources
     let combinedText = textArray.join('\n\n')
 
-    // Clean and normalize the text
+    // Clean and normalize the text - be much more conservative
     combinedText = combinedText
       // Remove Gutenberg header and metadata
       .replace(
@@ -257,79 +279,32 @@ class MarkovGenerator {
       .replace(/Most recently updated:.*?Language: English\s*/gs, '')
       .replace(/Contents\s*/gi, '')
       .replace(/THE SONNETS\s*/gi, '')
-      // Remove play titles and headers
-      .replace(/ALL'S WELL THAT ENDS WELL\s*/gi, '')
-      .replace(/THE TRAGEDY OF MACBETH\s*/gi, '')
-      .replace(/THE COMEDY OF ERRORS\s*/gi, '')
-      .replace(/HAMLET, PRINCE OF DENMARK\s*/gi, '')
-      .replace(/ROMEO AND JULIET\s*/gi, '')
-      .replace(/A MIDSUMMER NIGHT'S DREAM\s*/gi, '')
-      .replace(/THE MERCHANT OF VENICE\s*/gi, '')
-      .replace(/MUCH ADO ABOUT NOTHING\s*/gi, '')
-      .replace(/AS YOU LIKE IT\s*/gi, '')
-      .replace(/TWELFTH NIGHT\s*/gi, '')
-      .replace(/THE TAMING OF THE SHREW\s*/gi, '')
-      .replace(/KING LEAR\s*/gi, '')
-      .replace(/OTHELLO\s*/gi, '')
-      .replace(/JULIUS CAESAR\s*/gi, '')
-      .replace(/ANTONY AND CLEOPATRA\s*/gi, '')
-      .replace(/CORIOLANUS\s*/gi, '')
-      .replace(/TITUS ANDRONICUS\s*/gi, '')
-      .replace(/PERICLES\s*/gi, '')
-      .replace(/CYMBELINE\s*/gi, '')
-      .replace(/THE WINTER'S TALE\s*/gi, '')
-      .replace(/THE TEMPEST\s*/gi, '')
-      .replace(/HENRY IV\s*/gi, '')
-      .replace(/HENRY V\s*/gi, '')
-      .replace(/HENRY VI\s*/gi, '')
-      .replace(/HENRY VIII\s*/gi, '')
-      .replace(/RICHARD II\s*/gi, '')
-      .replace(/RICHARD III\s*/gi, '')
-      .replace(/KING JOHN\s*/gi, '')
-      .replace(/MEASURE FOR MEASURE\s*/gi, '')
-      .replace(/TROILUS AND CRESSIDA\s*/gi, '')
-      .replace(/TIMON OF ATHENS\s*/gi, '')
-      .replace(/LOVE'S LABOUR'S LOST\s*/gi, '')
-      .replace(/THE TWO GENTLEMEN OF VERONA\s*/gi, '')
-      .replace(/THE MERRY WIVES OF WINDSOR\s*/gi, '')
-      .replace(/THE LIFE AND DEATH OF KING JOHN\s*/gi, '')
-      .replace(/THE FIRST PART OF KING HENRY IV\s*/gi, '')
-      .replace(/THE SECOND PART OF KING HENRY IV\s*/gi, '')
-      .replace(/THE LIFE OF KING HENRY V\s*/gi, '')
-      .replace(/THE FIRST PART OF KING HENRY VI\s*/gi, '')
-      .replace(/THE SECOND PART OF KING HENRY VI\s*/gi, '')
-      .replace(/THE THIRD PART OF KING HENRY VI\s*/gi, '')
-      .replace(/THE LIFE AND DEATH OF RICHARD III\s*/gi, '')
-      .replace(/THE LIFE OF KING HENRY VIII\s*/gi, '')
-      .replace(/THE TRAGEDY OF\s*/gi, '')
-      .replace(/THE COMEDY OF\s*/gi, '')
-      .replace(/THE HISTORY OF\s*/gi, '')
       // Remove stage directions in brackets/parentheses
       .replace(/\[.*?\]/g, '')
       .replace(/\(.*?\)/g, '')
       // Remove common play formatting artifacts
-      .replace(/Act\s+[IVX]+/gi, '')
-      .replace(/Scene\s+[IVX]+/gi, '')
-      .replace(/Enter\s+/gi, '')
-      .replace(/Exit\s+/gi, '')
-      .replace(/Exeunt\s+/gi, '')
-      // Remove excessive whitespace
-      .replace(/\s+/g, ' ')
-      // Remove multiple consecutive newlines, but preserve paragraph breaks
-      .replace(/\n\s*\n\s*\n+/g, '\n\n')
-      // Remove leading/trailing whitespace from lines
+      .replace(/^Act\s+[IVX]+/gim, '')
+      .replace(/^Scene\s+[IVX]+/gim, '')
+      .replace(/^Enter\s+/gim, '')
+      .replace(/^Exit\s+/gim, '')
+      .replace(/^Exeunt\s+/gim, '')
+      // Remove excessive whitespace but preserve line breaks
+      .replace(/\r\n/g, '\n') // Normalize line endings
+      .replace(/\r/g, '\n') // Normalize line endings
+      .replace(/\n\s*\n\s*\n+/g, '\n\n') // Remove excessive newlines
+      .replace(/[ \t]+/g, ' ') // Normalize spaces
+
+    // Split into lines and clean each line individually
+    const lines = combinedText
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
-      // Remove any remaining multiple spaces
-      .map((line) => line.replace(/[ \t]+/g, ' '))
-      // Ensure sentences end properly
-      .map((line) => line.replace(/([.!?])\s*([A-Z])/g, '$1\n$2'))
-      // Clean up any double spaces that might remain
-      .map((line) => line.replace(/\s{2,}/g, ' '))
-      .filter((line) => line.length > 0)
+      .filter((line) => line.length > 10) // Only keep lines with substantial content
+      .filter((line) => !/^[A-Z\s]+$/.test(line)) // Remove lines that are just ALL CAPS (headers)
+      .filter((line) => !/^[0-9]+\s/.test(line)) // Remove numbered lines (like "1 From fairest creatures...")
+      .filter((line) => !line.match(/^(The|A|An)\s+[A-Z][a-z]+\s+[A-Z][a-z]+/)) // Remove play titles
 
-    return combinedText
+    return lines
   }
 
   // Clean generated text to remove character names and formatting artifacts
