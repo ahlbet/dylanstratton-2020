@@ -99,9 +99,10 @@ const AllSongsPage = ({ pageContext, location }) => {
                 (daily) => daily.id === audio.daily_id
               )
 
-              // Use displayFilename from presigned URL generation (clean filename without extension)
-              const cleanTitle =
-                audio.displayFilename || dailyEntry?.title || 'Unknown'
+              // Use the display filename that was already extracted (same pattern as blog posts)
+              const filename =
+                audio.displayFilename ||
+                extractFilenameFromStoragePath(audio.storage_path)
 
               return {
                 url: audio.url, // Use presigned URL directly
@@ -109,7 +110,7 @@ const AllSongsPage = ({ pageContext, location }) => {
                   audio.duration !== null && audio.duration !== undefined
                     ? audio.duration
                     : null,
-                postTitle: cleanTitle,
+                postTitle: filename, // Clean title without extension
                 postDate: dailyEntry?.created_at
                   ? new Date(dailyEntry.created_at).toLocaleDateString(
                       'en-US',
