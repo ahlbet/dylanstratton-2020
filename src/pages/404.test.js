@@ -15,12 +15,12 @@ beforeEach(() => {
 })
 
 // Mock the Layout component
-jest.mock('../../components/layout/layout', () => {
+jest.mock('../components/layout/layout', () => {
   return ({ children }) => <div data-testid="layout">{children}</div>
 })
 
 // Mock the SEO component
-jest.mock('../../components/seo/seo', () => {
+jest.mock('../components/seo/seo', () => {
   return ({ title }) => <div data-testid="seo">{title}</div>
 })
 

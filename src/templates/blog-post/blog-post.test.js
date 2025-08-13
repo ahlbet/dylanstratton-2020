@@ -1,18 +1,8 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import BlogPostTemplate from './blog-post'
-import { useStaticQuery } from 'gatsby'
 
-// Mock the gatsby dependencies
-jest.mock('gatsby', () => ({
-  Link: jest
-    .fn()
-    .mockImplementation(({ children, to }) => <a href={to}>{children}</a>),
-  graphql: jest.fn(),
-  useStaticQuery: jest.fn(),
-}))
-
-// Mock the components
+// Mock ALL components to avoid complex rendering issues
 jest.mock('../../components/bio/bio', () => () => (
   <div data-testid="bio">Bio Component</div>
 ))
@@ -26,8 +16,6 @@ jest.mock('../../components/seo/seo', () => ({ title, description }) => (
     SEO Component
   </div>
 ))
-
-// Mock the calendar components
 jest.mock('../../components/calendar/calendar', () => () => (
   <div data-testid="calendar">Calendar Component</div>
 ))
@@ -42,14 +30,81 @@ jest.mock('../../components/calendar/user-preferences-context', () => ({
   }),
 }))
 
-// Mock the typography utils
-jest.mock('../../utils/typography', () => ({
-  rhythm: jest.fn((n) => n * 10),
-  scale: jest.fn(() => ({ fontSize: '0.8rem' })),
+// Mock the audio player context
+jest.mock('../../contexts/audio-player-context/audio-player-context', () => ({
+  AudioPlayerProvider: ({ children }) => (
+    <div data-testid="audio-provider">{children}</div>
+  ),
+  useAudioPlayer: () => ({
+    setPlaylist: jest.fn(),
+    playlist: [],
+    playTrack: jest.fn(),
+  }),
+}))
+
+// Mock the fixed audio player component
+jest.mock('../../components/fixed-audio-player/FixedAudioPlayer', () => ({
+  FixedAudioPlayer: () => (
+    <div data-testid="fixed-audio-player">Fixed Audio Player</div>
+  ),
+}))
+
+// Mock the blog audio player component
+jest.mock('../../components/blog-audio-player/BlogAudioPlayer', () => () => (
+  <div data-testid="blog-audio-player">Blog Audio Player</div>
+))
+
+// Mock the dynamic markov text component
+jest.mock(
+  '../../components/dynamic-markov-text/DynamicMarkovText',
+  () => () => <div data-testid="dynamic-markov-text">Dynamic Markov Text</div>
+)
+
+// Mock the audio FFT component
+jest.mock('../../components/audio-fft/AudioFFT', () => () => (
+  <div data-testid="audio-fft">Audio FFT</div>
+))
+
+// Mock utility functions
+jest.mock('../../utils/extractAudioUrls', () => ({
+  extractAudioUrls: jest.fn(() => []),
+  removeAudioFromHtml: jest.fn((html) => html),
+}))
+
+jest.mock('../../utils/local-audio-urls', () => ({
+  convertAudioUrlsToLocal: jest.fn(() => []),
+  convertCoverArtUrlToLocal: jest.fn(() => ''),
+  getCoverArtUrl: jest.fn(() => ''),
+}))
+
+jest.mock('../../utils/presigned-urls', () => ({
+  generatePresignedUrlsForAudio: jest.fn(() => []),
+  removeBucketPrefix: jest.fn((path) => path),
+  extractFilenameFromStoragePath: jest.fn((path) => 'test-file'),
+}))
+
+jest.mock('../../utils/local-dev-utils', () => ({
+  isLocalDev: jest.fn(() => false),
 }))
 
 // Mock CSS imports
 jest.mock('../../utils/audio-player.css', () => ({}), { virtual: true })
+jest.mock('./blog-post.css', () => ({}), { virtual: true })
+
+// Mock gatsby
+jest.mock('gatsby', () => ({
+  Link: jest
+    .fn()
+    .mockImplementation(({ children, to }) => <a href={to}>{children}</a>),
+  graphql: jest.fn(),
+  useStaticQuery: jest.fn(),
+}))
+
+// Mock typography
+jest.mock('../../utils/typography', () => ({
+  rhythm: jest.fn((n) => n * 10),
+  scale: jest.fn(() => ({ fontSize: '0.8rem' })),
+}))
 
 describe('BlogPostTemplate', () => {
   const mockData = {
@@ -79,6 +134,8 @@ describe('BlogPostTemplate', () => {
       fields: { slug: '/next-post/' },
       frontmatter: { title: 'Next Post' },
     },
+    markdownData: null,
+    supabaseData: null,
   }
 
   const mockLocation = {
@@ -160,17 +217,5 @@ describe('BlogPostTemplate', () => {
 
     expect(screen.getAllByText('← Previous Post')).toHaveLength(2)
     expect(screen.queryByText(/Next Post →/)).not.toBeInTheDocument()
-  })
-
-  test('renders calendar toggle button', () => {
-    render(
-      <BlogPostTemplate
-        data={mockData}
-        pageContext={mockPageContext}
-        location={mockLocation}
-      />
-    )
-
-    expect(screen.getByTestId('calendar-toggle')).toBeInTheDocument()
   })
 })

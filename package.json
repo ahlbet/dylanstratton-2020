@@ -54,16 +54,20 @@
   },
   "devDependencies": {
     "@babel/preset-typescript": "^7.27.1",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/jest": "^29.5.14",
     "babel-jest": "^29.7.0",
     "babel-preset-gatsby": "^3.14.0",
+    "husky": "^9.1.7",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "standard-version": "^9.5.0"
   },
   "homepage": "https://github.com/gatsbyjs/gatsby-starter-blog#readme",
   "keywords": [
@@ -77,6 +81,7 @@
   },
   "scripts": {
     "build": "gatsby build",
+    "release": "standard-version",
     "develop": "NODE_ENV=development GATSBY_USE_LOCAL_DATA=true gatsby develop",
     "develop-local": "NODE_ENV=development GATSBY_USE_LOCAL_DATA=true gatsby develop",
     "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
@@ -99,6 +104,7 @@
     "debug-local-dev": "node scripts/debug-local-dev.js",
     "test-url-conversion": "node scripts/test-url-conversion.js",
     "clean-local-markov": "node scripts/clean-local-markov-texts.js",
-    "fetch-markov-texts": "node scripts/fetch-markov-texts-from-supabase.js"
+    "fetch-markov-texts": "node scripts/fetch-markov-texts-from-supabase.js",
+    "prepare": "husky"
   }
 }
