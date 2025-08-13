@@ -301,7 +301,7 @@ export const FixedAudioPlayer = () => {
         </button>
         <div className="track-info">
           <div className="track-title">{currentTrack?.title || '~~~'}</div>
-          <div className="track-artist">{currentTrack?.artist || '~~~'}</div>
+          {/* <div className="track-artist">{currentTrack?.artist || '~~~'}</div> */}
         </div>
         <div className="player-controls">
           {playlist.length > 1 && (

@@ -39,7 +39,7 @@
 }
 
 .player-center {
-  flex: 2;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -97,7 +97,7 @@
 /* Mobile layout */
 @media (max-width: 768px) {
   .audio-player-container {
-    padding: 8px 12px;
+    padding: 16px 12px;
   }
 
   .player-left {
