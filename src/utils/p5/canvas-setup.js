@@ -16,11 +16,11 @@ export const getContainerDimensions = (
   defaultHeight = 400
 ) => {
   const containerWidth =
-    canvas && canvas.parentElement
+    canvas && canvas.parentElement && canvas.parentElement.offsetWidth
       ? canvas.parentElement.offsetWidth
       : defaultWidth
   const containerHeight =
-    canvas && canvas.parentElement
+    canvas && canvas.parentElement && canvas.parentElement.offsetHeight
       ? canvas.parentElement.offsetHeight
       : defaultHeight
 

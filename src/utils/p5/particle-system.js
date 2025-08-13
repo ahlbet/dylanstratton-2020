@@ -10,7 +10,10 @@ export class Particle {
   constructor(p, x, y, amp, frequencyBand, markovSeed = 0) {
     this.p = p
     this.pos = p.createVector(x, y)
+    this.vel = p.createVector(0, 0)
+    this.acc = p.createVector(0, 0)
     this.frequencyBand = frequencyBand // 0-7: different frequency ranges
+    this.lifeFrames = 0
 
     // Individual particle properties for unique movement
     this.noiseOffsetX = p.random(1000)
@@ -165,26 +168,26 @@ export class Particle {
     }
   }
 
-  update() {
-    const p = this.p
+  update(p, audioData, frequencyBands) {
+    const p5 = p || this.p
 
     // Individual noise-based movement
-    const noiseX = p.noise(this.noiseOffsetX) * 2 - 1
-    const noiseY = p.noise(this.noiseOffsetY) * 2 - 1
+    const noiseX = p5.noise(this.noiseOffsetX) * 2 - 1
+    const noiseY = p5.noise(this.noiseOffsetY) * 2 - 1
 
     // Add smooth noise movement
-    const noiseForce = p
+    const noiseForce = p5
       .createVector(noiseX, noiseY)
       .mult(this.noiseStrength * 0.05)
     this.vel.add(noiseForce)
 
     // Individual oscillation
     const oscillationX =
-      p.sin(p.frameCount * this.oscillationSpeed + this.individualSeed) *
+      p5.sin(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
       0.005
     const oscillationY =
-      p.cos(p.frameCount * this.oscillationSpeed + this.individualSeed) *
+      p5.cos(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
       0.005
     this.vel.add(oscillationX, oscillationY)
@@ -202,19 +205,19 @@ export class Particle {
     this.noiseOffsetY += this.noiseScale
 
     // Apply frequency band-specific movement patterns
-    this.applyFrequencyBandMovement()
+    this.applyFrequencyBandMovement(p5)
 
     // Limit velocity based on audio reactivity
     this.vel.limit(1.0 + this.audioReactivity * 2.0)
   }
 
-  applyFrequencyBandMovement() {
-    const p = this.p
+  applyFrequencyBandMovement(p) {
+    const p5 = p || this.p
 
     switch (this.frequencyBand) {
       case 0: // Sub-bass - strong gravitational pull to center
-        const center = p.createVector(p.width / 2, p.height / 2)
-        const toCenter = p.createVector(
+        const center = p5.createVector(p5.width / 2, p5.height / 2)
+        const toCenter = p5.createVector(
           center.x - this.pos.x,
           center.y - this.pos.y
         )
@@ -226,25 +229,25 @@ export class Particle {
         this.vel.rotate(this.rotationSpeed * this.audioReactivity)
         break
       case 2: // Low Mid - bouncing off edges with audio-reactive bounciness
-        if (this.pos.x < 0 || this.pos.x > p.width)
+        if (this.pos.x < 0 || this.pos.x > p5.width)
           this.vel.x *= -(0.6 + this.audioReactivity * 0.4)
-        if (this.pos.y < 0 || this.pos.y > p.height)
+        if (this.pos.y < 0 || this.pos.y > p5.height)
           this.vel.y *= -(0.6 + this.audioReactivity * 0.4)
         break
       case 3: // Mid - wavey movement
         this.vel.x +=
-          p.sin(p.frameCount * 0.15 + this.individualSeed) *
+          p5.sin(p5.frameCount * 0.15 + this.individualSeed) *
           0.1 *
           this.audioReactivity
         this.vel.y +=
-          p.cos(p.frameCount * 0.15 + this.individualSeed) *
+          p5.cos(p5.frameCount * 0.15 + this.individualSeed) *
           0.1 *
           this.audioReactivity
         break
       case 4: // High Mid - expanding/contracting movement
-        const expansionForce = p.createVector(
-          this.pos.x - p.width / 2,
-          this.pos.y - p.height / 2
+        const expansionForce = p5.createVector(
+          this.pos.x - p5.width / 2,
+          this.pos.y - p5.height / 2
         )
         expansionForce.normalize()
         expansionForce.mult(0.2 * this.audioReactivity)
@@ -252,24 +255,24 @@ export class Particle {
         break
       case 5: // Presence - chaotic movement
         this.vel.add(
-          p
-            .createVector(p.random(-0.2, 0.2), p.random(-0.2, 0.2))
+          p5
+            .createVector(p5.random(-0.2, 0.2), p5.random(-0.2, 0.2))
             .mult(this.audioReactivity)
         )
         break
       case 6: // Brilliance - rapid oscillation
         this.vel.x +=
-          p.sin(p.frameCount * 0.3 + this.individualSeed) *
+          p5.sin(p5.frameCount * 0.3 + this.individualSeed) *
           0.15 *
           this.audioReactivity
         this.vel.y +=
-          p.cos(p.frameCount * 0.3 + this.individualSeed) *
+          p5.sin(p5.frameCount * 0.3 + this.individualSeed) *
           0.15 *
           this.audioReactivity
         break
       case 7: // Air - random direction changes
-        if (p.random() < 0.1 * this.audioReactivity) {
-          this.vel.rotate(p.random(-p.PI / 4, p.PI / 4))
+        if (p5.random() < 0.1 * this.audioReactivity) {
+          this.vel.rotate(p5.random(-p5.PI / 4, p5.PI / 4))
         }
         break
     }
@@ -323,7 +326,7 @@ export class Particle {
   }
 
   isDead() {
-    return this.lifeFrames >= this.maxLifeFrames
+    return this.lifeFrames <= 0
   }
 }
 

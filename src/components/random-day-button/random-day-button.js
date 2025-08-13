@@ -20,7 +20,12 @@ const RandomDayButton = () => {
     }
   `)
 
-  const posts = data.allMarkdownRemark.edges
+  const posts = data?.allMarkdownRemark?.edges
+
+  // If no posts are available, don't render the button
+  if (!posts || posts.length === 0) {
+    return null
+  }
 
   const getRandomPost = () => {
     const randomIndex = Math.floor(Math.random() * posts.length)
@@ -28,6 +33,11 @@ const RandomDayButton = () => {
   }
 
   const randomPost = getRandomPost()
+
+  // Additional safety check
+  if (!randomPost?.fields?.slug) {
+    return null
+  }
 
   return (
     <Link

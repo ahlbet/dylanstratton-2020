@@ -14,7 +14,7 @@ export const extractAudioUrls = (html) => {
   }
 
   // Method 1: Extract from <audio> elements (processed by gatsby-remark-audio)
-  // Handle both quoted and unquoted src attributes
+  // Handle both quoted and unquoted src attributes, including fragments
   const audioElementRegex =
     /<audio[^>]+src=(?:["']([^"']+)["']|([^\s>]+))[^>]*>/gi
   let match
@@ -47,9 +47,13 @@ export const extractAudioUrls = (html) => {
   // Filter and validate URLs
   return audioUrls.filter((url) => {
     try {
-      new URL(url)
+      const parsedUrl = new URL(url)
+      // Only allow HTTP and HTTPS protocols
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return false
+      }
       // Check if it's likely an audio file
-      return url.match(/\.(wav|mp3|ogg|m4a|aac|flac)(\?|$)/i)
+      return url.match(/\.(wav|mp3|ogg|m4a|aac|flac)(\?|#|$)/i)
     } catch {
       return false
     }
@@ -67,20 +71,27 @@ export const removeAudioFromHtml = (html) => {
     return html
   }
 
-  return (
-    html
-      // Remove paragraph elements containing audio elements (from gatsby-remark-audio)
-      .replace(/<p[^>]*>\s*<audio[^>]*>.*?<\/audio>\s*<\/p>/gi, '')
-      // Remove <audio> elements (fallback)
-      .replace(/<audio[^>]*>.*?<\/audio>/gi, '')
-      // Remove code blocks with audio: URLs
-      .replace(/<code[^>]*>audio:[^<]*<\/code>/gi, '')
-      // Remove paragraph elements that only contain audio code blocks
-      .replace(/<p[^>]*>\s*<code[^>]*>audio:[^<]*<\/code>\s*<\/p>/gi, '')
-      // Clean up any double line breaks or empty paragraphs
-      .replace(/<p[^>]*>\s*<\/p>/gi, '')
-      .replace(/\n\s*\n/g, '\n')
-  )
+  // Handle whitespace-only input
+  if (html.trim() === '') {
+    return ''
+  }
+
+  const result = html
+    // Remove paragraph elements containing audio elements (from gatsby-remark-audio)
+    .replace(/<p[^>]*>\s*<audio[^>]*>.*?<\/audio>\s*<\/p>/gi, '')
+    // Remove <audio> elements (fallback)
+    .replace(/<audio[^>]*>.*?<\/audio>/gi, '')
+    // Remove code blocks with audio: URLs
+    .replace(/<code[^>]*>audio:[^<]*<\/code>/gi, '')
+    // Remove paragraph elements that only contain audio code blocks
+    .replace(/<p[^>]*>\s*<code[^>]*>audio:[^<]*<\/code>\s*<\/p>/gi, '')
+    // Clean up any double line breaks or empty paragraphs
+    .replace(/<p[^>]*>\s*<\/p>/gi, '')
+    .replace(/\n\s*\n/g, '\n')
+
+  // Only trim if we actually made changes to avoid modifying content unnecessarily
+  const hasChanges = result !== html
+  return hasChanges ? result.trim() : html
 }
 
 export default { extractAudioUrls, removeAudioFromHtml }

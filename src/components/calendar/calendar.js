@@ -32,20 +32,23 @@ const CalendarComponent = () => {
   `)
 
   // Generate events from blog posts
-  const events = data.allMarkdownRemark.edges.map(({ node }) => {
-    const { title, date, description } = node.frontmatter
-    const slug = node.fields.slug
+  const events =
+    data?.allMarkdownRemark?.edges?.map(({ node }) => {
+      const { title, date, description } = node.frontmatter || {}
+      const slug = node.fields?.slug
 
-    return {
-      id: title,
-      title: `${title}`,
-      start: date,
-      url: slug,
-      extendedProps: {
-        description: description || '',
-      },
-    }
-  })
+      return {
+        id: title,
+        title: title || 'Untitled',
+        start: date ? new Date(date) : new Date(),
+        end: date ? new Date(date) : new Date(),
+        url: slug || '#',
+        extendedProps: {
+          description: description || '',
+        },
+        allDay: true,
+      }
+    }) || []
 
   // Handle view change
   const handleViewChange = (viewInfo) => {
@@ -89,7 +92,7 @@ const CalendarComponent = () => {
           // Event clicked - could add navigation logic here if needed
         }}
         eventDidMount={(info) => {
-          if (info.event.extendedProps.description) {
+          if (info.event.extendedProps?.description) {
             info.el.title = info.event.extendedProps.description
           }
         }}

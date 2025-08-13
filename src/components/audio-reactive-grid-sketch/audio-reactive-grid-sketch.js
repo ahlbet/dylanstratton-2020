@@ -9,7 +9,7 @@ const P5SketchComponent = lazy(() =>
 )
 
 // Audio-reactive grid sketch function - only runs client-side
-const createAudioReactiveGridSketch =
+export const createAudioReactiveGridSketch =
   (markovText = '', totalPlaylistDuration = 0) =>
   (p) => {
     // Global variables
