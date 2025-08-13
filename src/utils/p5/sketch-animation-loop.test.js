@@ -138,7 +138,6 @@ describe('sketch-animation-loop', () => {
 
     it('should handle FFT not properly initialized', () => {
       const invalidFFT = { analyze: 'not a function' }
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
 
       const animationLoop = createAudioReactiveAnimationLoop(
         mockP5,
@@ -160,12 +159,7 @@ describe('sketch-animation-loop', () => {
 
       animationLoop()
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'FFT not properly initialized, skipping animation frame'
-      )
       expect(mockFFT.analyze).not.toHaveBeenCalled()
-
-      consoleSpy.mockRestore()
     })
 
     it('should spawn particles when conditions are met', () => {

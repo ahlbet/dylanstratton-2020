@@ -41,7 +41,6 @@ export const createAudioReactiveAnimationLoop = (
   return () => {
     // Verify FFT is properly initialized
     if (!fft || typeof fft.analyze !== 'function') {
-      console.warn('FFT not properly initialized, skipping animation frame')
       return
     }
 
@@ -119,7 +118,9 @@ export const createAudioReactiveAnimationLoop = (
       const pt = particles[i]
       pt.update()
       pt.draw()
-      if (pt.isDead()) particles.splice(i, 1)
+      if (pt.isDead()) {
+        particles.splice(i, 1)
+      }
     }
   }
 }

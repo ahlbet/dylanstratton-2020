@@ -123,7 +123,7 @@ export const FixedAudioPlayer = () => {
     const handleEnded = () => {
       if (isLoopOn) {
         // If loop is on, restart the current track
-        if (audioRef.current) {
+        if (audioRef.current && currentAudioUrl) {
           audioRef.current.currentTime = 0
           audioRef.current.play()
         }
@@ -179,18 +179,30 @@ export const FixedAudioPlayer = () => {
     shuffledPlaylist,
     navigateToRandomPost,
     volume,
+    currentAudioUrl,
   ])
 
   useEffect(() => {
     const audio = audioRef.current
     if (audio) {
       if (isPlaying) {
+        // Check if audio source is ready before attempting to play
+        if (!currentAudioUrl || audio.readyState === 0) {
+          console.log('Audio source not ready, waiting for URL or metadata...')
+          return
+        }
+
         const playPromise = audio.play()
         if (playPromise !== undefined) {
           playPromise.catch((error) => {
             // Ignore AbortError as it's expected when navigating
             if (error.name !== 'AbortError') {
               console.warn('Audio play failed:', error)
+              // If play fails due to source issues, try to recover
+              if (error.name === 'NotSupportedError' && currentAudioUrl) {
+                console.log('Attempting to reload audio source...')
+                audio.load()
+              }
             }
           })
         }
@@ -198,7 +210,7 @@ export const FixedAudioPlayer = () => {
         audio.pause()
       }
     }
-  }, [isPlaying])
+  }, [isPlaying, currentAudioUrl])
 
   // Handle autopilot navigation when enabled on home or /all page
   useEffect(() => {
@@ -215,12 +227,23 @@ export const FixedAudioPlayer = () => {
     // wait until metadata loads before attempting playback
     const tryPlay = () => {
       if (isPlaying) {
+        // Check if audio source is ready before attempting to play
+        if (!currentAudioUrl || audio.readyState === 0) {
+          console.log('Audio source not ready in autoplay, waiting...')
+          return
+        }
+
         const promise = audio.play()
         if (promise?.catch) {
           promise.catch((err) => {
             // Ignore AbortError as it's expected when navigating
             if (err.name !== 'AbortError') {
               console.warn('Autoplay failed:', err)
+              // If autoplay fails due to source issues, try to recover
+              if (err.name === 'NotSupportedError' && currentAudioUrl) {
+                console.log('Attempting to reload audio source for autoplay...')
+                audio.load()
+              }
             }
           })
         }
@@ -238,6 +261,12 @@ export const FixedAudioPlayer = () => {
         ? Math.floor(Math.random() * playlist.length)
         : 0
       playTrack(trackIndex)
+      return
+    }
+
+    // Don't allow play if there's no audio source
+    if (!currentAudioUrl) {
+      console.log('Cannot play: no audio source available')
       return
     }
 

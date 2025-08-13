@@ -382,7 +382,7 @@ describe('calculateStaggeredSpawn', () => {
     expect(result).toHaveProperty('shouldSpawn')
     expect(result).toHaveProperty('spawnIndex')
     expect(result).toHaveProperty('interval')
-    expect(result.interval).toBe(8)
+    expect(result.interval).toBe(3)
   })
 
   test('should calculate spawn timing for bass band', () => {
@@ -390,7 +390,7 @@ describe('calculateStaggeredSpawn', () => {
     expect(result).toHaveProperty('shouldSpawn')
     expect(result).toHaveProperty('spawnIndex')
     expect(result).toHaveProperty('interval')
-    expect(result.interval).toBe(6)
+    expect(result.interval).toBe(2)
   })
 
   test('should calculate spawn timing for low-mid band', () => {
@@ -398,7 +398,7 @@ describe('calculateStaggeredSpawn', () => {
     expect(result).toHaveProperty('shouldSpawn')
     expect(result).toHaveProperty('spawnIndex')
     expect(result).toHaveProperty('interval')
-    expect(result.interval).toBe(7)
+    expect(result.interval).toBe(3)
   })
 
   test('should calculate spawn timing for mid band', () => {
@@ -406,7 +406,7 @@ describe('calculateStaggeredSpawn', () => {
     expect(result).toHaveProperty('shouldSpawn')
     expect(result).toHaveProperty('spawnIndex')
     expect(result).toHaveProperty('interval')
-    expect(result.interval).toBe(5)
+    expect(result.interval).toBe(2)
   })
 
   test('should calculate spawn timing for high-mid band', () => {
@@ -414,7 +414,7 @@ describe('calculateStaggeredSpawn', () => {
     expect(result).toHaveProperty('shouldSpawn')
     expect(result).toHaveProperty('spawnIndex')
     expect(result).toHaveProperty('interval')
-    expect(result.interval).toBe(6)
+    expect(result.interval).toBe(3)
   })
 
   test('should calculate spawn timing for presence band', () => {
@@ -422,7 +422,7 @@ describe('calculateStaggeredSpawn', () => {
     expect(result).toHaveProperty('shouldSpawn')
     expect(result).toHaveProperty('spawnIndex')
     expect(result).toHaveProperty('interval')
-    expect(result.interval).toBe(7)
+    expect(result.interval).toBe(2)
   })
 
   test('should calculate spawn timing for brilliance band', () => {
@@ -430,7 +430,7 @@ describe('calculateStaggeredSpawn', () => {
     expect(result).toHaveProperty('shouldSpawn')
     expect(result).toHaveProperty('spawnIndex')
     expect(result).toHaveProperty('interval')
-    expect(result.interval).toBe(8)
+    expect(result.interval).toBe(3)
   })
 
   test('should calculate spawn timing for air band', () => {
@@ -438,7 +438,7 @@ describe('calculateStaggeredSpawn', () => {
     expect(result).toHaveProperty('shouldSpawn')
     expect(result).toHaveProperty('spawnIndex')
     expect(result).toHaveProperty('interval')
-    expect(result.interval).toBe(9)
+    expect(result.interval).toBe(2)
   })
 
   test('should handle invalid frequency band', () => {
@@ -446,7 +446,7 @@ describe('calculateStaggeredSpawn', () => {
     expect(result).toHaveProperty('shouldSpawn')
     expect(result).toHaveProperty('spawnIndex')
     expect(result).toHaveProperty('interval')
-    expect(result.interval).toBe(7) // Should use default case
+    expect(result.interval).toBe(3) // Should use default case
   })
 
   test('should handle different frame counts', () => {

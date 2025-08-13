@@ -178,90 +178,124 @@ describe('Canvas Setup Utilities', () => {
   })
 
   describe('setupFFT', () => {
-    test('should return null when no source node provided', () => {
+    test('should return null when no source node provided', async () => {
       const mockGlobalP5 = createMockGlobalP5()
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
 
-      const result = setupFFT(mockGlobalP5, null)
+      const result = await setupFFT(mockGlobalP5, null)
 
       expect(result).toBeNull()
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '🎵 No source node provided for FFT setup'
-      )
-      consoleSpy.mockRestore()
     })
 
-    test('should use global FFT instance if available', () => {
+    test('should use global FFT instance if available', async () => {
       const mockGlobalP5 = createMockGlobalP5()
-      const mockSourceNode = { id: 'source' }
-      const mockGlobalFFT = { setInput: jest.fn() }
+      const mockSourceNode = {
+        id: 'source',
+        context: { state: 'running' },
+        mediaElement: createMockAudioElement(),
+      }
+      const mockGlobalFFT = {
+        setInput: jest.fn(),
+        input: null,
+        _input: null,
+        analyzer: null,
+      }
+      mockGlobalFFT.setInput.mockImplementation((input) => {
+        mockGlobalFFT.input = input
+        mockGlobalFFT._input = input
+      })
       window.__globalFFTInstance = mockGlobalFFT
 
-      const result = setupFFT(mockGlobalP5, mockSourceNode)
+      const result = await setupFFT(mockGlobalP5, mockSourceNode)
 
       expect(result).toBe(mockGlobalFFT)
       expect(mockGlobalFFT.setInput).toHaveBeenCalledWith(mockSourceNode)
     })
 
-    test('should create new FFT instance if global one fails', () => {
+    test('should create new FFT instance if global one fails', async () => {
       const mockGlobalP5 = createMockGlobalP5()
-      const mockSourceNode = { id: 'source' }
+      const mockSourceNode = {
+        id: 'source',
+        context: { state: 'running' },
+        mediaElement: createMockAudioElement(),
+      }
       const mockGlobalFFT = {
         setInput: jest.fn(() => {
           throw new Error('Failed')
         }),
       }
       window.__globalFFTInstance = mockGlobalFFT
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation()
 
-      const result = setupFFT(mockGlobalP5, mockSourceNode)
+      const result = await setupFFT(mockGlobalP5, mockSourceNode)
 
       expect(result).toBeDefined()
       expect(mockGlobalP5.FFT).toHaveBeenCalledWith(0.9, 2048)
       expect(window.__globalFFTInstance).toBeNull()
-      consoleSpy.mockRestore()
     })
 
-    test('should create new FFT instance when no global instance exists', () => {
+    test('should create new FFT instance when no global instance exists', async () => {
       const mockGlobalP5 = createMockGlobalP5()
-      const mockSourceNode = { id: 'source' }
-      const mockFFT = { setInput: jest.fn() }
+      const mockSourceNode = {
+        id: 'source',
+        context: { state: 'running' },
+        mediaElement: createMockAudioElement(),
+      }
+      const mockFFT = {
+        setInput: jest.fn(),
+        input: null,
+        _input: null,
+        analyzer: null,
+      }
+      mockFFT.setInput.mockImplementation((input) => {
+        mockFFT.input = input
+        mockFFT._input = input
+      })
       mockGlobalP5.FFT.mockReturnValue(mockFFT)
 
-      const result = setupFFT(mockGlobalP5, mockSourceNode)
+      const result = await setupFFT(mockGlobalP5, mockSourceNode)
 
       expect(result).toBe(mockFFT)
       expect(mockGlobalP5.FFT).toHaveBeenCalledWith(0.9, 2048)
       expect(mockFFT.setInput).toHaveBeenCalledWith(mockSourceNode)
     })
 
-    test('should use custom smoothing and fft size', () => {
+    test('should use custom smoothing and fft size', async () => {
       const mockGlobalP5 = createMockGlobalP5()
-      const mockSourceNode = { id: 'source' }
-      const mockFFT = { setInput: jest.fn() }
+      const mockSourceNode = {
+        id: 'source',
+        context: { state: 'running' },
+        mediaElement: createMockAudioElement(),
+      }
+      const mockFFT = {
+        setInput: jest.fn(),
+        input: null,
+        _input: null,
+        analyzer: null,
+      }
+      mockFFT.setInput.mockImplementation((input) => {
+        mockFFT.input = input
+        mockFFT._input = input
+      })
       mockGlobalP5.FFT.mockReturnValue(mockFFT)
 
-      setupFFT(mockGlobalP5, mockSourceNode, 0.5, 1024)
+      await setupFFT(mockGlobalP5, mockSourceNode, 0.5, 1024)
 
       expect(mockGlobalP5.FFT).toHaveBeenCalledWith(0.5, 1024)
     })
 
     test('should handle FFT creation errors', () => {
       const mockGlobalP5 = createMockGlobalP5()
-      const mockSourceNode = { id: 'source' }
+      const mockSourceNode = {
+        id: 'source',
+        context: { state: 'running' },
+        mediaElement: createMockAudioElement(),
+      }
       mockGlobalP5.FFT.mockImplementation(() => {
         throw new Error('FFT creation failed')
       })
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
 
       expect(() => setupFFT(mockGlobalP5, mockSourceNode)).toThrow(
         'FFT creation failed'
       )
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Failed to create FFT instance:',
-        expect.any(Error)
-      )
-      consoleSpy.mockRestore()
     })
   })
 

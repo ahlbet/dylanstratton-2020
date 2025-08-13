@@ -170,7 +170,6 @@ export class Particle {
 
   update(p, audioData, frequencyBands) {
     const p5 = p || this.p
-
     // Individual noise-based movement
     const noiseX = p5.noise(this.noiseOffsetX) * 2 - 1
     const noiseY = p5.noise(this.noiseOffsetY) * 2 - 1
@@ -326,7 +325,7 @@ export class Particle {
   }
 
   isDead() {
-    return this.lifeFrames <= 0
+    return this.lifeFrames >= this.maxLifeFrames
   }
 }
 
@@ -386,18 +385,19 @@ export const calculateParticleCount = (band, exponentialAmp, canvasScale) => {
  * @returns {Object} Spawn timing information
  */
 export const calculateStaggeredSpawn = (band, frameCount, totalParticles) => {
-  // Different spawn intervals for different frequency bands
-  const spawnIntervals = [8, 6, 7, 5, 6, 7, 8, 9] // Frames between spawns for each band
-  const interval = spawnIntervals[band] || 7
+  // Shorter spawn intervals for more continuous particle flow
+  const spawnIntervals = [3, 2, 3, 2, 3, 2, 3, 2] // Frames between spawns for each band
+  const interval = spawnIntervals[band] || 3
 
   // Offset each band to prevent all spawning at once
-  const bandOffset = band * 3
+  const bandOffset = band * 2
   const adjustedFrame = frameCount + bandOffset
 
   // Check if it's time to spawn
   const shouldSpawn = adjustedFrame % interval === 0
 
   // Calculate which particle in the sequence to spawn
+  // Use modulo to cycle through particles continuously
   const spawnIndex = Math.floor(adjustedFrame / interval) % totalParticles
 
   return {
