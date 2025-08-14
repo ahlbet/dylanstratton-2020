@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent, getPostName } from '../../utils/plausible-analytics'
 import { navigate, useStaticQuery, graphql } from 'gatsby'
@@ -182,16 +182,21 @@ export const FixedAudioPlayer = () => {
     currentAudioUrl,
   ])
 
-  useEffect(() => {
+  // Function to check if audio is ready to play
+  const isAudioReady = useCallback(() => {
     const audio = audioRef.current
-    if (audio) {
-      if (isPlaying) {
-        // Check if audio source is ready before attempting to play
-        if (!currentAudioUrl || audio.readyState === 0) {
-          console.log('Audio source not ready, waiting for URL or metadata...')
-          return
-        }
+    return (
+      audio &&
+      audio.src &&
+      audio.readyState >= 1 && // HAVE_METADATA or higher
+      currentAudioUrl
+    )
+  }, [currentAudioUrl])
 
+  // Function to wait for audio to be ready and then play
+  const waitForAudioAndPlay = useCallback(
+    (audio) => {
+      if (isAudioReady()) {
         const playPromise = audio.play()
         if (playPromise !== undefined) {
           playPromise.catch((error) => {
@@ -206,11 +211,44 @@ export const FixedAudioPlayer = () => {
             }
           })
         }
+        return true
+      }
+      return false
+    },
+    [currentAudioUrl, isAudioReady]
+  )
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio) {
+      if (isPlaying) {
+        // Check if audio source is ready before attempting to play
+        if (!currentAudioUrl || audio.readyState === 0 || !audio.src) {
+          console.log(
+            'Audio source not ready, waiting for URL, metadata, and source...'
+          )
+          return
+        }
+
+        // Try to play immediately if ready
+        if (waitForAudioAndPlay(audio)) {
+          return
+        }
+
+        // If not ready, wait and try again
+        console.log('Audio not ready yet, waiting for source and metadata...')
+        const timeoutId = setTimeout(() => {
+          if (isPlaying) {
+            waitForAudioAndPlay(audio)
+          }
+        }, 200)
+
+        return () => clearTimeout(timeoutId)
       } else {
         audio.pause()
       }
     }
-  }, [isPlaying, currentAudioUrl])
+  }, [isPlaying, currentAudioUrl, waitForAudioAndPlay])
 
   // Handle autopilot navigation when enabled on home or /all page
   useEffect(() => {
@@ -228,31 +266,51 @@ export const FixedAudioPlayer = () => {
     const tryPlay = () => {
       if (isPlaying) {
         // Check if audio source is ready before attempting to play
-        if (!currentAudioUrl || audio.readyState === 0) {
-          console.log('Audio source not ready in autoplay, waiting...')
+        if (!currentAudioUrl || audio.readyState === 0 || !audio.src) {
+          console.log(
+            'Audio source not ready in autoplay, waiting for URL, metadata, and source...'
+          )
           return
         }
 
-        const promise = audio.play()
-        if (promise?.catch) {
-          promise.catch((err) => {
-            // Ignore AbortError as it's expected when navigating
-            if (err.name !== 'AbortError') {
-              console.warn('Autoplay failed:', err)
-              // If autoplay fails due to source issues, try to recover
-              if (err.name === 'NotSupportedError' && currentAudioUrl) {
-                console.log('Attempting to reload audio source for autoplay...')
-                audio.load()
-              }
-            }
-          })
+        // Try to play immediately if ready
+        if (waitForAudioAndPlay(audio)) {
+          return
         }
+
+        // If not ready, wait and try again
+        console.log(
+          'Audio not ready yet in autoplay, waiting for source and metadata...'
+        )
+        setTimeout(() => {
+          if (isPlaying) {
+            waitForAudioAndPlay(audio)
+          }
+        }, 200)
       }
     }
 
     audio.addEventListener('loadedmetadata', tryPlay)
     return () => audio.removeEventListener('loadedmetadata', tryPlay)
   }, [currentTrack, isPlaying])
+
+  // Listen for audio metadata loading to know when it's ready to play
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const handleMetadataLoaded = () => {
+      console.log('Audio metadata loaded, ready to play')
+      // If user was waiting to play, try to play now
+      if (isPlaying && isAudioReady()) {
+        waitForAudioAndPlay(audio)
+      }
+    }
+
+    audio.addEventListener('loadedmetadata', handleMetadataLoaded)
+    return () =>
+      audio.removeEventListener('loadedmetadata', handleMetadataLoaded)
+  }, [isPlaying, isAudioReady, waitForAudioAndPlay])
 
   const togglePlay = () => {
     // If no track is selected but we have a playlist, start playing
@@ -267,6 +325,20 @@ export const FixedAudioPlayer = () => {
     // Don't allow play if there's no audio source
     if (!currentAudioUrl) {
       console.log('Cannot play: no audio source available')
+      return
+    }
+
+    // Check if audio is ready (both context and source metadata)
+    const audio = audioRef.current
+    if (audio && (audio.readyState === 0 || !audio.src)) {
+      console.log('Audio not ready yet, waiting for source and metadata...')
+      // Wait a bit and try again
+      setTimeout(() => {
+        if (audio.readyState > 0 && audio.src) {
+          // Instead of calling togglePlay recursively, just set playing state
+          setIsPlaying(true)
+        }
+      }, 200) // Increased delay to give more time for setup
       return
     }
 
