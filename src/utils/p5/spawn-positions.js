@@ -56,6 +56,36 @@ export const calculateTatSpawnPosition = (
     return null
   }
 
+  // Special handling for sub-bass (case 0) - distribute across entire canvas
+  if (bandIndex === 0) {
+    // Create a distributed grid pattern for sub-bass particles
+    const gridSize = Math.ceil(Math.sqrt(tatShapePositions.length * 2)) // More grid points
+    const gridSpacingX = p.width / gridSize
+    const gridSpacingY = p.height / gridSize
+
+    // Use particle index to determine grid position with some randomness
+    const gridX = (particleIndex % gridSize) * gridSpacingX
+    const gridY = Math.floor(particleIndex / gridSize) * gridSpacingY
+
+    // Add significant random variation to break up the grid pattern
+    const randomOffsetX = (p.random() - 0.5) * gridSpacingX * 0.8
+    const randomOffsetY = (p.random() - 0.5) * gridSpacingY * 0.8
+
+    // Add smooth noise for organic movement
+    const noiseOffsetX =
+      (gridX + particleIndex * 100) * 0.01 + p.frameCount * 0.003
+    const noiseOffsetY =
+      (gridY + particleIndex * 200) * 0.01 + p.frameCount * 0.003
+    const noiseX = (p.noise(noiseOffsetX) - 0.5) * gridSpacingX * 0.6
+    const noiseY = (p.noise(noiseOffsetY) - 0.5) * gridSpacingY * 0.6
+
+    return {
+      x: gridX + randomOffsetX + noiseX,
+      y: gridY + randomOffsetY + noiseY,
+    }
+  }
+
+  // Original logic for other frequency bands
   const positionIndex = (bandIndex * particleIndex) % tatShapePositions.length
   const position = tatShapePositions[positionIndex]
 

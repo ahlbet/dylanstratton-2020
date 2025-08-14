@@ -7,6 +7,44 @@
  * Audio-reactive particle class
  */
 export class Particle {
+  // Helper function to map all colors to blue-to-red spectrum (eliminates green entirely)
+  static avoidGreenHue(hue) {
+    // Map the full 360° spectrum to blue-to-red (240° to 0°/360°)
+    // This creates a continuous blue -> purple -> red -> orange -> yellow -> blue gradient
+
+    if (hue >= 0 && hue < 60) {
+      // Red to orange (0-59°) - keep as is
+      return hue
+    } else if (hue >= 60 && hue < 120) {
+      // Orange to yellow (60-119°) - map to red-orange range
+      return 0 + ((hue - 60) / 59) * 30 // Map 60-119 to 0-30
+    } else if (hue >= 120 && hue < 180) {
+      // Green to cyan (120-179°) - map to blue range
+      return 240 - ((hue - 120) / 59) * 40 // Map 120-179 to 240-200
+    } else if (hue >= 180 && hue < 240) {
+      // Cyan to blue (180-239°) - keep in blue range
+      return hue
+    } else if (hue >= 240 && hue < 300) {
+      // Blue to magenta (240-299°) - keep as is
+      return hue
+    } else if (hue >= 300 && hue < 360) {
+      // Magenta to red (300-359°) - map to red range
+      return 0 + ((hue - 300) / 59) * 30 // Map 300-359 to 0-30
+    }
+
+    return hue
+  }
+
+  // Helper function to adjust saturation and brightness for blue-to-red spectrum
+  static adjustGreenishColors(hue, saturation, brightness) {
+    // Since we're eliminating green entirely, we can be more generous with saturation and brightness
+    // Just ensure colors aren't too intense
+    return {
+      saturation: Math.max(50, Math.min(100, saturation * 0.9)), // Slight reduction, min 50
+      brightness: Math.max(60, Math.min(100, brightness * 0.9)), // Slight reduction, min 60
+    }
+  }
+
   constructor(p, x, y, amp, frequencyBand, markovSeed = 0) {
     this.p = p
     this.pos = p.createVector(x, y)
@@ -28,9 +66,18 @@ export class Particle {
     // Individual color variation properties based on markov seed
     const primaryHue = markovSeed % 360 // Use markov seed for primary hue
     const hueVariation = p.random(-30, 30) // ±30 degree variation
-    this.colorHue = (primaryHue + hueVariation + 360) % 360
-    this.colorSaturation = p.random(60, 100)
-    this.colorBrightness = p.random(70, 100)
+    this.colorHue = Particle.avoidGreenHue(
+      (primaryHue + hueVariation + 360) % 360
+    )
+    const baseSaturationInit = p.random(60, 100)
+    const baseBrightnessInit = p.random(70, 100)
+    const adjustedColorsInit = Particle.adjustGreenishColors(
+      this.colorHue,
+      baseSaturationInit,
+      baseBrightnessInit
+    )
+    this.colorSaturation = adjustedColorsInit.saturation
+    this.colorBrightness = adjustedColorsInit.brightness
     this.colorShiftSpeed = p.random(0.5, 2.0)
     this.colorShiftDirection = p.random([-1, 1])
 
@@ -69,9 +116,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (180 + boostedAmp * 120) * lifespanVariation
         )
-        this.colorHue = (primaryHue + p.random(-10, 10) + 360) % 360
-        this.colorSaturation = p.random(90, 100)
-        this.colorBrightness = p.random(90, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + p.random(-10, 10) + 360) % 360
+        )
+        const baseSaturation = p.random(90, 100)
+        const baseBrightness = p.random(90, 100)
+        const adjustedColors = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation,
+          baseBrightness
+        )
+        this.colorSaturation = adjustedColors.saturation
+        this.colorBrightness = adjustedColors.brightness
         this.noiseStrength *= 0.3
         break
       case 1: // Bass (60-250 Hz) - most dramatic
@@ -81,9 +137,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (150 + boostedAmp * 100) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 30 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(85, 100)
-        this.colorBrightness = p.random(85, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 30 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation1 = p.random(85, 100)
+        const baseBrightness1 = p.random(85, 100)
+        const adjustedColors1 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation1,
+          baseBrightness1
+        )
+        this.colorSaturation = adjustedColors1.saturation
+        this.colorBrightness = adjustedColors1.brightness
         this.noiseStrength *= 0.6
         break
       case 2: // Low Mid (250-500 Hz)
@@ -93,9 +158,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (120 + boostedAmp * 80) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 60 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(80, 100)
-        this.colorBrightness = p.random(80, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 60 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation2 = p.random(80, 100)
+        const baseBrightness2 = p.random(80, 100)
+        const adjustedColors2 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation2,
+          baseBrightness2
+        )
+        this.colorSaturation = adjustedColors2.saturation
+        this.colorBrightness = adjustedColors2.brightness
         this.noiseStrength *= 1.0
         break
       case 3: // Mid (500-2000 Hz) - very responsive
@@ -105,9 +179,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (100 + boostedAmp * 60) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 90 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(75, 100)
-        this.colorBrightness = p.random(75, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 90 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation3 = p.random(75, 100)
+        const baseBrightness3 = p.random(75, 100)
+        const adjustedColors3 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation3,
+          baseBrightness3
+        )
+        this.colorSaturation = adjustedColors3.saturation
+        this.colorBrightness = adjustedColors3.brightness
         this.noiseStrength *= 1.4
         break
       case 4: // High Mid (2000-4000 Hz)
@@ -117,9 +200,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (80 + boostedAmp * 40) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 120 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(70, 100)
-        this.colorBrightness = p.random(70, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 140 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation4 = p.random(70, 100)
+        const baseBrightness4 = p.random(70, 100)
+        const adjustedColors4 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation4,
+          baseBrightness4
+        )
+        this.colorSaturation = adjustedColors4.saturation
+        this.colorBrightness = adjustedColors4.brightness
         this.noiseStrength *= 1.8
         break
       case 5: // Presence (4000-6000 Hz)
@@ -129,9 +221,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (60 + boostedAmp * 30) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 150 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(65, 100)
-        this.colorBrightness = p.random(65, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 150 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation5 = p.random(65, 100)
+        const baseBrightness5 = p.random(65, 100)
+        const adjustedColors5 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation5,
+          baseBrightness5
+        )
+        this.colorSaturation = adjustedColors5.saturation
+        this.colorBrightness = adjustedColors5.brightness
         this.noiseStrength *= 2.2
         break
       case 6: // Brilliance (6000-8000 Hz)
@@ -141,9 +242,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (40 + boostedAmp * 20) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 180 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(60, 100)
-        this.colorBrightness = p.random(60, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 180 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation6 = p.random(60, 100)
+        const baseBrightness6 = p.random(60, 100)
+        const adjustedColors6 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation6,
+          baseBrightness6
+        )
+        this.colorSaturation = adjustedColors6.saturation
+        this.colorBrightness = adjustedColors6.brightness
         this.noiseStrength *= 2.6
         break
       case 7: // Air (8000-20000 Hz)
@@ -153,18 +263,36 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (30 + boostedAmp * 15) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 210 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(55, 100)
-        this.colorBrightness = p.random(55, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 210 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation7 = p.random(55, 100)
+        const baseBrightness7 = p.random(55, 100)
+        const adjustedColors7 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation7,
+          baseBrightness7
+        )
+        this.colorSaturation = adjustedColors7.saturation
+        this.colorBrightness = adjustedColors7.brightness
         this.noiseStrength *= 3.0
         break
       default:
         this.speed = p.map(boostedAmp, 0, 1, 0, 25)
         this.size = p.map(boostedAmp, 0, 1, 4, 25)
         this.alphaDecay = 3
-        this.colorHue = (primaryHue + p.random(-20, 20) + 360) % 360
-        this.colorSaturation = p.random(50, 100)
-        this.colorBrightness = p.random(60, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + p.random(-20, 20) + 360) % 360
+        )
+        const baseSaturationDefault = p.random(50, 100)
+        const baseBrightnessDefault = p.random(60, 100)
+        const adjustedColorsDefault = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturationDefault,
+          baseBrightnessDefault
+        )
+        this.colorSaturation = adjustedColorsDefault.saturation
+        this.colorBrightness = adjustedColorsDefault.brightness
     }
   }
 
@@ -214,15 +342,31 @@ export class Particle {
     const p5 = p || this.p
 
     switch (this.frequencyBand) {
-      case 0: // Sub-bass - strong gravitational pull to center
+      case 0: // Sub-bass - pulsing/throbbing movement like a heartbeat
+        // Create a pulsing force that expands and contracts based on audio
         const center = p5.createVector(p5.width / 2, p5.height / 2)
         const toCenter = p5.createVector(
           center.x - this.pos.x,
           center.y - this.pos.y
         )
-        toCenter.normalize()
-        toCenter.mult(0.6 * this.audioReactivity)
-        this.vel.add(toCenter)
+
+        // Pulsing effect: particles move away from center when audio is loud,
+        // and back toward center when audio is quiet
+        const pulseStrength = 0.4 * this.audioReactivity
+        const pulseDirection =
+          p5.sin(p5.frameCount * 0.1 + this.individualSeed) * pulseStrength
+
+        if (pulseDirection > 0) {
+          // Expand outward
+          toCenter.normalize()
+          toCenter.mult(pulseDirection)
+          this.vel.add(toCenter)
+        } else {
+          // Contract inward (gentler than the old strong pull)
+          toCenter.normalize()
+          toCenter.mult(pulseDirection * 0.3) // Softer inward pull
+          this.vel.add(toCenter)
+        }
         break
       case 1: // Bass - spiral movement
         this.vel.rotate(this.rotationSpeed * this.audioReactivity)
@@ -290,12 +434,22 @@ export class Particle {
     if (this.colorHue > 360) this.colorHue -= 360
     if (this.colorHue < 0) this.colorHue += 360
 
+    // Ensure we still avoid green hues after dynamic shifting
+    this.colorHue = Particle.avoidGreenHue(this.colorHue)
+
+    // Adjust saturation and brightness to avoid greenish appearance
+    const adjustedColors = Particle.adjustGreenishColors(
+      this.colorHue,
+      this.colorSaturation,
+      this.colorBrightness
+    )
+
     // Create color with current properties
     p.colorMode(p.HSB, 360, 100, 100, 1)
     const currentColor = p.color(
       this.colorHue,
-      this.colorSaturation,
-      this.colorBrightness,
+      adjustedColors.saturation,
+      adjustedColors.brightness,
       this.alpha / 255
     )
 
