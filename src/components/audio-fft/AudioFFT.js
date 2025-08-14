@@ -98,6 +98,9 @@ export default function AudioFFT({ markovText = '' }) {
 
                 // Re-add dynamic movement properties to new positions
                 addDynamicMovementToPositions(tatShapePositions, p)
+
+                // Clear existing particles to prevent them from spawning at old positions
+                particles.length = 0
               },
             }
           )

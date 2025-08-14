@@ -32,17 +32,9 @@ function createMobileFriendlyWindowResized(originalWindowResized, p5Instance) {
     return originalWindowResized
   }
 
-  // Store previous dimensions to detect changes
-  let previousWidth = p5Instance.canvas
-    ? p5Instance.canvas.width
-    : p5Instance.windowWidth
-  let previousHeight = p5Instance.canvas
-    ? p5Instance.canvas.height
-    : p5Instance.windowHeight
-
   // On mobile, debounce the windowResized call
   const debouncedWindowResized = debounce(() => {
-    // Get current dimensions
+    // Always get current dimensions from the p5 instance
     const currentWidth = p5Instance.canvas
       ? p5Instance.canvas.width
       : p5Instance.windowWidth
@@ -50,16 +42,10 @@ function createMobileFriendlyWindowResized(originalWindowResized, p5Instance) {
       ? p5Instance.canvas.height
       : p5Instance.windowHeight
 
-    // Check if dimensions actually changed significantly (more than 10px)
-    const widthChanged = Math.abs(currentWidth - previousWidth) > 10
-    const heightChanged = Math.abs(currentHeight - previousHeight) > 10
-
-    if (widthChanged || heightChanged) {
-      // Update previous dimensions before calling the original function
-      previousWidth = currentWidth
-      previousHeight = currentHeight
-      originalWindowResized()
-    }
+    // For mobile, we want to be more permissive about when to call windowResized
+    // since the 10px threshold might be too restrictive for some resize scenarios
+    // Instead, let the original function handle the resize logic
+    originalWindowResized()
   }, 250) // 250ms debounce delay
 
   return debouncedWindowResized

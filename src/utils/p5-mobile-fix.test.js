@@ -259,7 +259,9 @@ describe('p5-mobile-fix', () => {
       debouncedFn()
       jest.advanceTimersByTime(250)
 
-      expect(mockOriginalFn).not.toHaveBeenCalled()
+      // The function now always calls the original function on mobile to ensure
+      // resize events work properly, even for small changes
+      expect(mockOriginalFn).toHaveBeenCalledTimes(1)
     })
 
     test('should handle p5 instance without canvas', () => {
@@ -273,9 +275,9 @@ describe('p5-mobile-fix', () => {
 
       const mockOriginalFn = jest.fn()
 
-      // The bug has been fixed: the function now stores previous dimensions
-      // and compares current dimensions against those, so it can detect changes
-      // even when there's no canvas
+      // The function now always calls the original function on mobile to ensure
+      // window resize works properly, rather than trying to detect dimension changes
+      // which was causing resize issues on larger screens
       const mockP5Instance = {
         windowWidth: 800,
         windowHeight: 600,
@@ -294,8 +296,8 @@ describe('p5-mobile-fix', () => {
       debouncedFn()
       jest.advanceTimersByTime(250)
 
-      // The function now correctly detects dimension changes by comparing
-      // against previous dimensions instead of comparing against itself
+      // The function now always calls the original function on mobile to ensure
+      // resize events work properly
       expect(mockOriginalFn).toHaveBeenCalledTimes(1)
     })
   })
