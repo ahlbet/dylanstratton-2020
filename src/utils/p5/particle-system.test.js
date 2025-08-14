@@ -7,6 +7,73 @@ import {
 } from './particle-system'
 
 describe('Particle', () => {
+  describe('avoidGreenHue', () => {
+    it('should map all colors to blue-to-red spectrum', () => {
+      // Test red to orange range (0-59°) - should remain unchanged
+      expect(Particle.avoidGreenHue(0)).toBe(0) // Red
+      expect(Particle.avoidGreenHue(30)).toBe(30) // Orange-red
+      expect(Particle.avoidGreenHue(59)).toBe(59) // Orange
+
+      // Test orange to yellow range (60-119°) - should map to red-orange
+      expect(Particle.avoidGreenHue(60)).toBe(0) // Orange maps to red
+      expect(Particle.avoidGreenHue(90)).toBeCloseTo(15, 0) // Yellow-orange maps to red-orange
+      expect(Particle.avoidGreenHue(119)).toBeCloseTo(30, 0) // Yellow maps to orange
+
+      // Test green to cyan range (120-179°) - should map to blue
+      expect(Particle.avoidGreenHue(120)).toBe(240) // Green maps to blue
+      expect(Particle.avoidGreenHue(150)).toBeCloseTo(220, 0) // Blue-green maps to blue
+      expect(Particle.avoidGreenHue(179)).toBeCloseTo(200, 0) // Cyan maps to blue
+
+      // Test cyan to blue range (180-239°) - should remain unchanged
+      expect(Particle.avoidGreenHue(180)).toBe(180) // Cyan
+      expect(Particle.avoidGreenHue(210)).toBe(210) // Blue
+      expect(Particle.avoidGreenHue(239)).toBe(239) // Blue
+
+      // Test blue to magenta range (240-299°) - should remain unchanged
+      expect(Particle.avoidGreenHue(240)).toBe(240) // Blue
+      expect(Particle.avoidGreenHue(270)).toBe(270) // Purple
+      expect(Particle.avoidGreenHue(299)).toBe(299) // Magenta
+
+      // Test magenta to red range (300-359°) - should map to red
+      expect(Particle.avoidGreenHue(300)).toBe(0) // Magenta maps to red
+      expect(Particle.avoidGreenHue(330)).toBeCloseTo(15, 0) // Red-magenta maps to red-orange
+      expect(Particle.avoidGreenHue(359)).toBeCloseTo(30, 0) // Almost red maps to orange
+    })
+  })
+
+  describe('adjustGreenishColors', () => {
+    it('should adjust saturation and brightness for blue-to-red spectrum', () => {
+      // Test with various hues - all should get slight reduction
+      const result1 = Particle.adjustGreenishColors(0, 90, 80) // Red
+      expect(result1.saturation).toBeCloseTo(81, 1) // 90 * 0.9
+      expect(result1.brightness).toBeCloseTo(72, 1) // 80 * 0.9
+
+      const result2 = Particle.adjustGreenishColors(120, 100, 100) // Green (will be mapped to blue)
+      expect(result2.saturation).toBeCloseTo(90, 1) // 100 * 0.9
+      expect(result2.brightness).toBeCloseTo(90, 1) // 100 * 0.9
+
+      const result3 = Particle.adjustGreenishColors(240, 85, 75) // Blue
+      expect(result3.saturation).toBeCloseTo(76.5, 1) // 85 * 0.9
+      expect(result3.brightness).toBeCloseTo(67.5, 1) // 75 * 0.9
+
+      const result4 = Particle.adjustGreenishColors(300, 95, 85) // Magenta (will be mapped to red)
+      expect(result4.saturation).toBeCloseTo(85.5, 1) // 95 * 0.9
+      expect(result4.brightness).toBeCloseTo(76.5, 1) // 85 * 0.9
+    })
+
+    it('should respect minimum and maximum values', () => {
+      // Test with very low saturation and brightness
+      const result1 = Particle.adjustGreenishColors(120, 30, 40)
+      expect(result1.saturation).toBe(50) // Minimum 50
+      expect(result1.brightness).toBe(60) // Minimum 60
+
+      // Test with very high saturation and brightness
+      const result2 = Particle.adjustGreenishColors(240, 100, 100)
+      expect(result2.saturation).toBe(90) // 100 * 0.9
+      expect(result2.brightness).toBe(90) // 100 * 0.9
+    })
+  })
+
   let mockP5
   let particle
 

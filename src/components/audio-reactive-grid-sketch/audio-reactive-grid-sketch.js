@@ -208,7 +208,7 @@ export const createAudioReactiveGridSketch =
         // Define colors for each frequency band
         const bandColors = [
           { r: 255, g: 100, b: 100 }, // Band 0: Red (Sub-bass/Low frequencies)
-          { r: 100, g: 255, b: 100 }, // Band 1: Green (Bass/Mid frequencies)
+          { r: 180, g: 150, b: 140 }, // Band 1: Teal (Bass/Mid frequencies) - avoiding green entirely
           { r: 100, g: 100, b: 255 }, // Band 2: Blue (Mid/High frequencies)
           { r: 255, g: 255, b: 100 }, // Band 3: Yellow (High frequencies)
         ]
@@ -229,8 +229,17 @@ export const createAudioReactiveGridSketch =
         // Add subtle color variation based on time and particle seed
         let colorVariation =
           Math.sin(p.frameCount * 0.01 + this.seed * 0.1) * 30
+        
+        // Apply color variation with special handling for green to avoid bright green
         r = Math.max(0, Math.min(255, r + colorVariation))
-        g = Math.max(0, Math.min(255, g + colorVariation))
+        
+        // Limit green variation to prevent bright green particles
+        let greenVariation = colorVariation
+        if (this.frequencyBand === 1) { // Bass/Mid frequency band
+          greenVariation = Math.min(colorVariation, 15) // Reduce green variation for this band
+        }
+        g = Math.max(0, Math.min(200, g + greenVariation)) // Cap green at 200 max
+        
         b = Math.max(0, Math.min(255, b + colorVariation))
 
         // Dynamic radius that responds to frequency band audio intensity

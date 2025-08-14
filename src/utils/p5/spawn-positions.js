@@ -56,6 +56,31 @@ export const calculateTatSpawnPosition = (
     return null
   }
 
+  // Special handling for sub-bass (case 0) - use Tat positions with better distribution
+  if (bandIndex === 0) {
+    // Use Tat shape positions but distribute particles around them more evenly
+    const positionIndex = (particleIndex * 3) % tatShapePositions.length // Spread across more Tat positions
+    const position = tatShapePositions[positionIndex]
+
+    // Add moderate random variation around the Tat position (not across entire canvas)
+    const randomOffsetX = (p.random() - 0.5) * 80 // ±40 pixels from Tat position
+    const randomOffsetY = (p.random() - 0.5) * 80 // ±40 pixels from Tat position
+
+    // Add smooth noise for organic movement
+    const noiseOffsetX =
+      (position.x + particleIndex * 100) * 0.01 + p.frameCount * 0.003
+    const noiseOffsetY =
+      (position.y + particleIndex * 200) * 0.01 + p.frameCount * 0.003
+    const noiseX = (p.noise(noiseOffsetX) - 0.5) * 40 // Smaller noise for sub-bass
+    const noiseY = (p.noise(noiseOffsetY) - 0.5) * 40 // Smaller noise for sub-bass
+
+    return {
+      x: position.x + randomOffsetX + noiseX,
+      y: position.y + randomOffsetY + noiseY,
+    }
+  }
+
+  // Original logic for other frequency bands
   const positionIndex = (bandIndex * particleIndex) % tatShapePositions.length
   const position = tatShapePositions[positionIndex]
 
