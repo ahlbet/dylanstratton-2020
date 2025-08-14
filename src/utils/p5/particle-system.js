@@ -375,28 +375,57 @@ export class Particle {
           center.y - this.pos.y
         )
 
-        // Much more dramatic pulsing effect - very responsive to audio
+        // Much more dramatic pulsing effect - directly tied to audio level
         const pulseStrength = 2.0 * this.audioReactivity // Increased from 0.8 to 2.0 (much more dramatic)
+        // Use audio reactivity to control the frequency and intensity of pulsing
+        const audioFrequency = 0.1 + this.audioReactivity * 0.3 // Audio affects pulse frequency
         const pulseDirection =
-          p5.sin(p5.frameCount * 0.15 + this.individualSeed) * pulseStrength
+          p5.sin(p5.frameCount * audioFrequency + this.individualSeed) *
+          pulseStrength *
+          (1 + this.audioReactivity * 2)
 
         if (pulseDirection > 0) {
-          // Expand outward - controlled dramatic effect
+          // Expand outward - controlled dramatic effect with audio-reactive variation
           toCenter.normalize()
-          toCenter.mult(pulseDirection * distanceMultiplier * 0.5) // Additional 50% reduction
+          const expandForce = pulseDirection * distanceMultiplier * 0.5
+          // Add some chaotic variation based on audio level
+          const chaoticVariation =
+            p5.sin(
+              p5.frameCount * (0.3 + this.audioReactivity * 0.6) +
+                this.individualSeed * 0.3
+            ) *
+            this.audioReactivity *
+            0.8
+          toCenter.mult(expandForce + chaoticVariation)
           this.vel.add(toCenter)
         } else {
-          // Contract inward - controlled dramatic effect
+          // Contract inward - controlled dramatic effect with audio-reactive variation
           toCenter.normalize()
-          toCenter.mult(pulseDirection * 0.6 * distanceMultiplier * 0.5) // Additional 50% reduction
+          const contractForce = pulseDirection * 0.6 * distanceMultiplier * 0.5
+          // Add some chaotic variation based on audio level
+          const chaoticVariation =
+            p5.sin(
+              p5.frameCount * (0.25 + this.audioReactivity * 0.4) +
+                this.individualSeed * 0.5
+            ) *
+            this.audioReactivity *
+            0.6
+          toCenter.mult(contractForce + chaoticVariation)
           this.vel.add(toCenter)
         }
 
         // Much more responsive velocity limit for sub-bass - varies dramatically with audio
         this.vel.limit((0.3 + this.audioReactivity * 1.5) * 0.75) // Much more dramatic speed variation with audio
         break
-      case 1: // Bass - much more dramatic spiral movement
-        this.vel.rotate(this.rotationSpeed * this.audioReactivity * 5.0) // Increased from 3.0 to 5.0 (much more dramatic)
+      case 1: // Bass - much more dramatic spiral movement directly tied to audio
+        // Audio affects both rotation speed and adds chaotic variation
+        const audioRotationSpeed =
+          this.rotationSpeed * this.audioReactivity * 5.0
+        const chaoticVariation =
+          p5.sin(p5.frameCount * (0.2 + this.audioReactivity * 0.5)) *
+          this.audioReactivity *
+          2.0
+        this.vel.rotate(audioRotationSpeed + chaoticVariation)
 
         // Much more responsive velocity limit for bass - varies dramatically with audio
         this.vel.limit((0.5 + this.audioReactivity * 2.0) * 0.75) // Much more dramatic speed variation with audio
@@ -407,15 +436,18 @@ export class Particle {
         if (this.pos.y < 0 || this.pos.y > p5.height)
           this.vel.y *= -(0.8 + this.audioReactivity * 2.5) // Increased from 1.2 to 2.5 (much more dramatic)
         break
-      case 3: // Mid - much more dramatic wavey movement
+      case 3: // Mid - much more dramatic wavey movement directly tied to audio
+        // Audio affects both frequency and amplitude of wavey movement
+        const audioWaveFreq = 0.2 + this.audioReactivity * 0.4 // Audio affects wave frequency
+        const audioWaveAmp =
+          0.8 * this.audioReactivity * (1 + this.audioReactivity * 3) // Audio affects wave amplitude
+
         this.vel.x +=
-          p5.sin(p5.frameCount * 0.2 + this.individualSeed) *
-          0.8 * // Increased from 0.4 to 0.8 (2x stronger)
-          this.audioReactivity
+          p5.sin(p5.frameCount * audioWaveFreq + this.individualSeed) *
+          audioWaveAmp
         this.vel.y +=
-          p5.cos(p5.frameCount * 0.2 + this.individualSeed) *
-          0.8 * // Increased from 0.4 to 0.8 (2x stronger)
-          this.audioReactivity
+          p5.cos(p5.frameCount * audioWaveFreq + this.individualSeed) *
+          audioWaveAmp
         break
       case 4: // High Mid - much more dramatic expanding/contracting movement
         const expansionForce = p5.createVector(
@@ -433,15 +465,32 @@ export class Particle {
             .mult(this.audioReactivity)
         )
         break
-      case 6: // Brilliance - much more dramatic rapid oscillation
+      case 6: // Brilliance - much more dramatic rapid oscillation directly tied to audio
+        // Audio affects both oscillation frequency and creates chaotic patterns
+        const audioOscFreq = 0.4 + this.audioReactivity * 0.8 // Audio affects oscillation frequency
+        const audioOscAmp =
+          1.2 * this.audioReactivity * (1 + this.audioReactivity * 4) // Audio affects oscillation amplitude
+
+        // Add chaotic variation based on audio level
+        const chaoticX =
+          p5.sin(p5.frameCount * audioOscFreq * 2 + this.individualSeed * 0.5) *
+          this.audioReactivity *
+          0.5
+        const chaoticY =
+          p5.cos(
+            p5.frameCount * audioOscFreq * 1.5 + this.individualSeed * 0.7
+          ) *
+          this.audioReactivity *
+          0.5
+
         this.vel.x +=
-          p5.sin(p5.frameCount * 0.4 + this.individualSeed) *
-          1.2 * // Increased from 0.6 to 1.2 (2x stronger)
-          this.audioReactivity
+          p5.sin(p5.frameCount * audioOscFreq + this.individualSeed) *
+            audioOscAmp +
+          chaoticX
         this.vel.y +=
-          p5.sin(p5.frameCount * 0.4 + this.individualSeed) *
-          1.2 * // Increased from 0.6 to 1.2 (2x stronger)
-          this.audioReactivity
+          p5.sin(p5.frameCount * audioOscFreq + this.individualSeed) *
+            audioOscAmp +
+          chaoticY
         break
       case 7: // Air - much more dramatic random direction changes
         if (p5.random() < 0.5 * this.audioReactivity) {
@@ -611,36 +660,58 @@ export const calculateParticleCount = (band, exponentialAmp, canvasScale) => {
   let baseParticles
   switch (band) {
     case 0:
-      baseParticles = 8
-      break // Sub-bass - more dramatic
-    case 1:
-      baseParticles = 12
-      break // Bass - most dramatic
-    case 2:
-      baseParticles = 10
-      break // Low Mid
-    case 3:
       baseParticles = 15
-      break // Mid - very responsive
+      break // Sub-bass - more dramatic, higher base count
+    case 1:
+      baseParticles = 20
+      break // Bass - most dramatic, highest base count
+    case 2:
+      baseParticles = 18
+      break // Low Mid - high base count
+    case 3:
+      baseParticles = 25
+      break // Mid - very responsive, highest base count
     case 4:
-      baseParticles = 12
-      break // High Mid
+      baseParticles = 20
+      break // High Mid - high base count
     case 5:
-      baseParticles = 10
-      break // Presence
+      baseParticles = 15
+      break // Presence - moderate base count
     case 6:
-      baseParticles = 8
-      break // Brilliance
+      baseParticles = 12
+      break // Brilliance - lower base count
     case 7:
-      baseParticles = 6
-      break // Air
-    default:
       baseParticles = 10
+      break // Air - lowest base count
+    default:
+      baseParticles = 15
   }
 
-  // Much more dramatic response to audio
-  const audioMultiplier = exponentialAmp > 0.05 ? 8 : 1 // 8x boost when audio detected
-  const dramaticResponse = Math.pow(exponentialAmp, 0.15) // Much more sensitive curve
+  // Much more granular response to audio - particle count directly correlates with loudness
+  let audioMultiplier
+
+  if (exponentialAmp < 0.01) {
+    // Very quiet - minimal particles
+    audioMultiplier = 0.1
+  } else if (exponentialAmp < 0.05) {
+    // Quiet - few particles
+    audioMultiplier = 0.5
+  } else if (exponentialAmp < 0.1) {
+    // Moderate - normal particles
+    audioMultiplier = 1.0
+  } else if (exponentialAmp < 0.2) {
+    // Loud - many particles
+    audioMultiplier = 3.0
+  } else if (exponentialAmp < 0.4) {
+    // Very loud - lots of particles
+    audioMultiplier = 6.0
+  } else {
+    // Extremely loud - maximum particles
+    audioMultiplier = 10.0
+  }
+
+  // Much more sensitive curve for dramatic response
+  const dramaticResponse = Math.pow(exponentialAmp, 0.1) // Even more sensitive than 0.15
 
   return Math.max(
     1,
