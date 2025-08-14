@@ -342,7 +342,7 @@ export class Particle {
     const p5 = p || this.p
 
     switch (this.frequencyBand) {
-      case 0: // Sub-bass - pulsing/throbbing movement like a heartbeat
+      case 0: // Sub-bass - dramatic pulsing/throbbing movement that's very obvious
         // Create a pulsing force that expands and contracts based on audio
         const center = p5.createVector(p5.width / 2, p5.height / 2)
         const toCenter = p5.createVector(
@@ -350,72 +350,72 @@ export class Particle {
           center.y - this.pos.y
         )
 
-        // Pulsing effect: particles move away from center when audio is loud,
-        // and back toward center when audio is quiet
-        const pulseStrength = 0.4 * this.audioReactivity
+        // Much more dramatic pulsing effect - very obvious difference between drums/no drums
+        const pulseStrength = 2.5 * this.audioReactivity // Increased from 0.4 to 2.5 (6x stronger)
         const pulseDirection =
-          p5.sin(p5.frameCount * 0.1 + this.individualSeed) * pulseStrength
+          p5.sin(p5.frameCount * 0.15 + this.individualSeed) * pulseStrength
 
         if (pulseDirection > 0) {
-          // Expand outward
+          // Expand outward - much more dramatic
           toCenter.normalize()
           toCenter.mult(pulseDirection)
           this.vel.add(toCenter)
         } else {
-          // Contract inward (gentler than the old strong pull)
+          // Contract inward - also more dramatic
           toCenter.normalize()
-          toCenter.mult(pulseDirection * 0.3) // Softer inward pull
+          toCenter.mult(pulseDirection * 0.8) // Increased from 0.3 to 0.8
           this.vel.add(toCenter)
         }
         break
-      case 1: // Bass - spiral movement
-        this.vel.rotate(this.rotationSpeed * this.audioReactivity)
+      case 1: // Bass - much more dramatic spiral movement
+        this.vel.rotate(this.rotationSpeed * this.audioReactivity * 3.0) // Increased from 1.0 to 3.0
         break
-      case 2: // Low Mid - bouncing off edges with audio-reactive bounciness
+      case 2: // Low Mid - much more dramatic bouncing with audio-reactive bounciness
         if (this.pos.x < 0 || this.pos.x > p5.width)
-          this.vel.x *= -(0.6 + this.audioReactivity * 0.4)
+          this.vel.x *= -(0.8 + this.audioReactivity * 1.2) // Increased from 0.6 + 0.4 to 0.8 + 1.2
         if (this.pos.y < 0 || this.pos.y > p5.height)
-          this.vel.y *= -(0.6 + this.audioReactivity * 0.4)
+          this.vel.y *= -(0.8 + this.audioReactivity * 1.2) // Increased from 0.6 + 0.4 to 0.8 + 1.2
         break
-      case 3: // Mid - wavey movement
+      case 3: // Mid - much more dramatic wavey movement
         this.vel.x +=
-          p5.sin(p5.frameCount * 0.15 + this.individualSeed) *
-          0.1 *
+          p5.sin(p5.frameCount * 0.2 + this.individualSeed) *
+          0.4 * // Increased from 0.1 to 0.4 (4x stronger)
           this.audioReactivity
         this.vel.y +=
-          p5.cos(p5.frameCount * 0.15 + this.individualSeed) *
-          0.1 *
+          p5.cos(p5.frameCount * 0.2 + this.individualSeed) *
+          0.4 * // Increased from 0.1 to 0.4 (4x stronger)
           this.audioReactivity
         break
-      case 4: // High Mid - expanding/contracting movement
+      case 4: // High Mid - much more dramatic expanding/contracting movement
         const expansionForce = p5.createVector(
           this.pos.x - p5.width / 2,
           this.pos.y - p5.height / 2
         )
         expansionForce.normalize()
-        expansionForce.mult(0.2 * this.audioReactivity)
+        expansionForce.mult(0.8 * this.audioReactivity) // Increased from 0.2 to 0.8 (4x stronger)
         this.vel.add(expansionForce)
         break
-      case 5: // Presence - chaotic movement
+      case 5: // Presence - much more dramatic chaotic movement
         this.vel.add(
           p5
-            .createVector(p5.random(-0.2, 0.2), p5.random(-0.2, 0.2))
+            .createVector(p5.random(-0.6, 0.6), p5.random(-0.6, 0.6)) // Increased from 0.2 to 0.6 (3x stronger)
             .mult(this.audioReactivity)
         )
         break
-      case 6: // Brilliance - rapid oscillation
+      case 6: // Brilliance - much more dramatic rapid oscillation
         this.vel.x +=
-          p5.sin(p5.frameCount * 0.3 + this.individualSeed) *
-          0.15 *
+          p5.sin(p5.frameCount * 0.4 + this.individualSeed) *
+          0.6 * // Increased from 0.15 to 0.6 (4x stronger)
           this.audioReactivity
         this.vel.y +=
-          p5.sin(p5.frameCount * 0.3 + this.individualSeed) *
-          0.15 *
+          p5.sin(p5.frameCount * 0.4 + this.individualSeed) *
+          0.6 * // Increased from 0.6 (4x stronger)
           this.audioReactivity
         break
-      case 7: // Air - random direction changes
-        if (p5.random() < 0.1 * this.audioReactivity) {
-          this.vel.rotate(p5.random(-p5.PI / 4, p5.PI / 4))
+      case 7: // Air - much more dramatic random direction changes
+        if (p5.random() < 0.3 * this.audioReactivity) {
+          // Increased from 0.1 to 0.3 (3x more frequent)
+          this.vel.rotate(p5.random(-p5.PI / 2, p5.PI / 2)) // Increased from PI/4 to PI/2 (2x more dramatic)
         }
         break
     }
@@ -453,22 +453,22 @@ export class Particle {
       this.alpha / 255
     )
 
-    // Size pulsing based on frequency band and audio reactivity
+    // Much more dramatic size pulsing based on frequency band and audio reactivity
     let pulseSize = this.size
-    const pulseIntensity = this.audioReactivity * 0.5
+    const pulseIntensity = this.audioReactivity * 2.0 // Increased from 0.5 to 2.0 (4x stronger)
 
     if (this.frequencyBand === 0) {
-      // Sub-bass pulses more dramatically
-      pulseSize *= 1 + p.sin(p.frameCount * 0.3) * pulseIntensity
+      // Sub-bass pulses much more dramatically - very obvious difference
+      pulseSize *= 1 + p.sin(p.frameCount * 0.4) * pulseIntensity
     } else if (this.frequencyBand === 1) {
-      // Bass pulses
-      pulseSize *= 1 + p.sin(p.frameCount * 0.25) * pulseIntensity
+      // Bass pulses more dramatically
+      pulseSize *= 1 + p.sin(p.frameCount * 0.3) * pulseIntensity
     } else if (this.frequencyBand >= 6) {
-      // High frequencies vibrate rapidly
-      pulseSize *= 1 + p.sin(p.frameCount * 0.8) * pulseIntensity
+      // High frequencies vibrate much more rapidly
+      pulseSize *= 1 + p.sin(p.frameCount * 1.0) * pulseIntensity
     } else {
-      // Mid frequencies have moderate pulsing
-      pulseSize *= 1 + p.sin(p.frameCount * 0.15) * pulseIntensity
+      // Mid frequencies have much more dramatic pulsing
+      pulseSize *= 1 + p.sin(p.frameCount * 0.2) * pulseIntensity
     }
 
     p.fill(currentColor)
