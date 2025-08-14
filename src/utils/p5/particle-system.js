@@ -81,9 +81,9 @@ export class Particle {
     this.colorShiftSpeed = p.random(0.5, 2.0)
     this.colorShiftDirection = p.random([-1, 1])
 
-    // More dramatic amplitude mapping using exponential scaling
+    // Much more dramatic amplitude mapping using exponential scaling
     const normalizedAmp = amp / 255
-    const exponentialAmp = Math.pow(normalizedAmp, 0.3) // Makes low values more sensitive
+    const exponentialAmp = Math.pow(normalizedAmp, 0.15) // Much more sensitive to low values (increased from 0.3)
 
     // Configure particle based on frequency band
     this.configureByFrequencyBand(exponentialAmp, primaryHue)
@@ -331,18 +331,43 @@ export class Particle {
     this.noiseOffsetX += this.noiseScale
     this.noiseOffsetY += this.noiseScale
 
-    // Apply frequency band-specific movement patterns
-    this.applyFrequencyBandMovement(p5)
+    // Check if particle is already too far from spawn before applying movement
+    const currentDistance = Math.sqrt(
+      Math.pow(this.pos.x - this.spawnX, 2) +
+        Math.pow(this.pos.y - this.spawnY, 2)
+    )
 
-    // Limit velocity based on audio reactivity
-    this.vel.limit(1.0 + this.audioReactivity * 2.0)
+    // If already too far, reduce movement forces - much more aggressive for sub-bass
+    let distanceMultiplier
+    if (this.frequencyBand === 0) {
+      // Sub-bass - extremely aggressive force reduction
+      distanceMultiplier =
+        currentDistance > 30 ? 0.1 : currentDistance > 20 ? 0.3 : 1.0
+    } else {
+      // Other frequencies - standard force reduction
+      distanceMultiplier = currentDistance > 60 ? 0.3 : 1.0
+    }
+
+    // Make distance multiplier more responsive to audio - allow more movement when audio is loud
+    distanceMultiplier = distanceMultiplier * (0.5 + this.audioReactivity * 0.5) // Audio affects how much movement is allowed
+
+    // Apply frequency band-specific movement patterns
+    this.applyFrequencyBandMovement(p5, distanceMultiplier)
+
+    // Limit velocity based on audio reactivity and distance from spawn - much more dramatic variation
+    const maxVelocity =
+      (0.5 + this.audioReactivity * 4.0) * distanceMultiplier * 0.75 // Much more dramatic speed variation with audio
+    this.vel.limit(maxVelocity)
+
+    // Constrain particle position to stay close to spawn position
+    this.constrainToSpawnArea(p5)
   }
 
-  applyFrequencyBandMovement(p) {
+  applyFrequencyBandMovement(p, distanceMultiplier = 1.0) {
     const p5 = p || this.p
 
     switch (this.frequencyBand) {
-      case 0: // Sub-bass - dramatic pulsing/throbbing movement that's very obvious
+      case 0: // Sub-bass - much more controlled pulsing movement
         // Create a pulsing force that expands and contracts based on audio
         const center = p5.createVector(p5.width / 2, p5.height / 2)
         const toCenter = p5.createVector(
@@ -350,40 +375,46 @@ export class Particle {
           center.y - this.pos.y
         )
 
-        // Much more dramatic pulsing effect - very obvious difference between drums/no drums
-        const pulseStrength = 2.5 * this.audioReactivity // Increased from 0.4 to 2.5 (6x stronger)
+        // Much more dramatic pulsing effect - very responsive to audio
+        const pulseStrength = 2.0 * this.audioReactivity // Increased from 0.8 to 2.0 (much more dramatic)
         const pulseDirection =
           p5.sin(p5.frameCount * 0.15 + this.individualSeed) * pulseStrength
 
         if (pulseDirection > 0) {
-          // Expand outward - much more dramatic
+          // Expand outward - controlled dramatic effect
           toCenter.normalize()
-          toCenter.mult(pulseDirection)
+          toCenter.mult(pulseDirection * distanceMultiplier * 0.5) // Additional 50% reduction
           this.vel.add(toCenter)
         } else {
-          // Contract inward - also more dramatic
+          // Contract inward - controlled dramatic effect
           toCenter.normalize()
-          toCenter.mult(pulseDirection * 0.8) // Increased from 0.3 to 0.8
+          toCenter.mult(pulseDirection * 0.6 * distanceMultiplier * 0.5) // Additional 50% reduction
           this.vel.add(toCenter)
         }
+
+        // Much more responsive velocity limit for sub-bass - varies dramatically with audio
+        this.vel.limit((0.3 + this.audioReactivity * 1.5) * 0.75) // Much more dramatic speed variation with audio
         break
       case 1: // Bass - much more dramatic spiral movement
-        this.vel.rotate(this.rotationSpeed * this.audioReactivity * 3.0) // Increased from 1.0 to 3.0
+        this.vel.rotate(this.rotationSpeed * this.audioReactivity * 5.0) // Increased from 3.0 to 5.0 (much more dramatic)
+
+        // Much more responsive velocity limit for bass - varies dramatically with audio
+        this.vel.limit((0.5 + this.audioReactivity * 2.0) * 0.75) // Much more dramatic speed variation with audio
         break
       case 2: // Low Mid - much more dramatic bouncing with audio-reactive bounciness
         if (this.pos.x < 0 || this.pos.x > p5.width)
-          this.vel.x *= -(0.8 + this.audioReactivity * 1.2) // Increased from 0.6 + 0.4 to 0.8 + 1.2
+          this.vel.x *= -(0.8 + this.audioReactivity * 2.5) // Increased from 1.2 to 2.5 (much more dramatic)
         if (this.pos.y < 0 || this.pos.y > p5.height)
-          this.vel.y *= -(0.8 + this.audioReactivity * 1.2) // Increased from 0.6 + 0.4 to 0.8 + 1.2
+          this.vel.y *= -(0.8 + this.audioReactivity * 2.5) // Increased from 1.2 to 2.5 (much more dramatic)
         break
       case 3: // Mid - much more dramatic wavey movement
         this.vel.x +=
           p5.sin(p5.frameCount * 0.2 + this.individualSeed) *
-          0.4 * // Increased from 0.1 to 0.4 (4x stronger)
+          0.8 * // Increased from 0.4 to 0.8 (2x stronger)
           this.audioReactivity
         this.vel.y +=
           p5.cos(p5.frameCount * 0.2 + this.individualSeed) *
-          0.4 * // Increased from 0.1 to 0.4 (4x stronger)
+          0.8 * // Increased from 0.4 to 0.8 (2x stronger)
           this.audioReactivity
         break
       case 4: // High Mid - much more dramatic expanding/contracting movement
@@ -392,32 +423,104 @@ export class Particle {
           this.pos.y - p5.height / 2
         )
         expansionForce.normalize()
-        expansionForce.mult(0.8 * this.audioReactivity) // Increased from 0.2 to 0.8 (4x stronger)
+        expansionForce.mult(1.5 * this.audioReactivity) // Increased from 0.8 to 1.5 (much more dramatic)
         this.vel.add(expansionForce)
         break
       case 5: // Presence - much more dramatic chaotic movement
         this.vel.add(
           p5
-            .createVector(p5.random(-0.6, 0.6), p5.random(-0.6, 0.6)) // Increased from 0.2 to 0.6 (3x stronger)
+            .createVector(p5.random(-1.0, 1.0), p5.random(-1.0, 1.0)) // Increased from 0.6 to 1.0 (much more dramatic)
             .mult(this.audioReactivity)
         )
         break
       case 6: // Brilliance - much more dramatic rapid oscillation
         this.vel.x +=
           p5.sin(p5.frameCount * 0.4 + this.individualSeed) *
-          0.6 * // Increased from 0.15 to 0.6 (4x stronger)
+          1.2 * // Increased from 0.6 to 1.2 (2x stronger)
           this.audioReactivity
         this.vel.y +=
           p5.sin(p5.frameCount * 0.4 + this.individualSeed) *
-          0.6 * // Increased from 0.6 (4x stronger)
+          1.2 * // Increased from 0.6 to 1.2 (2x stronger)
           this.audioReactivity
         break
       case 7: // Air - much more dramatic random direction changes
-        if (p5.random() < 0.3 * this.audioReactivity) {
-          // Increased from 0.1 to 0.3 (3x more frequent)
-          this.vel.rotate(p5.random(-p5.PI / 2, p5.PI / 2)) // Increased from PI/4 to PI/2 (2x more dramatic)
+        if (p5.random() < 0.5 * this.audioReactivity) {
+          // Increased from 0.3 to 0.5 (much more frequent)
+          this.vel.rotate(p5.random(-p5.PI, p5.PI)) // Increased from PI/2 to PI (much more dramatic)
         }
         break
+    }
+  }
+
+  constrainToSpawnArea(p) {
+    const p5 = p || this.p
+
+    // Calculate distance from spawn position manually (for test compatibility)
+    const dx = this.pos.x - this.spawnX
+    const dy = this.pos.y - this.spawnY
+    const distanceFromSpawn = Math.sqrt(dx * dx + dy * dy)
+
+    // Maximum allowed distance from spawn position - much more restrictive
+    // Sub-bass and bass get even tighter constraints due to their strong movement patterns
+    let maxDistance
+    if (this.frequencyBand === 0) {
+      // Sub-bass - extremely tight constraints due to dramatic pulsing
+      maxDistance = 25 + this.audioReactivity * 15 // 25px to 40px max
+    } else if (this.frequencyBand === 1) {
+      // Bass - very tight constraints due to spiral movement
+      maxDistance = 30 + this.audioReactivity * 20 // 30px to 50px max
+    } else {
+      // Other frequencies - standard tight constraints
+      maxDistance = 40 + this.audioReactivity * 30 // 40px to 70px max
+    }
+
+    if (distanceFromSpawn > maxDistance) {
+      // Calculate direction back to spawn position
+      const toSpawn = p5.createVector(
+        this.spawnX - this.pos.x,
+        this.spawnY - this.pos.y
+      )
+      toSpawn.normalize()
+
+      // Move particle back to allowed area
+      const overshoot = distanceFromSpawn - maxDistance
+      this.pos.add(toSpawn.mult(overshoot))
+
+      // Reduce velocity in the direction away from spawn
+      const awayFromSpawn = p5.createVector(
+        this.pos.x - this.spawnX,
+        this.pos.y - this.spawnY
+      )
+      awayFromSpawn.normalize()
+      const velocityComponent = this.vel.dot(awayFromSpawn)
+
+      if (velocityComponent > 0) {
+        // Much more aggressive velocity reduction in the direction away from spawn
+        this.vel.sub(awayFromSpawn.mult(velocityComponent * 0.8)) // Increased from 0.5 to 0.8
+      }
+    } else if (distanceFromSpawn > maxDistance * 0.7) {
+      // Add gentle pull back toward spawn when getting close to boundary
+      const toSpawn = p5.createVector(
+        this.spawnX - this.pos.x,
+        this.spawnY - this.pos.y
+      )
+      toSpawn.normalize()
+
+      // Stronger pull force for sub-bass and bass due to their strong movement patterns
+      let pullStrength
+      if (this.frequencyBand === 0) {
+        // Sub-bass - much stronger pull due to dramatic pulsing
+        pullStrength = 0.3 * (distanceFromSpawn - maxDistance * 0.7)
+      } else if (this.frequencyBand === 1) {
+        // Bass - stronger pull due to spiral movement
+        pullStrength = 0.2 * (distanceFromSpawn - maxDistance * 0.7)
+      } else {
+        // Other frequencies - standard gentle pull
+        pullStrength = 0.1 * (distanceFromSpawn - maxDistance * 0.7)
+      }
+
+      toSpawn.mult(pullStrength)
+      this.vel.add(toSpawn)
     }
   }
 
@@ -455,21 +558,35 @@ export class Particle {
 
     // Much more dramatic size pulsing based on frequency band and audio reactivity
     let pulseSize = this.size
-    const pulseIntensity = this.audioReactivity * 2.0 // Increased from 0.5 to 2.0 (4x stronger)
+
+    // Use audio reactivity to control the intensity of the pulse
+    const audioMultiplier = Math.max(0.1, this.audioReactivity) // Minimum 0.1, maximum 1.0
 
     if (this.frequencyBand === 0) {
       // Sub-bass pulses much more dramatically - very obvious difference
-      pulseSize *= 1 + p.sin(p.frameCount * 0.4) * pulseIntensity
+      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 0.4) // 0 to 1 range
+      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
+      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
     } else if (this.frequencyBand === 1) {
       // Bass pulses more dramatically
-      pulseSize *= 1 + p.sin(p.frameCount * 0.3) * pulseIntensity
+      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 0.3) // 0 to 1 range
+      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
+      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
     } else if (this.frequencyBand >= 6) {
       // High frequencies vibrate much more rapidly
-      pulseSize *= 1 + p.sin(p.frameCount * 1.0) * pulseIntensity
+      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 1.0) // 0 to 1 range
+      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
+      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
     } else {
       // Mid frequencies have much more dramatic pulsing
-      pulseSize *= 1 + p.sin(p.frameCount * 0.2) * pulseIntensity
+      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 0.2) // 0 to 1 range
+      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
+      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
     }
+
+    // Safety check - ensure size never goes below 50% of original size
+    const absoluteMinSize = this.size * 0.5
+    pulseSize = Math.max(pulseSize, absoluteMinSize)
 
     p.fill(currentColor)
     p.ellipse(this.pos.x, this.pos.y, pulseSize)

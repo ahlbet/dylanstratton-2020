@@ -56,32 +56,27 @@ export const calculateTatSpawnPosition = (
     return null
   }
 
-  // Special handling for sub-bass (case 0) - distribute across entire canvas
+  // Special handling for sub-bass (case 0) - use Tat positions with better distribution
   if (bandIndex === 0) {
-    // Create a distributed grid pattern for sub-bass particles
-    const gridSize = Math.ceil(Math.sqrt(tatShapePositions.length * 2)) // More grid points
-    const gridSpacingX = p.width / gridSize
-    const gridSpacingY = p.height / gridSize
+    // Use Tat shape positions but distribute particles around them more evenly
+    const positionIndex = (particleIndex * 3) % tatShapePositions.length // Spread across more Tat positions
+    const position = tatShapePositions[positionIndex]
 
-    // Use particle index to determine grid position with some randomness
-    const gridX = (particleIndex % gridSize) * gridSpacingX
-    const gridY = Math.floor(particleIndex / gridSize) * gridSpacingY
-
-    // Add significant random variation to break up the grid pattern
-    const randomOffsetX = (p.random() - 0.5) * gridSpacingX * 0.8
-    const randomOffsetY = (p.random() - 0.5) * gridSpacingY * 0.8
+    // Add moderate random variation around the Tat position (not across entire canvas)
+    const randomOffsetX = (p.random() - 0.5) * 80 // ±40 pixels from Tat position
+    const randomOffsetY = (p.random() - 0.5) * 80 // ±40 pixels from Tat position
 
     // Add smooth noise for organic movement
     const noiseOffsetX =
-      (gridX + particleIndex * 100) * 0.01 + p.frameCount * 0.003
+      (position.x + particleIndex * 100) * 0.01 + p.frameCount * 0.003
     const noiseOffsetY =
-      (gridY + particleIndex * 200) * 0.01 + p.frameCount * 0.003
-    const noiseX = (p.noise(noiseOffsetX) - 0.5) * gridSpacingX * 0.6
-    const noiseY = (p.noise(noiseOffsetY) - 0.5) * gridSpacingY * 0.6
+      (position.y + particleIndex * 200) * 0.01 + p.frameCount * 0.003
+    const noiseX = (p.noise(noiseOffsetX) - 0.5) * 40 // Smaller noise for sub-bass
+    const noiseY = (p.noise(noiseOffsetY) - 0.5) * 40 // Smaller noise for sub-bass
 
     return {
-      x: gridX + randomOffsetX + noiseX,
-      y: gridY + randomOffsetY + noiseY,
+      x: position.x + randomOffsetX + noiseX,
+      y: position.y + randomOffsetY + noiseY,
     }
   }
 
