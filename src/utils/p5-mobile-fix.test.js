@@ -273,9 +273,9 @@ describe('p5-mobile-fix', () => {
 
       const mockOriginalFn = jest.fn()
 
-      // The function has a bug: when there's no canvas, it compares
-      // current dimensions with themselves, so it never detects changes
-      // This test documents this behavior
+      // The bug has been fixed: the function now stores previous dimensions
+      // and compares current dimensions against those, so it can detect changes
+      // even when there's no canvas
       const mockP5Instance = {
         windowWidth: 800,
         windowHeight: 600,
@@ -294,9 +294,9 @@ describe('p5-mobile-fix', () => {
       debouncedFn()
       jest.advanceTimersByTime(250)
 
-      // Due to the bug in the function, it won't call the original function
-      // because it's comparing dimensions with themselves
-      expect(mockOriginalFn).not.toHaveBeenCalled()
+      // The function now correctly detects dimension changes by comparing
+      // against previous dimensions instead of comparing against itself
+      expect(mockOriginalFn).toHaveBeenCalledTimes(1)
     })
   })
 
