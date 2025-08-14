@@ -96,7 +96,6 @@ export const FixedAudioPlayer = () => {
           const audioUrl = await getAudioUrl(currentTrack)
           setCurrentAudioUrl(audioUrl)
         } catch (error) {
-          console.error('Failed to generate audio URL:', error)
           // Fall back to original URL
           setCurrentAudioUrl(currentTrack.url)
         }
@@ -202,10 +201,8 @@ export const FixedAudioPlayer = () => {
           playPromise.catch((error) => {
             // Ignore AbortError as it's expected when navigating
             if (error.name !== 'AbortError') {
-              console.warn('Audio play failed:', error)
               // If play fails due to source issues, try to recover
               if (error.name === 'NotSupportedError' && currentAudioUrl) {
-                console.log('Attempting to reload audio source...')
                 audio.load()
               }
             }
@@ -224,9 +221,6 @@ export const FixedAudioPlayer = () => {
       if (isPlaying) {
         // Check if audio source is ready before attempting to play
         if (!currentAudioUrl || audio.readyState === 0 || !audio.src) {
-          console.log(
-            'Audio source not ready, waiting for URL, metadata, and source...'
-          )
           return
         }
 
@@ -236,7 +230,6 @@ export const FixedAudioPlayer = () => {
         }
 
         // If not ready, wait and try again
-        console.log('Audio not ready yet, waiting for source and metadata...')
         const timeoutId = setTimeout(() => {
           if (isPlaying) {
             waitForAudioAndPlay(audio)
@@ -267,9 +260,6 @@ export const FixedAudioPlayer = () => {
       if (isPlaying) {
         // Check if audio source is ready before attempting to play
         if (!currentAudioUrl || audio.readyState === 0 || !audio.src) {
-          console.log(
-            'Audio source not ready in autoplay, waiting for URL, metadata, and source...'
-          )
           return
         }
 
@@ -279,9 +269,6 @@ export const FixedAudioPlayer = () => {
         }
 
         // If not ready, wait and try again
-        console.log(
-          'Audio not ready yet in autoplay, waiting for source and metadata...'
-        )
         setTimeout(() => {
           if (isPlaying) {
             waitForAudioAndPlay(audio)
@@ -300,7 +287,6 @@ export const FixedAudioPlayer = () => {
     if (!audio) return
 
     const handleMetadataLoaded = () => {
-      console.log('Audio metadata loaded, ready to play')
       // If user was waiting to play, try to play now
       if (isPlaying && isAudioReady()) {
         waitForAudioAndPlay(audio)
@@ -324,14 +310,12 @@ export const FixedAudioPlayer = () => {
 
     // Don't allow play if there's no audio source
     if (!currentAudioUrl) {
-      console.log('Cannot play: no audio source available')
       return
     }
 
     // Check if audio is ready (both context and source metadata)
     const audio = audioRef.current
     if (audio && (audio.readyState === 0 || !audio.src)) {
-      console.log('Audio not ready yet, waiting for source and metadata...')
       // Wait a bit and try again
       setTimeout(() => {
         if (audio.readyState > 0 && audio.src) {
