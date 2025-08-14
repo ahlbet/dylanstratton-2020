@@ -41,6 +41,8 @@ export {
   setupCanvas,
   setupAudioContext,
   setupFFT,
+  cleanupFFT,
+  handleAudioSourceChange,
   handleWindowResize,
   setupAudioReactiveCanvas,
   initializeFrequencyData,

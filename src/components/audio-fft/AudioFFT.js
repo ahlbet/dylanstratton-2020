@@ -33,19 +33,16 @@ export default function AudioFFT({ markovText = '' }) {
 
     // Wait for p5 to be available
     if (!window.p5) {
-      console.warn('p5 not available, waiting...')
       return
     }
 
     // Wait for audio context to be available
     if (!audioRef || !audioRef.current) {
-      console.warn('Audio ref not available, waiting...')
       return
     }
 
     // Wait for container to be available
     if (!containerRef.current) {
-      console.warn('Container ref not available, waiting...')
       return
     }
 
@@ -54,7 +51,7 @@ export default function AudioFFT({ markovText = '' }) {
       try {
         p5InstanceRef.current.remove()
       } catch (error) {
-        console.warn('Error removing p5 instance:', error)
+        // Error removing p5 instance
       }
       p5InstanceRef.current = null
     }
@@ -73,33 +70,40 @@ export default function AudioFFT({ markovText = '' }) {
       const markovSeed = generateSeedFromText(markovText)
       let tatShapePositions = []
 
-      p.setup = () => {
+      p.setup = async () => {
         try {
           // Additional safety check for canvas dimensions
           if (!containerRef.current) {
-            console.warn('Container not available in setup')
             return
           }
 
           // Setup canvas and audio using utilities
-          const setup = setupAudioReactiveCanvas(p, P5, audioRef.current, {
-            fftSmoothing: 0.9,
-            fftSize: 2048,
-            onResize: (width, height) => {
-              if (!isInitialized || !width || !height) return
+          const setup = await setupAudioReactiveCanvas(
+            p,
+            P5,
+            audioRef.current,
+            {
+              fftSmoothing: 0.9,
+              fftSize: 2048,
+              onResize: (width, height) => {
+                if (!isInitialized || !width || !height) return
 
-              // Regenerate Tat shape positions for new canvas size
-              tatShapePositions = generateTatShapePositions(
-                markovSeed,
-                width,
-                height,
-                5
-              )
+                // Regenerate Tat shape positions for new canvas size
+                tatShapePositions = generateTatShapePositions(
+                  markovSeed,
+                  width,
+                  height,
+                  5
+                )
 
-              // Re-add dynamic movement properties to new positions
-              addDynamicMovementToPositions(tatShapePositions, p)
-            },
-          })
+                // Re-add dynamic movement properties to new positions
+                addDynamicMovementToPositions(tatShapePositions, p)
+
+                // Clear existing particles to prevent them from spawning at old positions
+                particles.length = 0
+              },
+            }
+          )
 
           // Extract setup components
           fft = setup.fft
@@ -109,7 +113,6 @@ export default function AudioFFT({ markovText = '' }) {
 
           // Guard against failed FFT setup
           if (!fft) {
-            console.warn('🎵 FFT setup failed, skipping animation loop')
             return
           }
 
@@ -120,10 +123,6 @@ export default function AudioFFT({ markovText = '' }) {
             containerWidth <= 0 ||
             containerHeight <= 0
           ) {
-            console.warn('Invalid canvas dimensions:', {
-              containerWidth,
-              containerHeight,
-            })
             return
           }
 

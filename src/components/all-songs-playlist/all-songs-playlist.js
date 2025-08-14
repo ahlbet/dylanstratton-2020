@@ -99,6 +99,7 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
   const totalDuration = useMemo(() => {
     const totalSeconds =
       audioUrlsWithMetadata?.reduce((sum, item) => {
+        if (!item) return sum
         return sum + (item.duration || 0)
       }, 0) || 0
     return formatDuration(totalSeconds)
@@ -108,6 +109,7 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
   useEffect(() => {
     const totalSeconds =
       audioUrlsWithMetadata?.reduce((sum, item) => {
+        if (!item) return sum
         return sum + (item.duration || 0)
       }, 0) || 0
     updateTotalPlaylistDuration(totalSeconds)
