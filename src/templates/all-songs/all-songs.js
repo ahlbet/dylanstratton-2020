@@ -87,8 +87,6 @@ const AllSongsPage = ({ pageContext, location }) => {
                 (daily) => daily.id === audio.daily_id
               )
 
-              console.log('dailyEntry', dailyEntry)
-
               // Use the display filename that was already extracted (same pattern as blog posts)
               const filename =
                 audio.displayFilename ||
