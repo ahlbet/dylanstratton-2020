@@ -120,8 +120,8 @@ const SongsTable = ({ audioUrlsWithMetadata }) => {
       // If it's the current track and playing, pause it
       setIsPlaying(false)
     } else {
-      // Just play the track - let the audio player handle the playlist
-      // Always use index 0 since we're passing a single-track playlist
+      // Set the playlist first, then play the track
+      setPlaylist([track])
       playTrack(0, [track])
     }
   }
@@ -257,7 +257,7 @@ const SongsTable = ({ audioUrlsWithMetadata }) => {
                 const isCurrentTrack =
                   currentIndex !== null &&
                   playlist.length > 0 &&
-                  playlist[0]?.url === (item.url || item.storagePath)
+                  playlist[currentIndex]?.url === (item.url || item.storagePath)
 
                 return (
                   <tr
