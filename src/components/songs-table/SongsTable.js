@@ -121,7 +121,8 @@ const SongsTable = ({ audioUrlsWithMetadata }) => {
       setIsPlaying(false)
     } else {
       // Just play the track - let the audio player handle the playlist
-      playTrack(index, [track])
+      // Always use index 0 since we're passing a single-track playlist
+      playTrack(0, [track])
     }
   }
 
@@ -181,7 +182,7 @@ const SongsTable = ({ audioUrlsWithMetadata }) => {
                 index={startIndex + index}
                 isCurrentTrack={false}
                 isPlayingCurrent={false}
-                onTrackClick={() => {}} // Will be handled by parent
+                onTrackClick={() => handlePlayTrack(item, startIndex + index)}
                 showDownloadButton={false}
                 isMobile={true}
               />
@@ -256,13 +257,13 @@ const SongsTable = ({ audioUrlsWithMetadata }) => {
                 const isCurrentTrack =
                   currentIndex !== null &&
                   playlist.length > 0 &&
-                  playlist[currentIndex]?.url === (item.url || item.storagePath)
+                  playlist[0]?.url === (item.url || item.storagePath)
 
                 return (
                   <tr
                     key={`${item.storagePath || item.url}-${index}`}
                     className="song-row"
-                    onClick={() => handlePlayTrack(item, index)}
+                    onClick={() => handlePlayTrack(item, startIndex + index)}
                     style={{ cursor: 'pointer' }}
                   >
                     <td className="play-cell">
@@ -271,7 +272,7 @@ const SongsTable = ({ audioUrlsWithMetadata }) => {
                           className="play-button"
                           onClick={(e) => {
                             e.stopPropagation() // Prevent row click from triggering
-                            handlePlayTrack(item, index)
+                            handlePlayTrack(item, startIndex + index)
                           }}
                           title={
                             isCurrentTrack && isPlaying
@@ -280,7 +281,7 @@ const SongsTable = ({ audioUrlsWithMetadata }) => {
                           }
                         >
                           {isCurrentTrack && isPlaying ? (
-                            <Pause size={16} data-testid="play-icon" />
+                            <Pause size={16} data-testid="pause-icon" />
                           ) : (
                             <Play size={16} data-testid="play-icon" />
                           )}

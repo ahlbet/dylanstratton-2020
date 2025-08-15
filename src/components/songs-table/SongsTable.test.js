@@ -256,4 +256,24 @@ describe('SongsTable', () => {
     expect(screen.getByText('Song 25')).toBeInTheDocument()
     expect(screen.queryByText('Song 1')).not.toBeInTheDocument()
   })
+
+  it('allows playing multiple different tracks', () => {
+    render(<SongsTable audioUrlsWithMetadata={mockAudioData} />)
+
+    // Click on first track
+    const firstSongRow = screen.getByText('Zebra Song').closest('tr')
+    fireEvent.click(firstSongRow)
+
+    // Click on second track
+    const secondSongRow = screen.getByText('Alpha Song').closest('tr')
+    fireEvent.click(secondSongRow)
+
+    // Verify that both tracks have clickable rows
+    expect(firstSongRow).toHaveStyle({ cursor: 'pointer' })
+    expect(secondSongRow).toHaveStyle({ cursor: 'pointer' })
+
+    // Verify that all tracks have play buttons
+    const playButtons = screen.getAllByTestId('play-icon')
+    expect(playButtons).toHaveLength(3) // 3 tracks, each with a play button
+  })
 })
