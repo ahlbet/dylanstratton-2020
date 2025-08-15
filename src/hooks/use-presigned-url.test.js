@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { usePresignedUrl } from './use-presigned-url'
 
 // Mock the presigned URLs utility
@@ -181,19 +181,19 @@ describe('usePresignedUrl', () => {
     // Start generation
     const urlPromise = result.current.getAudioUrl(track)
 
-    // Wait for next tick to allow state update
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    expect(result.current.isGenerating).toBe(true)
+    // Wait for state to be set to true
+    await waitFor(() => {
+      expect(result.current.isGenerating).toBe(true)
+    })
 
     // Resolve the promise
     resolvePromise('https://example.com/presigned-url?token=abc123')
     await urlPromise
 
-    // Wait for next tick to allow state update
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    expect(result.current.isGenerating).toBe(false)
+    // Wait for state to be set to false
+    await waitFor(() => {
+      expect(result.current.isGenerating).toBe(false)
+    })
   })
 
   test('handles isGenerating state on error', async () => {
@@ -207,7 +207,10 @@ describe('usePresignedUrl', () => {
 
     await result.current.getAudioUrl(track)
 
-    expect(result.current.isGenerating).toBe(false)
+    // Wait for state to be set to false after error
+    await waitFor(() => {
+      expect(result.current.isGenerating).toBe(false)
+    })
   })
 
   test('clears cache when clearCache is called', async () => {
