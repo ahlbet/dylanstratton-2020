@@ -1,11 +1,14 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent } from '../../utils/plausible-analytics'
+import useIsMobile from '../../hooks/use-is-mobile'
 import TrackItem from '../track-item/TrackItem'
 import './all-songs-playlist.css'
 
 const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
   const [isMuted, setIsMuted] = useState(false)
+  const isMobile = useIsMobile()
+
   const {
     playlist,
     currentIndex,
@@ -241,7 +244,7 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
                 isPlayingCurrent={isPlayingCurrent}
                 onTrackClick={handleTrackClick}
                 showDownloadButton={false}
-                isMobile={false}
+                isMobile={isMobile}
               />
             )
           })}

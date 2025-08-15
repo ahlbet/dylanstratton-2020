@@ -3,6 +3,7 @@ import JSZip from 'jszip'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent } from '../../utils/plausible-analytics'
 import { useScrollToTrack } from '../../hooks/use-scroll-to-track'
+import useIsMobile from '../../hooks/use-is-mobile'
 import TrackItem from '../track-item/TrackItem'
 import './BlogAudioPlayer.css'
 
@@ -116,7 +117,7 @@ const CustomPlaylist = ({
 const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
   const [isMuted, setIsMuted] = useState(false)
   const [isDownloadingZip, setIsDownloadingZip] = useState(false)
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  const isMobile = useIsMobile()
 
   // Normalize audioData to handle both string URLs and objects with metadata
   const normalizedAudioData = useMemo(() => {
