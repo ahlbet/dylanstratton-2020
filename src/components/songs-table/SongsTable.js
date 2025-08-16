@@ -110,19 +110,33 @@ const SongsTable = ({ audioUrlsWithMetadata }) => {
       duration: item.duration,
     }
 
+    // Use the current filtered and sorted data as the playlist
+    const playlistData = processedData.map((trackItem) => ({
+      url: trackItem.url || trackItem.storagePath,
+      title: trackItem.title,
+      artist: trackItem.postTitle,
+      album: trackItem.postDate,
+      duration: trackItem.duration,
+    }))
+
+    // Find the index of the selected track in the playlistData
+    const trackIndex = playlistData.findIndex(
+      (t) => t.url === (item.url || item.storagePath)
+    )
+
     // Check if this specific track is currently playing
     const isCurrentTrack =
       currentIndex !== null &&
       playlist.length > 0 &&
-      playlist[currentIndex]?.url === track.url
+      playlist[currentIndex]?.url === (item.url || item.storagePath)
 
     if (isCurrentTrack && isPlaying) {
       // If it's the current track and playing, pause it
       setIsPlaying(false)
     } else {
-      // Set the playlist first, then play the track
-      setPlaylist([track])
-      playTrack(0, [track])
+      // Set the playlist to the full filtered/sorted list, then play the selected track
+      setPlaylist(playlistData)
+      playTrack(trackIndex, playlistData)
     }
   }
 
@@ -272,7 +286,11 @@ const SongsTable = ({ audioUrlsWithMetadata }) => {
                           className="play-button"
                           onClick={(e) => {
                             e.stopPropagation() // Prevent row click from triggering
-                            handlePlayTrack(item, startIndex + index)
+                            if (isCurrentTrack) {
+                              setIsPlaying(!isPlaying)
+                            } else {
+                              handlePlayTrack(item, startIndex + index)
+                            }
                           }}
                           title={
                             isCurrentTrack && isPlaying
