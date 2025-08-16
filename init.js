@@ -334,15 +334,31 @@ const playAudio = async (audioPath, audioPlayer) => {
         isStopped = true
 
         console.log('\n⏹️  Stopping audio playback...')
+        
+        // Try graceful termination first
         audioProcess.kill('SIGTERM')
-
-        // Give it a moment to clean up, then force kill if needed
-        setTimeout(() => {
+        
+        // Monitor process termination with configurable timeout
+        const forceKillTimeout = parseInt(process.env.AUDIO_KILL_TIMEOUT) || 3000
+        let forceKillTimer = null
+        
+        // Set up force kill as fallback
+        forceKillTimer = setTimeout(() => {
           if (!audioProcess.killed) {
+            console.log('⚠️  Force killing audio process...')
             audioProcess.kill('SIGKILL')
           }
-        }, 1000)
-
+        }, forceKillTimeout)
+        
+        // Clean up timer when process terminates (existing close handler will resolve)
+        const originalListeners = audioProcess.listeners('close')
+        audioProcess.once('close', () => {
+          if (forceKillTimer) {
+            clearTimeout(forceKillTimer)
+            forceKillTimer = null
+          }
+        })
+        
         resolve()
       }
 
