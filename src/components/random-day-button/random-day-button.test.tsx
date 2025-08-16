@@ -7,7 +7,7 @@ jest.mock('gatsby', () => ({
   Link: jest
     .fn()
     .mockImplementation(
-      ({ children, to, style, onMouseEnter, onMouseLeave, className }) => (
+      ({ children, to, style, onMouseEnter, onMouseLeave, className }: any) => (
         <a
           href={to}
           style={style}

@@ -1,9 +1,9 @@
-const { cleanText, filterBadWords } = require('./text-cleaner')
+import { cleanText, filterBadWords } from './text-cleaner'
 
 // Mock the bad-words module
 jest.mock('bad-words', () => {
   return jest.fn().mockImplementation(() => ({
-    clean: jest.fn((text) => text.replace(/badword/gi, '***')),
+    clean: jest.fn((text: string) => text.replace(/badword/gi, '***')),
   }))
 })
 
@@ -15,9 +15,9 @@ describe('text-cleaner', () => {
     })
 
     test('should return input unchanged if text is not a string', () => {
-      expect(cleanText(123)).toBe(123)
-      expect(cleanText({})).toEqual({})
-      expect(cleanText([])).toEqual([])
+      expect(cleanText(123 as any)).toBe(123)
+      expect(cleanText({} as any)).toEqual({})
+      expect(cleanText([] as any)).toEqual([])
     })
 
     test('should remove Project Gutenberg headers', () => {

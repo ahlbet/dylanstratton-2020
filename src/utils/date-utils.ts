@@ -1,10 +1,10 @@
 /**
  * Transform a name in format "25may05" to a date string
- * @param {string} name - The name in format "YYmonDD" (e.g., "25may05")
- * @param {boolean} randomTime - Whether to add random time (default: true)
- * @returns {string} ISO string in format "YYYY-MM-DDTHH:mm:ss.sssZ" if randomTime=true, or "YYYY-MM-DD" if randomTime=false
+ * @param name - The name in format "YYmonDD" (e.g., "25may05")
+ * @param randomTime - Whether to add random time (default: true)
+ * @returns ISO string in format "YYYY-MM-DDTHH:mm:ss.sssZ" if randomTime=true, or "YYYY-MM-DD" if randomTime=false
  */
-const transformDate = (name, randomTime = true) => {
+const transformDate = (name: string, randomTime: boolean = true): string => {
   // Parse name format like "25may05" or "24jun19"
   const match = name.match(/^(\d{2})([a-z]{3})(\d{2})$/i)
   if (!match) {
@@ -20,7 +20,7 @@ const transformDate = (name, randomTime = true) => {
     parseInt(year) < 50 ? 2000 + parseInt(year) : 1900 + parseInt(year)
 
   // Convert month abbreviation to month number
-  const monthMap = {
+  const monthMap: Record<string, number> = {
     jan: 0,
     feb: 1,
     mar: 2,
@@ -63,9 +63,9 @@ const transformDate = (name, randomTime = true) => {
 
 /**
  * Get a list of all valid month abbreviations
- * @returns {string[]} Array of month abbreviations
+ * @returns Array of month abbreviations
  */
-const getMonthAbbreviations = () => [
+const getMonthAbbreviations = (): string[] => [
   'jan',
   'feb',
   'mar',
@@ -82,15 +82,14 @@ const getMonthAbbreviations = () => [
 
 /**
  * Validate if a name follows the expected format
- * @param {string} name - The name to validate
- * @returns {boolean} True if valid format
+ * @param name - The name to validate
+ * @returns True if valid format
  */
-const isValidNameFormat = (name) => {
+const isValidNameFormat = (name: string): boolean => {
   return /^(\d{2})([a-z]{3})(\d{2})$/i.test(name)
 }
 
-// Export for CommonJS (used by Node.js scripts)
-module.exports = {
+export {
   transformDate,
   getMonthAbbreviations,
   isValidNameFormat,

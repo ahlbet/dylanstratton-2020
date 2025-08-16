@@ -5,7 +5,7 @@ import Layout from './layout'
 
 // Mock the Link component from gatsby
 jest.mock('gatsby', () => ({
-  Link: jest.fn(({ to, style, children }) => (
+  Link: jest.fn(({ to, style, children }: any) => (
     <a href={to} style={style} data-testid="gatsby-link">
       {children}
     </a>
@@ -14,12 +14,15 @@ jest.mock('gatsby', () => ({
 
 // Mock the ThemeToggler component
 jest.mock('gatsby-plugin-dark-mode', () => ({
-  ThemeToggler: jest.fn(({ children }) =>
+  ThemeToggler: jest.fn(({ children }: any) =>
     children({ theme: 'light', toggleTheme: jest.fn() })
   ),
 }))
 
 // Mock the global variable
+declare global {
+  var __PATH_PREFIX__: string
+}
 global.__PATH_PREFIX__ = ''
 
 describe('Layout component', () => {

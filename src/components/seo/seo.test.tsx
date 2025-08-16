@@ -11,7 +11,7 @@ jest.mock('gatsby', () => ({
 
 // Mock Helmet since we can't test it directly
 jest.mock('react-helmet', () => {
-  const mockHelmet = ({ children, ...props }) => {
+  const mockHelmet = ({ children, ...props }: any) => {
     // Convert htmlAttributes to JSON string for proper testing
     const processedProps = { ...props }
     if (processedProps.htmlAttributes) {

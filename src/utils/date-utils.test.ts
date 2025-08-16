@@ -1,8 +1,8 @@
-const {
+import {
   transformDate,
   getMonthAbbreviations,
   isValidNameFormat,
-} = require('./date-utils')
+} from './date-utils'
 
 describe('date-utils', () => {
   describe('transformDate', () => {
@@ -186,8 +186,8 @@ describe('date-utils', () => {
         'extra25may05',
         '',
         '   ',
-        null,
-        undefined,
+        null as any,
+        undefined as any,
       ]
 
       invalidFormats.forEach((format) => {

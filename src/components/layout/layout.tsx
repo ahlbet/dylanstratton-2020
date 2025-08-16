@@ -5,9 +5,17 @@ import '../../utils/global.css'
 import { rhythm, scale } from '../../utils/typography'
 import RandomDayButton from '../random-day-button/random-day-button'
 
-const Layout = ({ location, title, children }) => {
+interface LayoutProps {
+  location: {
+    pathname: string
+  }
+  title: string
+  children: React.ReactNode
+}
+
+const Layout: React.FC<LayoutProps> = ({ location, title, children }) => {
   const rootPath = `${__PATH_PREFIX__}/`
-  let header
+  let header: React.ReactElement
 
   if (location.pathname === rootPath) {
     header = (

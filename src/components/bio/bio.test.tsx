@@ -9,7 +9,7 @@ jest.mock('gatsby', () => ({
 }))
 
 jest.mock('gatsby-plugin-image', () => ({
-  GatsbyImage: ({ image, alt, style, children }) => (
+  GatsbyImage: ({ image, alt, style, children }: any) => (
     <img
       data-testid="gatsby-image"
       alt={alt}
@@ -160,8 +160,6 @@ describe('Bio', () => {
   })
 
   test('renders bio with long author name', () => {
-    const longAuthorName =
-      'This is a very long author name that might cause layout issues'
     const mockData = {
       avatar: {
         childImageSharp: {
@@ -175,7 +173,7 @@ describe('Bio', () => {
       },
       site: {
         siteMetadata: {
-          author: longAuthorName,
+          author: 'Very Long Author Name That Exceeds Normal Length',
         },
       },
     }
@@ -190,11 +188,13 @@ describe('Bio', () => {
     render(<Bio />)
 
     const avatar = screen.getByTestId('gatsby-image')
-    expect(avatar).toHaveAttribute('alt', longAuthorName)
+    expect(avatar).toHaveAttribute(
+      'alt',
+      'Very Long Author Name That Exceeds Normal Length'
+    )
   })
 
   test('renders bio with special characters in author name', () => {
-    const specialAuthorName = "José María O'Connor-Smith"
     const mockData = {
       avatar: {
         childImageSharp: {
@@ -208,7 +208,7 @@ describe('Bio', () => {
       },
       site: {
         siteMetadata: {
-          author: specialAuthorName,
+          author: "José María O'Connor-Smith",
         },
       },
     }
@@ -223,11 +223,10 @@ describe('Bio', () => {
     render(<Bio />)
 
     const avatar = screen.getByTestId('gatsby-image')
-    expect(avatar).toHaveAttribute('alt', specialAuthorName)
+    expect(avatar).toHaveAttribute('alt', "José María O'Connor-Smith")
   })
 
   test('renders bio with unicode characters in author name', () => {
-    const unicodeAuthorName = 'José María 张伟 田中太郎'
     const mockData = {
       avatar: {
         childImageSharp: {
@@ -241,7 +240,7 @@ describe('Bio', () => {
       },
       site: {
         siteMetadata: {
-          author: unicodeAuthorName,
+          author: '张三李四',
         },
       },
     }
@@ -256,7 +255,7 @@ describe('Bio', () => {
     render(<Bio />)
 
     const avatar = screen.getByTestId('gatsby-image')
-    expect(avatar).toHaveAttribute('alt', unicodeAuthorName)
+    expect(avatar).toHaveAttribute('alt', '张三李四')
   })
 
   test('renders bio with empty author name', () => {
@@ -320,8 +319,7 @@ describe('Bio', () => {
     render(<Bio />)
 
     const avatar = screen.getByTestId('gatsby-image')
-    // When author is null, React doesn't set the alt attribute
-    expect(avatar.getAttribute('alt')).toBeNull()
+    expect(avatar).toHaveAttribute('alt', '')
   })
 
   test('renders bio with undefined author name', () => {
@@ -353,8 +351,7 @@ describe('Bio', () => {
     render(<Bio />)
 
     const avatar = screen.getByTestId('gatsby-image')
-    // When author is undefined, React doesn't set the alt attribute
-    expect(avatar.getAttribute('alt')).toBeNull()
+    expect(avatar).toHaveAttribute('alt', '')
   })
 
   test('renders bio with missing site metadata', () => {
@@ -384,8 +381,7 @@ describe('Bio', () => {
     render(<Bio />)
 
     const avatar = screen.getByTestId('gatsby-image')
-    // When author is undefined, React doesn't set the alt attribute
-    expect(avatar.getAttribute('alt')).toBeNull()
+    expect(avatar).toHaveAttribute('alt', '')
   })
 
   test('renders bio with missing site', () => {
@@ -423,7 +419,7 @@ describe('Bio', () => {
             width: 50,
             height: 50,
             layout: 'FIXED',
-            src: '/custom/path/to/profile-pic.jpg',
+            src: 'different-avatar-src',
           },
         },
       },
@@ -436,7 +432,7 @@ describe('Bio', () => {
 
     mockUseStaticQuery.mockReturnValue(mockData)
     mockGetImage.mockReturnValue({
-      src: '/custom/path/to/profile-pic.jpg',
+      src: 'different-avatar-src',
       width: 50,
       height: 50,
     })
@@ -444,7 +440,7 @@ describe('Bio', () => {
     render(<Bio />)
 
     const avatar = screen.getByTestId('gatsby-image')
-    expect(avatar).toBeInTheDocument()
+    expect(avatar).toHaveAttribute('src', 'different-avatar-src')
   })
 
   test('renders bio with missing avatar', () => {
@@ -480,7 +476,7 @@ describe('Bio', () => {
 
     const { container } = render(<Bio />)
 
-    // Should return null when no avatar
+    // Should return null when avatar is null
     expect(container.firstChild).toBeNull()
   })
 
@@ -499,7 +495,7 @@ describe('Bio', () => {
 
     const { container } = render(<Bio />)
 
-    // Should return null when no avatar
+    // Should return null when avatar is undefined
     expect(container.firstChild).toBeNull()
   })
 

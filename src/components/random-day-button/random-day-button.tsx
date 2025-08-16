@@ -2,8 +2,25 @@ import React from 'react'
 import { Link, useStaticQuery, graphql } from 'gatsby'
 import { Shuffle } from 'lucide-react'
 
-const RandomDayButton = () => {
-  const data = useStaticQuery(graphql`
+interface MarkdownPost {
+  node: {
+    fields: {
+      slug: string
+    }
+    frontmatter: {
+      title: string
+    }
+  }
+}
+
+interface RandomDayButtonQueryData {
+  allMarkdownRemark: {
+    edges: MarkdownPost[]
+  }
+}
+
+const RandomDayButton: React.FC = () => {
+  const data: RandomDayButtonQueryData = useStaticQuery(graphql`
     query {
       allMarkdownRemark(sort: { fields: [frontmatter___date], order: DESC }) {
         edges {
@@ -27,7 +44,7 @@ const RandomDayButton = () => {
     return null
   }
 
-  const getRandomPost = () => {
+  const getRandomPost = (): MarkdownPost['node'] => {
     const randomIndex = Math.floor(Math.random() * posts.length)
     return posts[randomIndex].node
   }
@@ -60,10 +77,10 @@ const RandomDayButton = () => {
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
         zIndex: 1000,
       }}
-      onMouseEnter={(e) => {
+      onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
         e.target.style.backgroundColor = '#c02a56'
       }}
-      onMouseLeave={(e) => {
+      onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
         e.target.style.backgroundColor = '#DE3163'
       }}
       className="random-day-button"

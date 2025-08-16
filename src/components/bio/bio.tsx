@@ -6,13 +6,24 @@
  */
 
 import { graphql, useStaticQuery } from 'gatsby'
-
-import { GatsbyImage, getImage } from 'gatsby-plugin-image'
+import { GatsbyImage, getImage, IGatsbyImageData } from 'gatsby-plugin-image'
 import React from 'react'
-import { rhythm } from '../../utils/typography'
 
-const Bio = () => {
-  const data = useStaticQuery(graphql`
+interface BioQueryData {
+  avatar: {
+    childImageSharp: {
+      gatsbyImageData: IGatsbyImageData
+    }
+  }
+  site: {
+    siteMetadata: {
+      author: string
+    }
+  }
+}
+
+const Bio: React.FC = () => {
+  const data: BioQueryData = useStaticQuery(graphql`
     query BioQuery {
       avatar: file(absolutePath: { regex: "/profile-pic.jpg/" }) {
         childImageSharp {
@@ -37,7 +48,7 @@ const Bio = () => {
     <div className="flex mb-10">
       <GatsbyImage
         image={image}
-        alt={author}
+        alt={author || ''}
         className="mr-2 mb-0 w-12 h-12 rounded-full"
       />
     </div>
