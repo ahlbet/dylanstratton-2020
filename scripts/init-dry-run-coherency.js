@@ -19,7 +19,7 @@ const fs = require('fs')
 const path = require('path')
 const readline = require('readline')
 const { spawn } = require('child_process')
-const { checkAudioTools, getAudioPlayer } = require('../src/utils/audio-tools')
+const { checkAudioTools, getAudioPlayer, DEFAULT_AUDIO_KILL_TIMEOUT_MS } = require('../src/utils/audio-tools')
 
 // Create readline interface for user input
 const rl = readline.createInterface({
@@ -112,7 +112,7 @@ const playAudio = async (audioPath, audioPlayer) => {
           if (!audioProcess.killed) {
             audioProcess.kill('SIGKILL')
           }
-        }, 1000)
+        }, DEFAULT_AUDIO_KILL_TIMEOUT_MS)
 
         resolve()
       }
