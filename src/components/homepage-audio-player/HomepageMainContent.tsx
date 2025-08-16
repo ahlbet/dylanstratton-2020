@@ -4,6 +4,7 @@ import { Card } from '../ui/card'
 import { FileText, CalendarIcon } from 'lucide-react'
 import { PostCalendar } from '../post-calendar/PostCalendar'
 import { Link } from 'gatsby'
+import AudioFFT from '../audio-fft/AudioFFT'
 
 interface BlogPost {
   id: string
@@ -13,6 +14,12 @@ interface BlogPost {
   daily_id?: string
 }
 
+interface MarkovText {
+  id: string
+  content: string
+  coherency_level?: string
+}
+
 interface HomepageMainContentProps {
   bottomView: 'posts' | 'calendar'
   onBottomViewChange: (view: 'posts' | 'calendar') => void
@@ -20,6 +27,7 @@ interface HomepageMainContentProps {
   posts: any[]
   currentBlogPost: string | null
   onPostClick: (post: BlogPost) => void
+  markovTexts: MarkovText[]
 }
 
 export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
@@ -29,6 +37,7 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
   posts,
   currentBlogPost,
   onPostClick,
+  markovTexts,
 }) => {
   const isCurrentBlogPost = (post: BlogPost) => {
     return post.daily_id === currentBlogPost
@@ -41,7 +50,9 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
         <div className="w-full h-full rounded-lg overflow-hidden relative">
           {/* Placeholder for P5 sketch - replace with your actual sketch */}
           <div className="w-full h-full bg-gradient-to-br from-purple-900/20 to-blue-900/20 relative">
-            <div>Sketch</div>
+            <AudioFFT
+              markovText={markovTexts.map((text) => text.content).join(' ')}
+            />
           </div>
         </div>
       </div>

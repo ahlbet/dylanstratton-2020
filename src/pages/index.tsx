@@ -4,7 +4,7 @@ import { graphql, Link, PageProps } from 'gatsby'
 import Layout from '../components/layout/layout'
 import SEO from '../components/seo/seo'
 import { Button } from '../components/ui/button'
-import { Calendar as CalendarIcon, FileText } from 'lucide-react'
+import { Calendar as CalendarIcon, FileText, Loader } from 'lucide-react'
 import { Card } from '../components/ui/card'
 import { Calendar } from '../components/ui/calendar'
 import { useAudioPlayer } from '../contexts/audio-player-context/audio-player-context'
@@ -416,6 +416,14 @@ const BlogIndex = ({
     }
   }
 
+  if (supabaseLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader className="animate-spin" />
+      </div>
+    )
+  }
+
   return (
     <Layout location={location} title={siteTitle}>
       <SEO title="All posts" />
@@ -437,6 +445,7 @@ const BlogIndex = ({
         </div>
         {/* Main Content Area */}
         <HomepageMainContent
+          markovTexts={processedTexts}
           bottomView={bottomView}
           onBottomViewChange={setBottomView}
           recentPosts={recentPosts}
