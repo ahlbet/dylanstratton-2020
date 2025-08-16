@@ -361,7 +361,6 @@ const BlogAudioPlayer: React.FC<BlogAudioPlayerProps> = ({
     }
   }, [isDownloadingZip, audioData, postTitle, postDate]) // Dependencies for the download function
 
-  console.log('audioData', audioData)
   // Convert audio data to track format
   const tracks = useMemo(() => {
     // Ensure audioData is an array
@@ -373,7 +372,6 @@ const BlogAudioPlayer: React.FC<BlogAudioPlayerProps> = ({
       .map((audioItem, index) => {
         // Handle both string URLs and objects
         const url = typeof audioItem === 'string' ? audioItem : audioItem.url
-        console.log('url', url)
         const hasUrl = url && typeof url === 'string'
         const hasStoragePath =
           typeof audioItem === 'object' &&
