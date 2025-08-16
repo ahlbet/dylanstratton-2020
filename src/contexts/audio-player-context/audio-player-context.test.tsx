@@ -1,6 +1,10 @@
 import React from 'react'
 import { render, act, screen, fireEvent } from '@testing-library/react'
-import { AudioPlayerProvider, useAudioPlayer } from './audio-player-context'
+import {
+  AudioPlayerProvider,
+  useAudioPlayer,
+  AudioTrack,
+} from './audio-player-context'
 
 // Mock the plausible analytics utility
 jest.mock('../../utils/plausible-analytics', () => ({
@@ -25,7 +29,7 @@ Object.defineProperty(window, 'localStorage', {
 })
 
 // Test component to use the context
-const TestComponent = () => {
+const TestComponent: React.FC = () => {
   const audioPlayer = useAudioPlayer()
   return (
     <div>

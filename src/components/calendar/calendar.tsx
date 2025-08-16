@@ -7,7 +7,52 @@ import listPlugin from '@fullcalendar/list'
 import { useCalendar, CalendarProvider } from './calendar-context'
 import './calendar-dark.css'
 
-const CalendarComponent = () => {
+// Types
+interface BlogPost {
+  frontmatter: {
+    title: string
+    date: string
+    description?: string
+  }
+  fields: {
+    slug: string
+  }
+}
+
+interface CalendarEvent {
+  id: string
+  title: string
+  start: Date
+  end: Date
+  url: string
+  extendedProps: {
+    description: string
+  }
+  allDay: boolean
+}
+
+interface ViewInfo {
+  view: {
+    type: string
+  }
+}
+
+interface DateInfo {
+  view: {
+    currentStart: Date
+  }
+}
+
+interface EventInfo {
+  event: {
+    extendedProps?: {
+      description?: string
+    }
+  }
+  el: HTMLElement
+}
+
+const CalendarComponent: React.FC = () => {
   const { currentView, currentDate, setView, setDate } = useCalendar()
 
   const data = useStaticQuery(graphql`
@@ -32,8 +77,8 @@ const CalendarComponent = () => {
   `)
 
   // Generate events from blog posts
-  const events =
-    data?.allMarkdownRemark?.edges?.map(({ node }) => {
+  const events: CalendarEvent[] =
+    data?.allMarkdownRemark?.edges?.map(({ node }: { node: BlogPost }) => {
       const { title, date, description } = node.frontmatter || {}
       const slug = node.fields?.slug
 
@@ -51,12 +96,12 @@ const CalendarComponent = () => {
     }) || []
 
   // Handle view change
-  const handleViewChange = (viewInfo) => {
-    setView(viewInfo.view.type)
+  const handleViewChange = (viewInfo: ViewInfo): void => {
+    setView(viewInfo.view.type as any)
   }
 
   // Handle date change (navigation) - use the current date from the view
-  const handleDateChange = (dateInfo) => {
+  const handleDateChange = (dateInfo: DateInfo): void => {
     // Use the current date from the view, not the start date
     const currentViewDate = dateInfo.view.currentStart
     if (currentViewDate) {
@@ -88,10 +133,10 @@ const CalendarComponent = () => {
           next: '›',
         }}
         dayMaxEvents={3}
-        eventClick={(info) => {
+        eventClick={(info: EventInfo) => {
           // Event clicked - could add navigation logic here if needed
         }}
-        eventDidMount={(info) => {
+        eventDidMount={(info: EventInfo) => {
           if (info.event.extendedProps?.description) {
             info.el.title = info.event.extendedProps.description
           }
@@ -119,7 +164,7 @@ const CalendarComponent = () => {
 }
 
 // Main Calendar component that provides the context
-const Calendar = () => {
+const Calendar: React.FC = () => {
   return (
     <CalendarProvider>
       <CalendarComponent />

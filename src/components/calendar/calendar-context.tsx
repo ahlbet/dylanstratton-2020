@@ -1,17 +1,46 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react'
+import React, { createContext, useContext, useReducer, ReactNode } from 'react'
 
-// Calendar state context
-const CalendarContext = createContext()
+// Types
+export type CalendarView = 'dayGridMonth' | 'timeGridWeek' | 'listWeek'
+
+export interface CalendarState {
+  currentView: CalendarView
+  currentDate: string
+  viewOptions: CalendarView[]
+}
+
+export interface CalendarContextType extends CalendarState {
+  setView: (view: CalendarView) => void
+  setDate: (date: Date | string) => void
+  setCurrentDate: () => void
+}
+
+interface CalendarProviderProps {
+  children: ReactNode
+}
 
 // Action types
-const CALENDAR_ACTIONS = {
+export const CALENDAR_ACTIONS = {
   SET_VIEW: 'SET_VIEW',
   SET_DATE: 'SET_DATE',
   SET_CURRENT_DATE: 'SET_CURRENT_DATE',
+} as const
+
+type CalendarActionType =
+  (typeof CALENDAR_ACTIONS)[keyof typeof CALENDAR_ACTIONS]
+
+interface CalendarAction {
+  type: CalendarActionType
+  payload?: CalendarView | Date | string
 }
 
+// Calendar state context
+const CalendarContext = createContext<CalendarContextType | undefined>(
+  undefined
+)
+
 // Helper function to get a clean date string (YYYY-MM-DD format)
-const getCleanDateString = (date) => {
+const getCleanDateString = (date: Date | string): string => {
   if (typeof date === 'string') {
     // If it's already a date string, extract just the date part
     return date.split('T')[0]
@@ -23,7 +52,7 @@ const getCleanDateString = (date) => {
 }
 
 // Initial state
-const getInitialState = () => {
+const getInitialState = (): CalendarState => {
   if (typeof window !== 'undefined' && window.localStorage) {
     const saved = localStorage.getItem('calendarState')
     if (saved) {
@@ -48,21 +77,24 @@ const getInitialState = () => {
 }
 
 // Reducer function
-const calendarReducer = (state, action) => {
-  let newState
+const calendarReducer = (
+  state: CalendarState,
+  action: CalendarAction
+): CalendarState => {
+  let newState: CalendarState
 
   switch (action.type) {
     case CALENDAR_ACTIONS.SET_VIEW:
       newState = {
         ...state,
-        currentView: action.payload,
+        currentView: action.payload as CalendarView,
       }
       break
 
     case CALENDAR_ACTIONS.SET_DATE:
       newState = {
         ...state,
-        currentDate: getCleanDateString(action.payload),
+        currentDate: getCleanDateString(action.payload as Date | string),
       }
       break
 
@@ -86,23 +118,25 @@ const calendarReducer = (state, action) => {
 }
 
 // Provider component
-export const CalendarProvider = ({ children }) => {
+export const CalendarProvider: React.FC<CalendarProviderProps> = ({
+  children,
+}) => {
   const [state, dispatch] = useReducer(calendarReducer, getInitialState())
 
   // Actions
-  const setView = (view) => {
+  const setView = (view: CalendarView): void => {
     dispatch({ type: CALENDAR_ACTIONS.SET_VIEW, payload: view })
   }
 
-  const setDate = (date) => {
+  const setDate = (date: Date | string): void => {
     dispatch({ type: CALENDAR_ACTIONS.SET_DATE, payload: date })
   }
 
-  const setCurrentDate = () => {
+  const setCurrentDate = (): void => {
     dispatch({ type: CALENDAR_ACTIONS.SET_CURRENT_DATE })
   }
 
-  const value = {
+  const value: CalendarContextType = {
     ...state,
     setView,
     setDate,
@@ -117,13 +151,10 @@ export const CalendarProvider = ({ children }) => {
 }
 
 // Custom hook to use calendar context
-export const useCalendar = () => {
+export const useCalendar = (): CalendarContextType => {
   const context = useContext(CalendarContext)
   if (!context) {
     throw new Error('useCalendar must be used within a CalendarProvider')
   }
   return context
 }
-
-// Export action types for reference
-export { CALENDAR_ACTIONS }

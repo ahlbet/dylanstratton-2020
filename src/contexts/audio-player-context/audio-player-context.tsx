@@ -5,22 +5,64 @@ import React, {
   useRef,
   useEffect,
   useCallback,
+  ReactNode,
 } from 'react'
 import { trackAudioEvent, getPostName } from '../../utils/plausible-analytics'
 
-const AudioPlayerContext = createContext()
+// Types
+export interface AudioTrack {
+  url: string
+  title?: string
+  artist?: string
+  duration?: number
+  [key: string]: any // Allow additional properties
+}
 
-export const AudioPlayerProvider = ({ children }) => {
-  const [playlist, setPlaylist] = useState([])
-  const [currentIndex, setCurrentIndex] = useState(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [totalPlaylistDuration, setTotalPlaylistDuration] = useState(0)
-  const [volume, setVolume] = useState(1)
-  const [isShuffleOn, setIsShuffleOn] = useState(false)
-  const [isLoopOn, setIsLoopOn] = useState(false)
-  const [isAutopilotOn, setIsAutopilotOn] = useState(false)
-  const [shuffledPlaylist, setShuffledPlaylist] = useState([])
-  const audioRef = useRef(null)
+export interface AudioPlayerContextType {
+  playlist: AudioTrack[]
+  setPlaylist: React.Dispatch<React.SetStateAction<AudioTrack[]>>
+  currentIndex: number | null
+  isPlaying: boolean
+  setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>
+  totalPlaylistDuration: number
+  volume: number
+  isShuffleOn: boolean
+  isLoopOn: boolean
+  isAutopilotOn: boolean
+  shuffledPlaylist: AudioTrack[]
+  audioRef: React.RefObject<HTMLAudioElement>
+  playTrack: (index: number, newPlaylist?: AudioTrack[]) => Promise<void>
+  updateTotalPlaylistDuration: (duration: number) => void
+  updateVolume: (newVolume: number) => void
+  toggleShuffle: () => void
+  toggleLoop: () => void
+  toggleAutopilot: () => void
+  shouldNavigateToRandomPost: () => boolean
+  getNextTrackIndex: () => number
+  getPreviousTrackIndex: () => number
+}
+
+interface AudioPlayerProviderProps {
+  children: ReactNode
+}
+
+const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(
+  undefined
+)
+
+export const AudioPlayerProvider: React.FC<AudioPlayerProviderProps> = ({
+  children,
+}) => {
+  const [playlist, setPlaylist] = useState<AudioTrack[]>([])
+  const [currentIndex, setCurrentIndex] = useState<number | null>(null)
+  const [isPlaying, setIsPlaying] = useState<boolean>(false)
+  const [totalPlaylistDuration, setTotalPlaylistDuration] = useState<number>(0)
+  const [volume, setVolume] = useState<number>(1)
+  const [isShuffleOn, setIsShuffleOn] = useState<boolean>(false)
+  const [isLoopOn, setIsLoopOn] = useState<boolean>(false)
+  const [isAutopilotOn, setIsAutopilotOn] = useState<boolean>(false)
+  const [shuffledPlaylist, setShuffledPlaylist] = useState<AudioTrack[]>([])
+  const audioRef = useRef<HTMLAudioElement>(null)
 
   // Load volume, shuffle, and loop from localStorage on mount
   useEffect(() => {
@@ -89,7 +131,7 @@ export const AudioPlayerProvider = ({ children }) => {
   }, [isShuffleOn, playlist])
 
   const playTrack = useCallback(
-    async (index, newPlaylist) => {
+    async (index: number, newPlaylist?: AudioTrack[]): Promise<void> => {
       if (newPlaylist) setPlaylist(newPlaylist)
 
       const trackToPlay = newPlaylist ? newPlaylist[index] : playlist[index]
@@ -114,24 +156,24 @@ export const AudioPlayerProvider = ({ children }) => {
     [playlist]
   )
 
-  const updateVolume = (newVolume) => {
+  const updateVolume = (newVolume: number): void => {
     setVolume(newVolume)
     localStorage.setItem('audioPlayerVolume', newVolume.toString())
   }
 
-  const toggleShuffle = () => {
+  const toggleShuffle = (): void => {
     const newShuffleState = !isShuffleOn
     setIsShuffleOn(newShuffleState)
     localStorage.setItem('audioPlayerShuffle', newShuffleState.toString())
   }
 
-  const toggleLoop = () => {
+  const toggleLoop = (): void => {
     const newLoopState = !isLoopOn
     setIsLoopOn(newLoopState)
     localStorage.setItem('audioPlayerLoop', newLoopState.toString())
   }
 
-  const toggleAutopilot = () => {
+  const toggleAutopilot = (): void => {
     const newAutopilotState = !isAutopilotOn
     setIsAutopilotOn(newAutopilotState)
     localStorage.setItem('audioPlayerAutopilot', newAutopilotState.toString())
@@ -144,7 +186,7 @@ export const AudioPlayerProvider = ({ children }) => {
   }
 
   // Function to check if autopilot navigation is needed
-  const shouldNavigateToRandomPost = () => {
+  const shouldNavigateToRandomPost = (): boolean => {
     if (!isAutopilotOn) return false
 
     // Check if we're on home or /all page
@@ -156,10 +198,10 @@ export const AudioPlayerProvider = ({ children }) => {
     return false
   }
 
-  const getNextTrackIndex = () => {
+  const getNextTrackIndex = (): number => {
     if (isShuffleOn && shuffledPlaylist.length > 0) {
       // Find current track in shuffled playlist and get next
-      const currentTrack = playlist[currentIndex]
+      const currentTrack = playlist[currentIndex!]
       const currentShuffledIndex = shuffledPlaylist.findIndex(
         (track) => track.url === currentTrack.url
       )
@@ -169,14 +211,14 @@ export const AudioPlayerProvider = ({ children }) => {
       // Find the original index of the next track
       return playlist.findIndex((track) => track.url === nextTrack.url)
     } else {
-      return (currentIndex + 1) % playlist.length
+      return currentIndex !== null ? (currentIndex + 1) % playlist.length : 0
     }
   }
 
-  const getPreviousTrackIndex = () => {
+  const getPreviousTrackIndex = (): number => {
     if (isShuffleOn && shuffledPlaylist.length > 0) {
       // Find current track in shuffled playlist and get previous
-      const currentTrack = playlist[currentIndex]
+      const currentTrack = playlist[currentIndex!]
       const currentShuffledIndex = shuffledPlaylist.findIndex(
         (track) => track.url === currentTrack.url
       )
@@ -188,43 +230,49 @@ export const AudioPlayerProvider = ({ children }) => {
       // Find the original index of the previous track
       return playlist.findIndex((track) => track.url === prevTrack.url)
     } else {
-      return Math.max(currentIndex - 1, 0)
+      return Math.max((currentIndex ?? 0) - 1, 0)
     }
   }
 
-  const updateTotalPlaylistDuration = (duration) => {
+  const updateTotalPlaylistDuration = (duration: number): void => {
     setTotalPlaylistDuration(duration)
   }
 
+  const contextValue: AudioPlayerContextType = {
+    playlist,
+    setPlaylist,
+    currentIndex,
+    isPlaying,
+    setIsPlaying,
+    playTrack,
+    audioRef,
+    totalPlaylistDuration,
+    updateTotalPlaylistDuration,
+    volume,
+    updateVolume,
+    isShuffleOn,
+    toggleShuffle,
+    isLoopOn,
+    toggleLoop,
+    isAutopilotOn,
+    toggleAutopilot,
+    shouldNavigateToRandomPost,
+    shuffledPlaylist,
+    getNextTrackIndex,
+    getPreviousTrackIndex,
+  }
+
   return (
-    <AudioPlayerContext.Provider
-      value={{
-        playlist,
-        setPlaylist,
-        currentIndex,
-        isPlaying,
-        setIsPlaying,
-        playTrack,
-        audioRef,
-        totalPlaylistDuration,
-        updateTotalPlaylistDuration,
-        volume,
-        updateVolume,
-        isShuffleOn,
-        toggleShuffle,
-        isLoopOn,
-        toggleLoop,
-        isAutopilotOn,
-        toggleAutopilot,
-        shouldNavigateToRandomPost,
-        shuffledPlaylist,
-        getNextTrackIndex,
-        getPreviousTrackIndex,
-      }}
-    >
+    <AudioPlayerContext.Provider value={contextValue}>
       {children}
     </AudioPlayerContext.Provider>
   )
 }
 
-export const useAudioPlayer = () => useContext(AudioPlayerContext)
+export const useAudioPlayer = (): AudioPlayerContextType => {
+  const context = useContext(AudioPlayerContext)
+  if (context === undefined) {
+    throw new Error('useAudioPlayer must be used within an AudioPlayerProvider')
+  }
+  return context
+}

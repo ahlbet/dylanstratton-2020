@@ -1,7 +1,15 @@
 import React from 'react'
 import { useUserPreferences } from './user-preferences-context'
 
-const CalendarToggle = ({ className, style }) => {
+interface CalendarToggleProps {
+  className?: string
+  style?: React.CSSProperties
+}
+
+const CalendarToggle: React.FC<CalendarToggleProps> = ({
+  className,
+  style,
+}) => {
   const { calendarVisible, toggleCalendar } = useUserPreferences()
 
   return (
@@ -28,12 +36,14 @@ const CalendarToggle = ({ className, style }) => {
         ...style,
       }}
       onMouseEnter={(e) => {
-        e.target.style.background = '#222'
-        e.target.style.borderColor = '#333'
+        const target = e.target as HTMLButtonElement
+        target.style.background = '#222'
+        target.style.borderColor = '#333'
       }}
       onMouseLeave={(e) => {
-        e.target.style.background = '#111'
-        e.target.style.borderColor = '#222'
+        const target = e.target as HTMLButtonElement
+        target.style.background = '#111'
+        target.style.borderColor = '#222'
       }}
       title={calendarVisible ? 'Hide Calendar' : 'Show Calendar'}
     >

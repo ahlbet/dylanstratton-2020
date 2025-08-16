@@ -1,4 +1,4 @@
-// src/components/AudioFFT.js
+// src/components/AudioFFT.tsx
 import React, { useRef, useEffect } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 
@@ -20,9 +20,22 @@ import {
   createAudioReactiveAnimationLoop,
 } from '../../utils/p5'
 
-export default function AudioFFT({ markovText = '' }) {
-  const containerRef = useRef(null)
-  const p5InstanceRef = useRef(null)
+interface AudioFFTProps {
+  markovText?: string
+}
+
+// Extend Window interface to include p5
+declare global {
+  interface Window {
+    p5: any
+  }
+}
+
+export default function AudioFFT({
+  markovText = '',
+}: AudioFFTProps): JSX.Element {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const p5InstanceRef = useRef<any>(null)
   const { audioRef } = useAudioPlayer()
 
   useEffect(() => {
@@ -52,23 +65,24 @@ export default function AudioFFT({ markovText = '' }) {
         p5InstanceRef.current.remove()
       } catch (error) {
         // Error removing p5 instance
+        console.warn('Error removing p5 instance:', error)
       }
       p5InstanceRef.current = null
     }
 
     const P5 = window.p5
 
-    const sketch = (p) => {
-      let fft
-      let sourceNode
-      let particles = []
-      let frequencyData = []
-      let smoothedData = []
+    const sketch = (p: any) => {
+      let fft: any
+      let sourceNode: any
+      let particles: Particle[] = []
+      let frequencyData: number[] = []
+      let smoothedData: number[] = []
       let isInitialized = false
 
       // Generate seed from markov text
       const markovSeed = generateSeedFromText(markovText)
-      let tatShapePositions = []
+      let tatShapePositions: any[] = []
 
       p.setup = async () => {
         try {
@@ -85,7 +99,7 @@ export default function AudioFFT({ markovText = '' }) {
             {
               fftSmoothing: 0.9,
               fftSize: 2048,
-              onResize: (width, height) => {
+              onResize: (width: number, height: number) => {
                 if (!isInitialized || !width || !height) return
 
                 // Regenerate Tat shape positions for new canvas size

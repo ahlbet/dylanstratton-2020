@@ -7,8 +7,51 @@ import useIsMobile from '../../hooks/use-is-mobile'
 import TrackItem from '../track-item/TrackItem'
 import './BlogAudioPlayer.css'
 
+// Types
+interface AudioItem {
+  url?: string
+  storagePath?: string
+  title?: string
+  duration?: number
+  coherency_level?: string
+  postTitle?: string
+  postDate?: string
+}
+
+interface Track {
+  title: string
+  artist: string
+  album: string
+  duration: string
+  src: string
+  imageSrc: string | null
+  downloadUrl: string
+  downloadFilename: string
+  storagePath: string | null
+}
+
+interface CustomPlaylistProps {
+  tracks: Track[]
+  currentIndex: number | null
+  isPlaying: boolean
+  handleTrackClick: (index: number) => void
+  coverArtUrl?: string
+  postTitle?: string
+  totalDuration: string
+  trackListRef: React.RefObject<HTMLDivElement>
+  setTrackItemRef: (index: number, ref: HTMLDivElement | null) => void
+  isMobile: boolean
+}
+
+interface BlogAudioPlayerProps {
+  audioData: (string | AudioItem)[]
+  postTitle?: string
+  postDate?: string
+  coverArtUrl?: string
+}
+
 // Custom playlist component
-const CustomPlaylist = ({
+const CustomPlaylist: React.FC<CustomPlaylistProps> = ({
   tracks,
   currentIndex,
   isPlaying,
@@ -56,7 +99,8 @@ const CustomPlaylist = ({
                 objectFit: 'cover',
               }}
               onError={(e) => {
-                e.target.style.display = 'none'
+                const target = e.target as HTMLImageElement
+                target.style.display = 'none'
               }}
             />
           </div>
@@ -114,9 +158,14 @@ const CustomPlaylist = ({
   )
 }
 
-const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
-  const [isMuted, setIsMuted] = useState(false)
-  const [isDownloadingZip, setIsDownloadingZip] = useState(false)
+const BlogAudioPlayer: React.FC<BlogAudioPlayerProps> = ({
+  audioData,
+  postTitle,
+  postDate,
+  coverArtUrl,
+}) => {
+  const [isMuted, setIsMuted] = useState<boolean>(false)
+  const [isDownloadingZip, setIsDownloadingZip] = useState<boolean>(false)
   const isMobile = useIsMobile()
 
   // Normalize audioData to handle both string URLs and objects with metadata
@@ -154,7 +203,7 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
   )
 
   // Format duration from seconds to MM:SS
-  const formatDuration = (seconds) => {
+  const formatDuration = (seconds: number): string => {
     if (!seconds || isNaN(seconds)) return '0:00'
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
@@ -163,7 +212,7 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
 
   // Download function for audio files
   const downloadAudio = useCallback(
-    async (url, filename) => {
+    async (url: string, filename: string) => {
       try {
         const response = await fetch(url)
         const blob = await response.blob()
@@ -238,6 +287,9 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
       // Fetch all files and add to ZIP
       const fetchPromises = currentAudioData.map(async (audioItem) => {
         const url = typeof audioItem === 'string' ? audioItem : audioItem.url
+        if (!url)
+          return { success: false, filename: 'unknown', error: 'No URL' }
+
         const urlParts = url.split('/')
         const filename = urlParts[urlParts.length - 1]
 
@@ -332,25 +384,25 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
         }
 
         // Use metadata if available, otherwise extract from storage path or URL
-        let trackName, filename
+        let trackName: string, filename: string
         if (typeof audioItem === 'object' && audioItem.title) {
           // Use the clean metadata we provided
           trackName = audioItem.title
           filename = `${audioItem.title}.wav` // For download filename
         } else if (hasStoragePath) {
           // Extract from storage path for new format
-          const pathParts = audioItem.storagePath.split('/')
+          const pathParts = audioItem.storagePath!.split('/')
           filename = pathParts[pathParts.length - 1]
           trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
         } else {
           // Fall back to URL extraction for backward compatibility
-          const urlParts = url.split('/')
+          const urlParts = url!.split('/')
           filename = urlParts[urlParts.length - 1]
           trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
         }
 
         // Use Supabase duration if available, otherwise fall back to trackDurations
-        let duration
+        let duration: string
         if (audioItem.duration && typeof audioItem.duration === 'number') {
           duration = formatDuration(audioItem.duration)
         } else {
@@ -369,17 +421,17 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
           artist: postTitle || 'Unknown Artist',
           album: postDate || 'Unknown Album',
           duration: duration || '0:00',
-          src: url || audioItem.storagePath, // Use URL if available, otherwise storage path
+          src: url || audioItem.storagePath!, // Use URL if available, otherwise storage path
           imageSrc: coverArtUrl || null, // Use cover art from blog post
           // Add custom data for download
-          downloadUrl: url || audioItem.storagePath, // Use URL if available, otherwise storage path
+          downloadUrl: url || audioItem.storagePath!, // Use URL if available, otherwise storage path
           downloadFilename: filename,
           // Store storage path for on-demand presigned URL generation
           storagePath:
             typeof audioItem === 'object' ? audioItem.storagePath : null,
         }
       })
-      .filter(Boolean) // Remove any null entries
+      .filter((track): track is Track => track !== null) // Remove any null entries
   }, [audioData, postTitle, postDate, coverArtUrl])
 
   // Calculate total playlist duration
@@ -399,7 +451,7 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
 
     // Also set a global variable for the sketch to access
     if (typeof window !== 'undefined') {
-      window.totalPlaylistDuration = totalSeconds
+      ;(window as any).totalPlaylistDuration = totalSeconds
     }
   }, [audioData, updateTotalPlaylistDuration])
 
@@ -424,12 +476,12 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
           storagePath: track.storagePath,
         }
       })
-      .filter(Boolean) // Remove any null entries
+      .filter((track): track is Track & { url: string } => track !== null) // Remove any null entries
   }, [tracks])
 
   // Handle track selection and play/pause - let FixedAudioPlayer handle playback
   const handleTrackClick = useCallback(
-    async (index) => {
+    async (index: number) => {
       if (index >= 0 && index < tracks.length) {
         const track = tracks[index]
 

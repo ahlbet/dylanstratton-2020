@@ -1,4 +1,4 @@
-import { useCalendar } from './calendar-context'
+import { useCalendar, CalendarView } from './calendar-context'
 
 /**
  * Custom hook for easy access to calendar state and actions
@@ -24,7 +24,7 @@ export const useCalendarState = () => {
     isListView: calendar.currentView === 'listWeek',
 
     // Format current date for display
-    getCurrentDateDisplay: () => {
+    getCurrentDateDisplay: (): string => {
       const date = new Date(calendar.currentDate)
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
@@ -33,8 +33,8 @@ export const useCalendarState = () => {
     },
 
     // Get view display name
-    getViewDisplayName: () => {
-      const viewMap = {
+    getViewDisplayName: (): string => {
+      const viewMap: Record<CalendarView, string> = {
         dayGridMonth: 'Month',
         timeGridWeek: 'Week',
         listWeek: 'List',

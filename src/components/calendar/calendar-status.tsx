@@ -5,7 +5,7 @@ import { useCalendarState } from './use-calendar-state'
  * Example component showing how to use calendar state in other parts of the site
  * This could be used in a header, sidebar, or any other component
  */
-const CalendarStatus = () => {
+const CalendarStatus: React.FC = () => {
   const {
     currentView,
     getCurrentDateDisplay,
@@ -68,12 +68,14 @@ const CalendarStatus = () => {
             transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {
-            e.target.style.background = '#444'
-            e.target.style.borderColor = '#666'
+            const target = e.target as HTMLButtonElement
+            target.style.background = '#444'
+            target.style.borderColor = '#666'
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = '#333'
-            e.target.style.borderColor = '#555'
+            const target = e.target as HTMLButtonElement
+            target.style.background = '#333'
+            target.style.borderColor = '#555'
           }}
         >
           Go to Today

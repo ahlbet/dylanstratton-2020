@@ -1,16 +1,40 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react'
+import React, { createContext, useContext, useReducer, ReactNode } from 'react'
 
-// User preferences context
-const UserPreferencesContext = createContext()
-
-// Action types
-const USER_PREFERENCES_ACTIONS = {
-  TOGGLE_CALENDAR: 'TOGGLE_CALENDAR',
-  SET_CALENDAR_VISIBLE: 'SET_CALENDAR_VISIBLE',
+// Types
+export interface UserPreferencesState {
+  calendarVisible: boolean
 }
 
+export interface UserPreferencesContextType extends UserPreferencesState {
+  toggleCalendar: () => void
+  setCalendarVisible: (visible: boolean) => void
+}
+
+interface UserPreferencesProviderProps {
+  children: ReactNode
+}
+
+// Action types
+export const USER_PREFERENCES_ACTIONS = {
+  TOGGLE_CALENDAR: 'TOGGLE_CALENDAR',
+  SET_CALENDAR_VISIBLE: 'SET_CALENDAR_VISIBLE',
+} as const
+
+type UserPreferencesActionType =
+  (typeof USER_PREFERENCES_ACTIONS)[keyof typeof USER_PREFERENCES_ACTIONS]
+
+interface UserPreferencesAction {
+  type: UserPreferencesActionType
+  payload?: boolean
+}
+
+// User preferences context
+const UserPreferencesContext = createContext<
+  UserPreferencesContextType | undefined
+>(undefined)
+
 // Initial state
-const getInitialState = () => {
+const getInitialState = (): UserPreferencesState => {
   // Check if we're in a browser environment
   if (typeof window !== 'undefined' && window.localStorage) {
     const saved = localStorage.getItem('userPreferences')
@@ -29,8 +53,11 @@ const getInitialState = () => {
 }
 
 // Reducer function
-const userPreferencesReducer = (state, action) => {
-  let newState
+const userPreferencesReducer = (
+  state: UserPreferencesState,
+  action: UserPreferencesAction
+): UserPreferencesState => {
+  let newState: UserPreferencesState
 
   switch (action.type) {
     case USER_PREFERENCES_ACTIONS.TOGGLE_CALENDAR:
@@ -43,7 +70,7 @@ const userPreferencesReducer = (state, action) => {
     case USER_PREFERENCES_ACTIONS.SET_CALENDAR_VISIBLE:
       newState = {
         ...state,
-        calendarVisible: action.payload,
+        calendarVisible: action.payload!,
       }
       break
 
@@ -64,25 +91,27 @@ const userPreferencesReducer = (state, action) => {
 }
 
 // Provider component
-export const UserPreferencesProvider = ({ children }) => {
+export const UserPreferencesProvider: React.FC<
+  UserPreferencesProviderProps
+> = ({ children }) => {
   const [state, dispatch] = useReducer(
     userPreferencesReducer,
     getInitialState()
   )
 
   // Actions
-  const toggleCalendar = () => {
+  const toggleCalendar = (): void => {
     dispatch({ type: USER_PREFERENCES_ACTIONS.TOGGLE_CALENDAR })
   }
 
-  const setCalendarVisible = (visible) => {
+  const setCalendarVisible = (visible: boolean): void => {
     dispatch({
       type: USER_PREFERENCES_ACTIONS.SET_CALENDAR_VISIBLE,
       payload: visible,
     })
   }
 
-  const value = {
+  const value: UserPreferencesContextType = {
     ...state,
     toggleCalendar,
     setCalendarVisible,
@@ -96,7 +125,7 @@ export const UserPreferencesProvider = ({ children }) => {
 }
 
 // Custom hook to use user preferences context
-export const useUserPreferences = () => {
+export const useUserPreferences = (): UserPreferencesContextType => {
   const context = useContext(UserPreferencesContext)
   if (!context) {
     // Provide a fallback for SSR or when context is not available
@@ -118,6 +147,3 @@ export const useUserPreferences = () => {
   }
   return context
 }
-
-// Export action types for reference
-export { USER_PREFERENCES_ACTIONS }
