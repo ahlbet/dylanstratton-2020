@@ -16,7 +16,10 @@ export const HomepagePlaylistToggle: React.FC<HomepagePlaylistToggleProps> = ({
   posts,
 }) => {
   return (
-    <div className="p-4 border-b border-gray-800">
+    <div
+      className="p-4 border-b border-gray-800"
+      data-testid="playlist-toggle-container"
+    >
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <span className="text-sm text-gray-400">Playlist</span>
@@ -29,29 +32,40 @@ export const HomepagePlaylistToggle: React.FC<HomepagePlaylistToggleProps> = ({
             </span>
           )}
         </div>
-        <div className="flex space-x-1">
-          {/*
-          TODO: Add back in when we have a way to switch between list and grid views
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`p-1 ${viewMode === 'list' ? 'text-red-400' : 'text-gray-400'}`}
+        <div className="flex space-x-2" data-testid="toggle-buttons-container">
+          <button
+            role="button"
+            aria-label="Switch to list view"
+            aria-pressed={viewMode === 'list'}
+            className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-red-400 text-white'
+                : 'bg-gray-800 text-gray-400'
+            }`}
             onClick={() => onViewModeChange('list')}
-            aria-label="List view"
           >
-            <List className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`p-1 ${viewMode === 'grid' ? 'text-red-400' : 'text-gray-400'}`}
+            List
+          </button>
+          <button
+            role="button"
+            aria-label="Switch to grid view"
+            aria-pressed={viewMode === 'grid'}
+            className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+              viewMode === 'grid'
+                ? 'bg-red-400 text-white'
+                : 'bg-gray-800 text-gray-400'
+            }`}
             onClick={() => onViewModeChange('grid')}
-            aria-label="Grid view"
           >
-            <Grid className="h-4 w-4" />
-          </Button> */}
+            Grid
+          </button>
         </div>
       </div>
+      {currentBlogPost && (
+        <div className="text-center text-gray-400 text-sm mt-2">
+          {currentBlogPost}
+        </div>
+      )}
     </div>
   )
 }

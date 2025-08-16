@@ -416,9 +416,10 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   }
 
   const handleMuteToggle = () => {
-    setIsMuted(!isMuted)
+    const newMutedState = !isMuted
+    setIsMuted(newMutedState)
     if (audioRef.current) {
-      audioRef.current.muted = !isMuted
+      audioRef.current.muted = newMutedState
     }
   }
 

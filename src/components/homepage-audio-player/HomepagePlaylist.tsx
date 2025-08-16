@@ -56,7 +56,10 @@ export const HomepagePlaylist: React.FC<HomepagePlaylistProps> = ({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto max-h-[400px]">
+    <div
+      className="flex-1 overflow-y-auto max-h-[400px]"
+      data-testid="playlist-container"
+    >
       {tracks.map((track, index) => (
         <div
           key={track.id}
@@ -66,6 +69,7 @@ export const HomepagePlaylist: React.FC<HomepagePlaylistProps> = ({
               : ''
           }`}
           onClick={() => onTrackSelect(track)}
+          data-testid="playlist-track"
         >
           <div className="flex items-center space-x-3">
             <div className="flex-shrink-0 w-8 h-8 bg-gray-800 rounded flex items-center justify-center">

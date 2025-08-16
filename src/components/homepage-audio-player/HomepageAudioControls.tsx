@@ -60,7 +60,10 @@ export const HomepageAudioControls: React.FC<HomepageAudioControlsProps> = ({
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isLoading ? (
-            <div className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <div
+              className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin"
+              data-testid="loading-spinner"
+            ></div>
           ) : isPlaying ? (
             <Pause className="h-6 w-6" />
           ) : (
@@ -90,12 +93,15 @@ export const HomepageAudioControls: React.FC<HomepageAudioControlsProps> = ({
               onTimeChange(newTime)
             }
           }}
+          role="progressbar"
+          data-testid="progress-bar"
         >
           <div
             className="bg-red-400 h-1 rounded-full"
             style={{
               width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%',
             }}
+            data-testid="progress-bar-fill"
           ></div>
         </div>
         <div className="flex justify-between text-xs text-gray-400">
@@ -105,7 +111,10 @@ export const HomepageAudioControls: React.FC<HomepageAudioControlsProps> = ({
       </div>
 
       {/* Volume Control */}
-      <div className="flex items-center space-x-2 mt-4">
+      <div
+        className="flex items-center space-x-2 mt-4"
+        data-testid="volume-control-container"
+      >
         <button
           onClick={onMuteToggle}
           className="text-gray-400 hover:text-gray-300 transition-colors duration-150 p-1 rounded"
@@ -121,8 +130,9 @@ export const HomepageAudioControls: React.FC<HomepageAudioControlsProps> = ({
           {/* Background track showing current volume level */}
           <div className="absolute inset-0 bg-gray-800 rounded-full h-1"></div>
           <div
-            className="absolute inset-0 bg-white rounded-full h-1 "
+            className="absolute inset-0 bg-white rounded-full h-1 transition-all duration-150"
             style={{ width: `${volume * 100}%` }}
+            data-testid="volume-background"
           ></div>
           {/* Range input on top for interaction */}
           <input

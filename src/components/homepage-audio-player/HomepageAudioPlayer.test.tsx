@@ -10,11 +10,16 @@ jest.mock('./HomepageAudioControls', () => ({
     onPlayPause,
     onNextTrack,
     onPreviousTrack,
+    onMuteToggle,
+    isMuted,
   }: any) => (
     <div data-testid="audio-controls">
       <button onClick={onPlayPause}>Play/Pause</button>
       <button onClick={onNextTrack}>Next</button>
       <button onClick={onPreviousTrack}>Previous</button>
+      <button onClick={onMuteToggle} data-testid="mute-toggle">
+        {isMuted ? 'Unmute' : 'Mute'}
+      </button>
     </div>
   ),
 }))
@@ -249,5 +254,128 @@ describe('HomepageAudioPlayer', () => {
     // Verify that the audio controls are rendered (which handle seeking)
     const audioControls = screen.getByTestId('audio-controls')
     expect(audioControls).toBeInTheDocument()
+  })
+
+  it('renders mute toggle button in audio controls', () => {
+    render(<HomepageAudioPlayer {...defaultProps} />)
+
+    const muteToggle = screen.getByTestId('mute-toggle')
+    expect(muteToggle).toBeInTheDocument()
+    expect(muteToggle).toHaveTextContent('Mute')
+  })
+
+  it('toggles muted state when mute button is clicked', () => {
+    render(<HomepageAudioPlayer {...defaultProps} />)
+
+    const muteToggle = screen.getByTestId('mute-toggle')
+
+    // Initially should show "Mute"
+    expect(muteToggle).toHaveTextContent('Mute')
+
+    // Click to mute
+    fireEvent.click(muteToggle)
+
+    // Should now show "Unmute"
+    expect(muteToggle).toHaveTextContent('Unmute')
+  })
+
+  it('syncs muted state with audio element', () => {
+    // Mock HTMLAudioElement
+    const mockAudioElement = {
+      muted: false,
+      currentTime: 0,
+      duration: 0,
+      volume: 1,
+      src: '',
+      load: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    }
+
+    // Mock audioRef to return our mock element
+    const mockUseAudioPlayerWithRef = {
+      ...mockUseAudioPlayer,
+      audioRef: { current: mockAudioElement },
+    }
+
+    ;(
+      require('../../contexts/audio-player-context/audio-player-context') as any
+    ).useAudioPlayer.mockReturnValue(mockUseAudioPlayerWithRef)
+
+    render(<HomepageAudioPlayer {...defaultProps} />)
+
+    const muteToggle = screen.getByTestId('mute-toggle')
+
+    // Initially should show "Mute"
+    expect(muteToggle).toHaveTextContent('Mute')
+
+    // Click to mute
+    fireEvent.click(muteToggle)
+
+    // Should now show "Unmute" indicating muted state
+    expect(muteToggle).toHaveTextContent('Unmute')
+
+    // Click again to unmute
+    fireEvent.click(muteToggle)
+
+    // Should show "Mute" again
+    expect(muteToggle).toHaveTextContent('Mute')
+  })
+
+  it('maintains muted state across track changes', () => {
+    const mockUseAudioPlayerWithTrack = {
+      ...mockUseAudioPlayer,
+      currentIndex: 0,
+      playlist: [
+        {
+          id: '1',
+          title: 'Track 1',
+          url: 'http://example.com/track1.wav',
+          storagePath: 'audio/track1.wav',
+        },
+      ],
+    }
+
+    ;(
+      require('../../contexts/audio-player-context/audio-player-context') as any
+    ).useAudioPlayer.mockReturnValue(mockUseAudioPlayerWithTrack)
+
+    const { rerender } = render(<HomepageAudioPlayer {...defaultProps} />)
+
+    const muteToggle = screen.getByTestId('mute-toggle')
+
+    // Mute the audio
+    fireEvent.click(muteToggle)
+    expect(muteToggle).toHaveTextContent('Unmute')
+
+    // Change to a different track
+    const mockUseAudioPlayerWithSecondTrack = {
+      ...mockUseAudioPlayerWithTrack,
+      currentIndex: 1,
+      playlist: [
+        {
+          id: '1',
+          title: 'Track 1',
+          url: 'http://example.com/track1.wav',
+          storagePath: 'audio/track1.wav',
+        },
+        {
+          id: '2',
+          title: 'Track 2',
+          url: 'http://example.com/track2.wav',
+          storagePath: 'audio/track2.wav',
+        },
+      ],
+    }
+
+    ;(
+      require('../../contexts/audio-player-context/audio-player-context') as any
+    ).useAudioPlayer.mockReturnValue(mockUseAudioPlayerWithSecondTrack)
+
+    rerender(<HomepageAudioPlayer {...defaultProps} />)
+
+    // Muted state should be maintained
+    const newMuteToggle = screen.getByTestId('mute-toggle')
+    expect(newMuteToggle).toHaveTextContent('Unmute')
   })
 })
