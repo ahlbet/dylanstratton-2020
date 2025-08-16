@@ -264,13 +264,17 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
     }
 
     const track = playlist[currentIndex]
+
+    // Find the corresponding track in currentBlogPostTracks to get the date
+    const correspondingTrack = currentBlogPostTracks.find(
+      (processedTrack) => processedTrack.id === track.id
+    )
+
     return {
       title: track.title || track.displayFilename || 'Unknown Track',
-      date: track.created_at
-        ? new Date(track.created_at).toLocaleDateString()
-        : '',
+      date: correspondingTrack?.date || '',
     }
-  }, [currentIndex, playlist])
+  }, [currentIndex, playlist, currentBlogPostTracks])
 
   return (
     <div className="border-r border-gray-800 flex flex-col">
