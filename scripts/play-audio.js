@@ -318,7 +318,6 @@ const main = async () => {
     console.error(`❌ Error: ${error.message}`)
     process.exit(1)
   } finally {
-    // No readline interface to close
   }
 }
 
