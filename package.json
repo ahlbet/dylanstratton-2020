@@ -83,6 +83,7 @@
   "scripts": {
     "build": "gatsby build",
     "release": "standard-version",
+    "release:push": "yarn run release && git push --follow-tags origin develop",
     "develop": "NODE_ENV=development GATSBY_USE_LOCAL_DATA=true gatsby develop",
     "develop-local": "NODE_ENV=development GATSBY_USE_LOCAL_DATA=true gatsby develop",
     "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
