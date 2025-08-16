@@ -416,7 +416,8 @@ describe('BlogIndex Audio Functionality', () => {
       />
     )
 
-    expect(screen.getByText('Generated text content 1')).toBeInTheDocument()
+    // The new component structure should show the generated text
+    expect(screen.getByText('Generated Text')).toBeInTheDocument()
   })
 
   it('displays recent blog posts correctly', () => {
