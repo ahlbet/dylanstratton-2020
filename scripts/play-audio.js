@@ -116,6 +116,7 @@ const playAudio = async (audioPath, audioPlayer) => {
 
       // Set up a way to stop playback
       let isStopped = false
+      let isResolved = false
 
       const stopPlayback = () => {
         if (isStopped) return
@@ -146,7 +147,10 @@ const playAudio = async (audioPath, audioPlayer) => {
           }
         })
         
-        resolve()
+        if (!isResolved) {
+          isResolved = true
+          resolve()
+        }
       }
 
       // Handle process exit
@@ -155,13 +159,22 @@ const playAudio = async (audioPath, audioPlayer) => {
 
         if (code === 0) {
           console.log('\n🎵 Playback finished normally')
-          resolve()
+          if (!isResolved) {
+            isResolved = true
+            resolve()
+          }
         } else if (code === null) {
           console.log('\n⏹️  Playback stopped')
-          resolve()
+          if (!isResolved) {
+            isResolved = true
+            resolve()
+          }
         } else {
           console.log(`\n⚠️  Playback ended with code ${code}`)
-          resolve()
+          if (!isResolved) {
+            isResolved = true
+            resolve()
+          }
         }
       })
 
