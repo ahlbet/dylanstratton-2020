@@ -16,7 +16,7 @@ export const HomepageGeneratedText: React.FC<HomepageGeneratedTextProps> = ({
   processedTexts,
 }) => {
   return (
-    <div className="my-8">
+    <div className="my-8 px-6">
       <h3 className="text-sm text-gray-400 mb-4 uppercase tracking-wide">
         Generated Text
       </h3>

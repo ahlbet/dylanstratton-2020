@@ -55,19 +55,6 @@ describe('Layout component', () => {
     expect(screen.getByTestId('mock-children')).toBeInTheDocument()
   })
 
-  test('renders footer with current year', () => {
-    render(
-      <Layout
-        location={{ pathname: '/' }}
-        title={mockTitle}
-        children={mockChildren}
-      />
-    )
-
-    const currentYear = new Date().getFullYear().toString()
-    expect(screen.getByText(currentYear)).toBeInTheDocument()
-  })
-
   test('links back to homepage', () => {
     render(
       <Layout

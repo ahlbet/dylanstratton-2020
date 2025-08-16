@@ -25,8 +25,8 @@ export const HomepageCurrentTrackInfo: React.FC<
       className="p-6 border-b border-gray-800"
       data-testid="current-track-info-container"
     >
-      <div className="flex items-center space-x-4 mb-4">
-        <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
+      <div className="flex items-center space-x-4">
+        <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
           {coverArt ? (
             <img
               src={(() => {

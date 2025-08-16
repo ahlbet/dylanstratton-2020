@@ -19,7 +19,7 @@ const Layout: React.FC<LayoutProps> = ({ location, title, children }) => {
   )
 
   return (
-    <div className="mx-auto px-6 pb-20 bg-black text-gray-200 transition-colors duration-200">
+    <div className="mx-auto bg-black text-gray-200 transition-colors duration-200">
       {/* TODO: implement pretty toggle button 
       <ThemeToggler>
         {({ theme, toggleTheme }) => (
@@ -52,8 +52,8 @@ const Layout: React.FC<LayoutProps> = ({ location, title, children }) => {
           </div>
         </nav>
       </header>
-      <main className="mt-6">{children}</main>
-      <footer>{new Date().getFullYear()}</footer>
+      <main>{children}</main>
+      {/* <footer>{new Date().getFullYear()}</footer> */}
       {/* <RandomDayButton /> */}
     </div>
   )
