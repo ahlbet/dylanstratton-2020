@@ -268,52 +268,8 @@ const { generateCoverArt } = require('./src/utils/cover-art-generator')
 // Import coherency level utilities
 const { getCoherencyLevel } = require('./src/utils/coherency-level-utils')
 
-// Check if audio playback tools are available
-const checkAudioTools = () => {
-  const tools = {
-    afplay: 'macOS built-in audio player',
-    aplay: 'Linux ALSA audio player',
-    mpv: 'Cross-platform media player',
-    ffplay: 'FFmpeg audio player',
-    vlc: 'VLC media player',
-  }
-
-  const availableTools = []
-
-  for (const [tool, description] of Object.entries(tools)) {
-    try {
-      // Actually check if the tool exists using execSync
-      execSync(`which ${tool}`, { stdio: 'pipe' })
-      availableTools.push({ tool, description })
-    } catch (error) {
-      // Tool not available, skip it
-    }
-  }
-
-  return availableTools
-}
-
-// Get the best available audio player
-const getAudioPlayer = () => {
-  const availableTools = checkAudioTools()
-
-  if (availableTools.length === 0) {
-    console.warn('⚠️ No audio playback tools found on your system')
-    console.log(
-      "You can still set coherency levels, but won't be able to preview audio"
-    )
-    return null
-  }
-
-  // Prefer mpv for cross-platform compatibility
-  const preferredTool = availableTools.find((t) => t.tool === 'mpv')
-  if (preferredTool) {
-    return preferredTool
-  }
-
-  // Fall back to first available tool
-  return availableTools[0]
-}
+// Import audio tools utilities
+const { checkAudioTools, getAudioPlayer } = require('./src/utils/audio-tools')
 
 // Play audio file
 const playAudio = async (audioPath, audioPlayer) => {
@@ -470,6 +426,8 @@ const getAudioCoherencyLevel = async (
     } else {
       console.log('⏭️  Skipping audio playback for this track.')
     }
+  } else if (audioPath && !audioPlayer) {
+    console.log('⚠️ Audio playback not available, skipping preview')
   }
 
   while (true) {
@@ -981,6 +939,11 @@ const main = async () => {
         if (audioPlayer) {
           console.log(
             `🔧 Audio player available: ${audioPlayer.tool} (${audioPlayer.description})`
+          )
+        } else {
+          console.warn('⚠️ No audio playback tools found on your system')
+          console.log(
+            "You can still set coherency levels, but won't be able to preview audio"
           )
         }
 

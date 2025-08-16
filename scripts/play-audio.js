@@ -21,6 +21,7 @@ require('dotenv').config()
 const fs = require('fs')
 const path = require('path')
 const { spawn } = require('child_process')
+const { checkAudioTools, getAudioPlayer } = require('../src/utils/audio-tools')
 
 // Helper function to prompt user for input
 const askQuestion = (question) => {
@@ -38,34 +39,8 @@ const askQuestion = (question) => {
   })
 }
 
-// Check if audio playback tools are available
-const checkAudioTools = () => {
-  const tools = {
-    afplay: 'macOS built-in audio player',
-    aplay: 'Linux ALSA audio player',
-    mpv: 'Cross-platform media player',
-    ffplay: 'FFmpeg audio player',
-    vlc: 'VLC media player',
-  }
-
-  const availableTools = []
-
-  for (const [tool, description] of Object.entries(tools)) {
-    try {
-      // Actually check if the tool exists using execSync
-      const { execSync } = require('child_process')
-      execSync(`which ${tool}`, { stdio: 'pipe' })
-      availableTools.push({ tool, description })
-    } catch (error) {
-      // Tool not available, skip it
-    }
-  }
-
-  return availableTools
-}
-
 // Get the best available audio player
-const getAudioPlayer = () => {
+const getAudioPlayerForScript = () => {
   const availableTools = checkAudioTools()
 
   if (availableTools.length === 0) {
@@ -298,7 +273,7 @@ const main = async () => {
 
   try {
     // Check available audio tools
-    const audioPlayer = getAudioPlayer()
+    const audioPlayer = getAudioPlayerForScript()
     console.log(
       `🔧 Using audio player: ${audioPlayer.tool} (${audioPlayer.description})`
     )

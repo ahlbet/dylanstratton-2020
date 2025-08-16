@@ -19,6 +19,7 @@ const fs = require('fs')
 const path = require('path')
 const readline = require('readline')
 const { spawn } = require('child_process')
+const { checkAudioTools, getAudioPlayer } = require('../src/utils/audio-tools')
 
 // Create readline interface for user input
 const rl = readline.createInterface({
@@ -44,56 +45,7 @@ const displayText = (text, title) => {
   console.log(`${'='.repeat(60)}\n`)
 }
 
-// Check if audio playback tools are available
-const checkAudioTools = () => {
-  const tools = {
-    afplay: 'macOS built-in audio player',
-    aplay: 'Linux ALSA audio player',
-    mpv: 'Cross-platform media player',
-    ffplay: 'FFmpeg audio player',
-    vlc: 'VLC media player',
-  }
-
-  const availableTools = []
-
-  for (const [tool, description] of Object.entries(tools)) {
-    try {
-      // Actually check if the tool exists using execSync
-      const { execSync } = require('child_process')
-      execSync(`which ${tool}`, { stdio: 'pipe' })
-      availableTools.push({ tool, description })
-    } catch (error) {
-      // Tool not available, skip it
-    }
-  }
-
-  return availableTools
-}
-
-// Get the best available audio player
-const getAudioPlayer = () => {
-  const availableTools = checkAudioTools()
-
-  if (availableTools.length === 0) {
-    console.error('❌ No audio playback tools found on your system')
-    console.log('\nPlease install one of the following:')
-    console.log('  • mpv: brew install mpv (macOS) or apt install mpv (Ubuntu)')
-    console.log('  • VLC: Download from https://www.videolan.org/')
-    console.log(
-      '  • FFmpeg: brew install ffmpeg (macOS) or apt install ffmpeg (Ubuntu)'
-    )
-    process.exit(1)
-  }
-
-  // Prefer mpv for cross-platform compatibility
-  const preferredTool = availableTools.find((t) => t.tool === 'mpv')
-  if (preferredTool) {
-    return preferredTool
-  }
-
-  // Fall back to first available tool
-  return availableTools[0]
-}
+// Audio tools are now imported from shared utility
 
 // Play audio file
 const playAudio = async (audioPath, audioPlayer) => {
