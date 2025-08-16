@@ -95,6 +95,24 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
 
+  // Effect to handle audio source changes when currentIndex changes
+  useEffect(() => {
+    if (currentIndex !== null && playlist[currentIndex] && audioRef.current) {
+      const currentTrack = playlist[currentIndex]
+
+      // Only update if the track has a URL and it's different from current source
+      if (currentTrack.url && audioRef.current.src !== currentTrack.url) {
+        audioRef.current.src = currentTrack.url
+        // If we're currently playing, start the new track
+        if (isPlaying) {
+          audioRef.current.play().catch(() => {
+            setError('Failed to play track')
+          })
+        }
+      }
+    }
+  }, [currentIndex, playlist, isPlaying])
+
   // Handle play/pause
   const handlePlayPause = async () => {
     if (currentIndex === null && playlist.length > 0) {
@@ -142,8 +160,18 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
         audioRef.current?.pause()
         setIsPlaying(false)
       } else {
-        audioRef.current?.play()
-        setIsPlaying(true)
+        // Ensure the audio source is correct before playing
+        const currentTrack = playlist[currentIndex]
+        if (currentTrack && currentTrack.url && audioRef.current) {
+          // Check if the audio source matches the current track
+          if (audioRef.current.src !== currentTrack.url) {
+            audioRef.current.src = currentTrack.url
+          }
+          audioRef.current.play().catch(() => {
+            setError('Failed to play track')
+          })
+          setIsPlaying(true)
+        }
       }
     }
   }

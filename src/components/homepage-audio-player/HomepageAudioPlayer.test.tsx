@@ -19,12 +19,18 @@ jest.mock('./HomepageAudioControls', () => ({
   ),
 }))
 jest.mock('./HomepageCurrentTrackInfo', () => ({
-  HomepageCurrentTrackInfo: ({ currentTrackInfo, error, supabaseError }: any) => (
+  HomepageCurrentTrackInfo: ({
+    currentTrackInfo,
+    error,
+    supabaseError,
+  }: any) => (
     <div data-testid="current-track-info">
       <h2>{currentTrackInfo.title}</h2>
       <p>{currentTrackInfo.date}</p>
       {error && <p data-testid="error-message">{error}</p>}
-      {supabaseError && <p data-testid="supabase-error">Supabase: {supabaseError}</p>}
+      {supabaseError && (
+        <p data-testid="supabase-error">Supabase: {supabaseError}</p>
+      )}
     </div>
   ),
 }))
@@ -137,7 +143,9 @@ describe('HomepageAudioPlayer', () => {
     }
     render(<HomepageAudioPlayer {...propsWithError} />)
     expect(screen.getByTestId('error-message')).toBeInTheDocument()
-    expect(screen.getByText('Failed to get audio URL for track')).toBeInTheDocument()
+    expect(
+      screen.getByText('Failed to get audio URL for track')
+    ).toBeInTheDocument()
   })
 
   it('does not display error when parentError is null', () => {
@@ -146,6 +154,75 @@ describe('HomepageAudioPlayer', () => {
       parentError: null,
     }
     render(<HomepageAudioPlayer {...propsWithoutError} />)
-    expect(screen.queryByText('Failed to get audio URL for track')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Failed to get audio URL for track')
+    ).not.toBeInTheDocument()
+  })
+
+  it('handles audio source synchronization when currentIndex changes', () => {
+    const mockUseAudioPlayerWithTrack = {
+      ...mockUseAudioPlayer,
+      currentIndex: 0,
+      playlist: [
+        {
+          id: '1',
+          title: 'Track 1',
+          url: 'http://example.com/track1.wav',
+          storagePath: 'audio/track1.wav',
+        },
+        {
+          id: '2',
+          title: 'Track 2',
+          url: 'http://example.com/track2.wav',
+          storagePath: 'audio/track2.wav',
+        },
+      ],
+    }
+
+    ;(
+      require('../../contexts/audio-player-context/audio-player-context') as any
+    ).useAudioPlayer.mockReturnValue(mockUseAudioPlayerWithTrack)
+
+    const { rerender } = render(<HomepageAudioPlayer {...defaultProps} />)
+
+    // Simulate changing to second track
+    const mockUseAudioPlayerWithSecondTrack = {
+      ...mockUseAudioPlayerWithTrack,
+      currentIndex: 1,
+    }
+
+    ;(
+      require('../../contexts/audio-player-context/audio-player-context') as any
+    ).useAudioPlayer.mockReturnValue(mockUseAudioPlayerWithSecondTrack)
+
+    rerender(<HomepageAudioPlayer {...defaultProps} />)
+
+    // The component should now show the second track as current
+    expect(screen.getByText('Track 2')).toBeInTheDocument()
+  })
+
+  it('handles play/pause when track is already selected', () => {
+    const mockUseAudioPlayerWithSelectedTrack = {
+      ...mockUseAudioPlayer,
+      currentIndex: 0,
+      isPlaying: false,
+      playlist: [
+        {
+          id: '1',
+          title: 'Track 1',
+          url: 'http://example.com/track1.wav',
+          storagePath: 'audio/track1.wav',
+        },
+      ],
+    }
+
+    ;(
+      require('../../contexts/audio-player-context/audio-player-context') as any
+    ).useAudioPlayer.mockReturnValue(mockUseAudioPlayerWithSelectedTrack)
+
+    render(<HomepageAudioPlayer {...defaultProps} />)
+
+    // The component should display the selected track
+    expect(screen.getByText('Track 1')).toBeInTheDocument()
   })
 })
