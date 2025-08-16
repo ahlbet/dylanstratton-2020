@@ -418,13 +418,6 @@ const BlogIndex = ({
 
           setPlaylist(updatedPlaylist)
           playTrack(playlistIndex, updatedPlaylist)
-
-          // Set the audio source and play
-          // The audioRef is not defined in this component, so this block is removed.
-          // if (audioRef.current) {
-          //   audioRef.current.src = audioUrl
-          //   audioRef.current.play()
-          // }
         } else {
           setError('Failed to get audio URL for track')
         }

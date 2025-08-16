@@ -32,7 +32,6 @@ export const usePresignedUrl = (): UsePresignedUrlReturn => {
 
   const getAudioUrl = useCallback(
     async (track: Track): Promise<string | null> => {
-      console.log('track', track)
       // In development, always use the URL as-is
       if (isLocalDev()) {
         return track.url || null
