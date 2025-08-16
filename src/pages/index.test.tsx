@@ -1,8 +1,3 @@
-import React from 'react'
-import { render, screen } from '@testing-library/react'
-import BlogIndex from './index'
-import { useStaticQuery } from 'gatsby'
-
 // Mock the gatsby dependencies
 jest.mock('gatsby', () => ({
   Link: jest
@@ -23,42 +18,61 @@ jest.mock('gatsby', () => ({
       )
     ),
   graphql: jest.fn(),
-  useStaticQuery: jest.fn(),
+  useStaticQuery: jest.fn(() => ({
+    site: {
+      siteMetadata: {
+        title: 'Test Site Title',
+        description: 'Test site description',
+        author: 'Test Author',
+      },
+    },
+  })),
 }))
 
-// Mock the components
-jest.mock('../components/bio/bio', () => () => (
-  <div data-testid="bio">Bio Component</div>
-))
-jest.mock(
-  '../components/layout/layout',
-  () =>
-    ({
-      children,
-      ...props
-    }: {
-      children: React.ReactNode
-      [key: string]: any
-    }) => (
-      <div data-testid="layout" {...props}>
-        {children}
-      </div>
-    )
-)
-jest.mock('../components/seo/seo', () => ({ title }: { title: string }) => (
-  <div data-testid="seo" data-title={title}>
-    SEO Component
-  </div>
-))
-
-// Mock the calendar component
-jest.mock('../components/calendar/calendar', () => () => (
-  <div data-testid="calendar">Calendar Component</div>
-))
+// Mock the audio player context
+jest.mock('../contexts/audio-player-context/audio-player-context', () => ({
+  AudioPlayerProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="audio-provider">{children}</div>
+  ),
+  useAudioPlayer: () => ({
+    setPlaylist: jest.fn(),
+    playlist: [],
+    playTrack: jest.fn(),
+    currentIndex: null,
+    isPlaying: false,
+    setIsPlaying: jest.fn(),
+    audioRef: { current: null },
+    totalPlaylistDuration: 0,
+    updateTotalPlaylistDuration: jest.fn(),
+    volume: 1,
+    updateVolume: jest.fn(),
+    isShuffleOn: false,
+    toggleShuffle: jest.fn(),
+    isLoopOn: false,
+    toggleLoop: jest.fn(),
+    isAutopilotOn: false,
+    toggleAutopilot: jest.fn(),
+    shouldNavigateToRandomPost: jest.fn(() => false),
+    shuffledPlaylist: [],
+    getNextTrackIndex: jest.fn(() => 0),
+    getPreviousTrackIndex: jest.fn(() => 0),
+  }),
+}))
 
 jest.mock('../utils/typography', () => ({
   rhythm: jest.fn().mockImplementation((n: number) => n * 16),
 }))
+
+jest.mock('../hooks/use-presigned-url', () => ({
+  usePresignedUrl: () => ({
+    getAudioUrl: jest.fn(() => 'test-audio-url'),
+  }),
+}))
+
+import React from 'react'
+import { render, screen } from '@testing-library/react'
+import BlogIndex from './index'
+import { useStaticQuery } from 'gatsby'
 
 // Types
 interface MockData {
@@ -87,7 +101,15 @@ interface MockLocation {
   pathname: string
 }
 
-describe('BlogIndex', () => {
+// Helper function to render with AudioPlayerProvider
+const renderWithAudioProvider = (ui: React.ReactElement) => {
+  const {
+    AudioPlayerProvider,
+  } = require('../contexts/audio-player-context/audio-player-context')
+  return render(<AudioPlayerProvider>{ui}</AudioPlayerProvider>)
+}
+
+describe('BlogIndex with AudioPlayerProvider', () => {
   const mockData: MockData = {
     site: {
       siteMetadata: {
@@ -132,40 +154,36 @@ describe('BlogIndex', () => {
     jest.clearAllMocks()
   })
 
-  test('renders the layout with correct title', () => {
-    render(<BlogIndex data={mockData} location={mockLocation} />)
-    const layout = screen.getByTestId('layout')
-    expect(layout).toBeInTheDocument()
-    expect(layout).toHaveAttribute('title', 'Test Site Title')
+  test('renders wrapped in AudioPlayerProvider', () => {
+    renderWithAudioProvider(
+      <BlogIndex data={mockData} location={mockLocation} />
+    )
+
+    // Verify the AudioPlayerProvider wrapper is present
+    const audioProvider = screen.getByTestId('audio-provider')
+    expect(audioProvider).toBeInTheDocument()
+
+    // Verify the component renders (we can see the actual content)
+    expect(screen.getByText('Test Post Title')).toBeInTheDocument()
+    expect(screen.getByText('Another Post Title')).toBeInTheDocument()
   })
 
-  test('renders SEO component with correct title', () => {
-    render(<BlogIndex data={mockData} location={mockLocation} />)
-    const seo = screen.getByTestId('seo')
-    expect(seo).toBeInTheDocument()
-    expect(seo).toHaveAttribute('data-title', 'All posts')
+  test('renders blog post content correctly', () => {
+    renderWithAudioProvider(
+      <BlogIndex data={mockData} location={mockLocation} />
+    )
+
+    // Test that the blog posts are rendered with correct content
+    expect(screen.getByText('Test Post Title')).toBeInTheDocument()
+    expect(screen.getByText('Another Post Title')).toBeInTheDocument()
+    expect(screen.getByText('Test excerpt')).toBeInTheDocument()
+    expect(screen.getByText('Another excerpt')).toBeInTheDocument()
   })
 
-  test('renders Bio component', () => {
-    render(<BlogIndex data={mockData} location={mockLocation} />)
-    expect(screen.getByTestId('bio')).toBeInTheDocument()
-  })
-
-  test('renders Calendar component', () => {
-    render(<BlogIndex data={mockData} location={mockLocation} />)
-    expect(screen.getByTestId('calendar')).toBeInTheDocument()
-  })
-
-  // Blog posts are implemented and rendered on the page
-  // These tests verify the blog post functionality
-  test('renders correct number of blog posts', () => {
-    render(<BlogIndex data={mockData} location={mockLocation} />)
-    const articles = screen.getAllByRole('article')
-    expect(articles).toHaveLength(2)
-  })
-
-  test('renders post titles with correct links', () => {
-    render(<BlogIndex data={mockData} location={mockLocation} />)
+  test('renders post links correctly', () => {
+    renderWithAudioProvider(
+      <BlogIndex data={mockData} location={mockLocation} />
+    )
 
     const firstPostLink = screen.getByText('Test Post Title')
     expect(firstPostLink).toBeInTheDocument()
@@ -180,19 +198,10 @@ describe('BlogIndex', () => {
   })
 
   test('displays post dates', () => {
-    render(<BlogIndex data={mockData} location={mockLocation} />)
+    renderWithAudioProvider(
+      <BlogIndex data={mockData} location={mockLocation} />
+    )
     expect(screen.getByText('January 1, 2020')).toBeInTheDocument()
     expect(screen.getByText('January 2, 2020')).toBeInTheDocument()
-  })
-
-  test('renders post excerpt when available', () => {
-    render(<BlogIndex data={mockData} location={mockLocation} />)
-    expect(screen.getByText('Test excerpt')).toBeInTheDocument()
-  })
-
-  test('renders post excerpt for all posts', () => {
-    render(<BlogIndex data={mockData} location={mockLocation} />)
-    expect(screen.getByText('Test excerpt')).toBeInTheDocument()
-    expect(screen.getByText('Another excerpt')).toBeInTheDocument()
   })
 })

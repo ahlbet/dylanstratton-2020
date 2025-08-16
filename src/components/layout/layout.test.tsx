@@ -43,20 +43,6 @@ describe('Layout component', () => {
     expect(screen.getByText(mockTitle)).toBeInTheDocument()
   })
 
-  test('renders h3 header on subpages', () => {
-    render(
-      <Layout
-        location={{ pathname: '/blog/test-post' }}
-        title={mockTitle}
-        children={mockChildren}
-      />
-    )
-
-    const heading = screen.getByRole('heading', { level: 3 })
-    expect(heading).toBeInTheDocument()
-    expect(screen.getByText(mockTitle)).toBeInTheDocument()
-  })
-
   test('renders children content', () => {
     render(
       <Layout

@@ -1,9 +1,5 @@
 import React from 'react'
 import { Link } from 'gatsby'
-import { ThemeToggler } from 'gatsby-plugin-dark-mode'
-import '../../utils/global.css'
-import { rhythm, scale } from '../../utils/typography'
-import RandomDayButton from '../random-day-button/random-day-button'
 
 interface LayoutProps {
   location: {
@@ -14,64 +10,16 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ location, title, children }) => {
-  const rootPath = `${__PATH_PREFIX__}/`
-  let header: React.ReactElement
+  const header: React.ReactElement = (
+    <h1 className="text-2xl mb-6 mt-0">
+      <Link className="" to={`/`}>
+        {title}
+      </Link>
+    </h1>
+  )
 
-  if (location.pathname === rootPath) {
-    header = (
-      <h1
-        style={{
-          ...scale(0.5),
-          marginBottom: rhythm(1.5),
-          marginTop: 0,
-        }}
-      >
-        <Link
-          style={{
-            boxShadow: `none`,
-            textDecoration: `none`,
-            color: '#6082B6',
-          }}
-          to={`/`}
-        >
-          {title}
-        </Link>
-      </h1>
-    )
-  } else {
-    header = (
-      <h3
-        style={{
-          fontFamily: `Montserrat, sans-serif`,
-          marginTop: 0,
-        }}
-      >
-        <Link
-          style={{
-            boxShadow: `none`,
-            textDecoration: `none`,
-            color: `#A7C7E7`,
-          }}
-          to={`/`}
-        >
-          {title}
-        </Link>
-      </h3>
-    )
-  }
   return (
-    <div
-      style={{
-        marginLeft: `auto`,
-        marginRight: `auto`,
-        // maxWidth: rhythm(56),
-        padding: `${rhythm(1.5)} ${rhythm(3 / 4)}`,
-        paddingBottom: `calc(${rhythm(1.5)} + 80px)` /* Account for fixed audio player */,
-        // backgroundColor: 'var(--bg)',
-        color: 'var(--textNormal)',
-        transition: 'color 0.2s ease-out, background 0.2s ease-out',
-      }}
-    >
+    <div className="mx-auto px-6 pb-20 bg-background text-gray-200 transition-colors duration-200">
       {/* TODO: implement pretty toggle button 
       <ThemeToggler>
         {({ theme, toggleTheme }) => (
@@ -85,18 +33,26 @@ const Layout: React.FC<LayoutProps> = ({ location, title, children }) => {
           </label>
         )}
       </ThemeToggler> */}
-      <header className="pr-18">
+      <header className="pr-18 p-6 border-b border-gray-800">
         {header}
-        <nav className="mt-2">
-          <Link
-            to="/all"
-            className="text-red-500 no-underline text-sm font-medium hover:text-red-600 transition-colors"
-          >
-            All
-          </Link>
+        <nav className="mt-4">
+          <div className="flex space-x-4">
+            <Link
+              to="/"
+              className={`${location.pathname === '/' ? 'text-red-400 hover:text-red-300' : 'text-gray-400 hover:text-gray-300'}`}
+            >
+              Home
+            </Link>
+            <Link
+              to="/all"
+              className={`${location.pathname === '/all' ? 'text-red-400 hover:text-red-300' : 'text-gray-400 hover:text-gray-300'}`}
+            >
+              All
+            </Link>
+          </div>
         </nav>
       </header>
-      <main style={{ marginTop: '25px' }}>{children}</main>
+      <main className="mt-6">{children}</main>
       <footer>{new Date().getFullYear()}</footer>
       {/* <RandomDayButton /> */}
     </div>

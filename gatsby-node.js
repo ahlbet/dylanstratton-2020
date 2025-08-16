@@ -178,6 +178,9 @@ exports.createPages = async ({ graphql, actions }) => {
       },
     },
   })
+
+  // Note: Homepage uses src/pages/index.tsx which gets data via GraphQL
+  // No need to create a separate template for the homepage
 }
 
 exports.onCreateNode = ({ node, actions, getNode }) => {
