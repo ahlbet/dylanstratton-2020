@@ -28,6 +28,7 @@ const mockAudioData = [
     duration: 180,
     storagePath: 'audio/song-a.wav',
     url: null,
+    postSlug: '/post-a',
   },
   {
     title: 'Alpha Song',
@@ -36,6 +37,7 @@ const mockAudioData = [
     duration: 240,
     storagePath: 'audio/song-b.wav',
     url: null,
+    postSlug: '/post-b',
   },
   {
     title: 'Beta Song',
@@ -44,6 +46,7 @@ const mockAudioData = [
     duration: 120,
     storagePath: 'audio/song-c.wav',
     url: null,
+    postSlug: '/post-c',
   },
 ]
 
@@ -275,5 +278,49 @@ describe('SongsTable', () => {
     // Verify that all tracks have play buttons
     const playButtons = screen.getAllByTestId('play-icon')
     expect(playButtons).toHaveLength(3) // 3 tracks, each with a play button
+  })
+
+  it('renders post titles as clickable links when postSlug is available', () => {
+    render(<SongsTable audioUrlsWithMetadata={mockAudioData} />)
+
+    // Check that post titles are rendered as links
+    const postALink = screen.getByText('Post A').closest('a')
+    const postBLink = screen.getByText('Post B').closest('a')
+    const postCLink = screen.getByText('Post C').closest('a')
+
+    expect(postALink).toBeInTheDocument()
+    expect(postBLink).toBeInTheDocument()
+    expect(postCLink).toBeInTheDocument()
+
+    // Check that links have correct href attributes
+    expect(postALink).toHaveAttribute('href', '/post-a')
+    expect(postBLink).toHaveAttribute('href', '/post-b')
+    expect(postCLink).toHaveAttribute('href', '/post-c')
+
+    // Check that links have the correct CSS class
+    expect(postALink).toHaveClass('post-link')
+    expect(postBLink).toHaveClass('post-link')
+    expect(postCLink).toHaveClass('post-link')
+  })
+
+  it('renders post titles as plain text when postSlug is not available', () => {
+    const dataWithoutSlugs = [
+      {
+        title: 'Song without slug',
+        postTitle: 'Post without slug',
+        postDate: 'January 1, 2024',
+        duration: 180,
+        storagePath: 'audio/song.wav',
+        url: null,
+        // postSlug is intentionally omitted
+      },
+    ]
+
+    render(<SongsTable audioUrlsWithMetadata={dataWithoutSlugs} />)
+
+    // Check that post title is rendered as plain text (not a link)
+    const postTitle = screen.getByText('Post without slug')
+    expect(postTitle).toBeInTheDocument()
+    expect(postTitle.closest('a')).not.toBeInTheDocument()
   })
 })

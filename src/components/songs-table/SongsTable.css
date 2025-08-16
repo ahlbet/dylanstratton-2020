@@ -190,6 +190,23 @@
   white-space: nowrap;
 }
 
+.post-link {
+  color: #DE3163;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.post-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.post-link:focus {
+  outline: 2px solid #DE3163;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .date-cell {
   color: #888;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
