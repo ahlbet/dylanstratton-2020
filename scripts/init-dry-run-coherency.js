@@ -200,12 +200,21 @@ const getAudioCoherencyLevel = async (
 }
 
 // Function to extract audio duration from WAV file (simplified for dry run)
-const extractAudioDuration = async (filePath) => {
+const extractAudioDuration = async (filePath, mockDurationArg) => {
   try {
     console.log(`   📊 Extracting duration from: ${path.basename(filePath)}`)
 
-    // For dry run, just return a mock duration
-    const mockDuration = Math.floor(Math.random() * 300) + 30 // 30-330 seconds
+    // For dry run, return a deterministic or configurable mock duration
+    let mockDuration = 120; // default mock duration in seconds
+    if (typeof mockDurationArg === 'number') {
+      mockDuration = mockDurationArg;
+    } else if (process.env.MOCK_AUDIO_DURATION) {
+      const envVal = parseInt(process.env.MOCK_AUDIO_DURATION, 10);
+      if (!isNaN(envVal)) {
+        mockDuration = envVal;
+      }
+    }
+    
     console.log(`   ✅ Duration: ${mockDuration} seconds (mock)`)
     return mockDuration
   } catch (error) {
