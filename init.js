@@ -12,6 +12,7 @@ const https = require('https')
 const { promisify } = require('util')
 const stream = require('stream')
 const pipeline = promisify(stream.pipeline)
+const { DEFAULT_AUDIO_KILL_TIMEOUT_MS } = require('./src/utils/audio-tools')
 
 // Create readline interface for user input
 const rl = readline.createInterface({
@@ -339,7 +340,7 @@ const playAudio = async (audioPath, audioPlayer) => {
         audioProcess.kill('SIGTERM')
         
         // Monitor process termination with configurable timeout
-        const forceKillTimeout = parseInt(process.env.AUDIO_KILL_TIMEOUT) || 3000
+        const forceKillTimeout = parseInt(process.env.AUDIO_KILL_TIMEOUT) || DEFAULT_AUDIO_KILL_TIMEOUT_MS
         let forceKillTimer = null
         
         // Set up force kill as fallback
@@ -351,7 +352,6 @@ const playAudio = async (audioPath, audioPlayer) => {
         }, forceKillTimeout)
         
         // Clean up timer when process terminates (existing close handler will resolve)
-        const originalListeners = audioProcess.listeners('close')
         audioProcess.once('close', () => {
           if (forceKillTimer) {
             clearTimeout(forceKillTimer)

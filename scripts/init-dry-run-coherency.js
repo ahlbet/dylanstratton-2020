@@ -205,13 +205,13 @@ const extractAudioDuration = async (filePath, mockDurationArg) => {
     console.log(`   📊 Extracting duration from: ${path.basename(filePath)}`)
 
     // For dry run, return a deterministic or configurable mock duration
-    let mockDuration = 120; // default mock duration in seconds
+    let mockDuration = 120 // default mock duration in seconds
     if (typeof mockDurationArg === 'number') {
-      mockDuration = mockDurationArg;
+      mockDuration = mockDurationArg
     } else if (process.env.MOCK_AUDIO_DURATION) {
-      const envVal = parseInt(process.env.MOCK_AUDIO_DURATION, 10);
+      const envVal = parseInt(process.env.MOCK_AUDIO_DURATION, 10)
       if (!isNaN(envVal)) {
-        mockDuration = envVal;
+        mockDuration = envVal
       }
     }
     

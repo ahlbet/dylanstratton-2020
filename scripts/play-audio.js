@@ -21,7 +21,7 @@ require('dotenv').config()
 const fs = require('fs')
 const path = require('path')
 const { spawn } = require('child_process')
-const { checkAudioTools, getAudioPlayer } = require('../src/utils/audio-tools')
+const { checkAudioTools, getAudioPlayer, DEFAULT_AUDIO_KILL_TIMEOUT_MS } = require('../src/utils/audio-tools')
 
 // Helper function to prompt user for input
 const askQuestion = (question) => {
@@ -127,7 +127,7 @@ const playAudio = async (audioPath, audioPlayer) => {
         audioProcess.kill('SIGTERM')
         
         // Monitor process termination with configurable timeout
-        const forceKillTimeout = parseInt(process.env.AUDIO_KILL_TIMEOUT) || 3000
+        const forceKillTimeout = parseInt(process.env.AUDIO_KILL_TIMEOUT) || DEFAULT_AUDIO_KILL_TIMEOUT_MS
         let forceKillTimer = null
         
         // Set up force kill as fallback

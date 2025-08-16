@@ -5,6 +5,11 @@
 const { execSync } = require('child_process')
 
 /**
+ * Default timeout for force-killing audio processes (in milliseconds)
+ */
+const DEFAULT_AUDIO_KILL_TIMEOUT_MS = 3000
+
+/**
  * Check if audio playback tools are available on the system
  * @returns {Array} Array of available audio tools with tool name and description
  */
@@ -84,4 +89,5 @@ module.exports = {
   getAudioPlayer,
   getAvailableToolsList,
   isToolAvailable,
+  DEFAULT_AUDIO_KILL_TIMEOUT_MS,
 }
