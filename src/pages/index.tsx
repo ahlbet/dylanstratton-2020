@@ -19,6 +19,7 @@ import { Card } from '../components/ui/card'
 import { Calendar } from '../components/ui/calendar'
 import { useAudioPlayer } from '../contexts/audio-player-context/audio-player-context'
 import { usePresignedUrl } from '../hooks/use-presigned-url'
+import { PostCalendar } from '../components/post-calendar/PostCalendar'
 
 // Types
 interface BlogPost {
@@ -468,7 +469,14 @@ const BlogIndex = ({
                   ))}
                 </div>
               ) : (
-                <Calendar />
+                <PostCalendar
+                  posts={posts.map((post) => ({
+                    id: post.node.fields.slug,
+                    title: post.node.frontmatter.title,
+                    date: post.node.frontmatter.date,
+                    content: post.node.excerpt,
+                  }))}
+                />
               )}
             </div>
           </div>
