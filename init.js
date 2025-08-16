@@ -6,12 +6,13 @@ require('dotenv').config()
 const fs = require('fs')
 const path = require('path')
 const readline = require('readline')
-const { execSync } = require('child_process')
+const { execSync, spawn } = require('child_process')
 const { createClient } = require('@supabase/supabase-js')
 const https = require('https')
 const { promisify } = require('util')
 const stream = require('stream')
 const pipeline = promisify(stream.pipeline)
+const { DEFAULT_AUDIO_KILL_TIMEOUT_MS, COHERENCY_MIN_LEVEL, COHERENCY_MAX_LEVEL } = require('./src/utils/audio-tools')
 
 // Create readline interface for user input
 const rl = readline.createInterface({
@@ -268,6 +269,203 @@ const { generateCoverArt } = require('./src/utils/cover-art-generator')
 // Import coherency level utilities
 const { getCoherencyLevel } = require('./src/utils/coherency-level-utils')
 
+// Import audio tools utilities
+const { checkAudioTools, getAudioPlayer } = require('./src/utils/audio-tools')
+
+// Play audio file
+const playAudio = async (audioPath, audioPlayer) => {
+  if (!audioPlayer) {
+    console.log('⚠️ No audio player available, skipping playback')
+    return
+  }
+
+  const { tool } = audioPlayer
+
+  try {
+    console.log(`🎵 Playing audio with ${tool}`)
+    console.log(`📁 File: ${path.basename(audioPath)}`)
+
+    let command
+    let args = []
+
+    switch (tool) {
+      case 'afplay':
+        // macOS built-in player
+        command = 'afplay'
+        args = [audioPath]
+        break
+      case 'aplay':
+        // Linux ALSA player
+        command = 'aplay'
+        args = [audioPath]
+        break
+      case 'mpv':
+        // Cross-platform player with quiet output
+        command = 'mpv'
+        args = ['--no-video', '--quiet', audioPath]
+        break
+      case 'ffplay':
+        // FFmpeg player with quiet output
+        command = 'ffplay'
+        args = ['-nodisp', '-autoexit', '-loglevel', 'error', audioPath]
+        break
+      case 'vlc':
+        // VLC player with quiet output
+        command = 'vlc'
+        args = ['--intf', 'dummy', '--play-and-exit', audioPath]
+        break
+      default:
+        command = tool
+        args = [audioPath]
+    }
+
+    console.log(`▶️  Playing audio... (Press Enter to stop early)`)
+
+    return new Promise((resolve, reject) => {
+      const audioProcess = spawn(command, args, {
+        stdio: 'pipe', // Use pipe so we can control input/output
+        detached: false,
+      })
+
+      // Set up a way to stop playback
+      let isStopped = false
+
+      const stopPlayback = () => {
+        if (isStopped) return
+        isStopped = true
+
+        console.log('\n⏹️  Stopping audio playback...')
+        
+        // Try graceful termination first
+        audioProcess.kill('SIGTERM')
+        
+        // Monitor process termination with configurable timeout
+        const forceKillTimeout = parseInt(process.env.AUDIO_KILL_TIMEOUT) || DEFAULT_AUDIO_KILL_TIMEOUT_MS
+        let forceKillTimer = null
+        
+        // Set up force kill as fallback
+        forceKillTimer = setTimeout(() => {
+          if (!audioProcess.killed) {
+            console.log('⚠️  Force killing audio process...')
+            audioProcess.kill('SIGKILL')
+          }
+        }, forceKillTimeout)
+        
+        // Clean up timer when process terminates (existing close handler will resolve)
+        audioProcess.once('close', () => {
+          if (forceKillTimer) {
+            clearTimeout(forceKillTimer)
+            forceKillTimer = null
+          }
+        })
+        
+        resolve()
+      }
+
+      // Handle process exit
+      audioProcess.on('close', (code) => {
+        if (isStopped) return // Already handled by stopPlayback
+
+        if (code === 0) {
+          console.log('\n🎵 Playback finished normally')
+          resolve()
+        } else if (code === null) {
+          console.log('\n⏹️  Playback stopped')
+          resolve()
+        } else {
+          console.log(`\n⚠️  Playback ended with code ${code}`)
+          resolve()
+        }
+      })
+
+      // Handle process errors
+      audioProcess.on('error', (error) => {
+        if (isStopped) return
+        console.error(`❌ Error playing audio: ${error.message}`)
+        reject(error)
+      })
+
+      // Set up a prompt to stop playback
+      const checkForStop = async () => {
+        try {
+          console.log(
+            '\n💡 Press Enter to stop audio, or wait for it to finish...'
+          )
+          const answer = await askQuestion('')
+          if (answer === '') {
+            stopPlayback()
+          }
+        } catch (error) {
+          // User interrupted, continue with playback
+        }
+      }
+
+      // Start checking for stop command after a short delay
+      setTimeout(() => {
+        if (!isStopped) {
+          checkForStop()
+        }
+      }, 500)
+    })
+  } catch (error) {
+    console.error(`❌ Error playing audio: ${error.message}`)
+    throw error
+  }
+}
+
+// Helper function to get coherency level for audio tracks
+const getAudioCoherencyLevel = async (
+  askQuestion,
+  trackNumber,
+  totalTracks,
+  audioPath = null,
+  audioPlayer = null
+) => {
+  console.log(`\n🎵 Audio Track #${trackNumber} Coherency Level`)
+  console.log('1 = Least coherent (random/jumbled)')
+  console.log('100 = Fully coherent (clear, logical flow)')
+  console.log(`Track ${trackNumber} of ${totalTracks}`)
+
+  // Offer to play the audio first if available
+  if (audioPath && audioPlayer) {
+    const listenChoice = await askQuestion(
+      `Would you like to listen to this track before rating? (y/n): `
+    )
+
+    if (
+      listenChoice.toLowerCase() === 'y' ||
+      listenChoice.toLowerCase() === 'yes'
+    ) {
+      console.log(`\n🎧 Playing audio track...`)
+      await playAudio(audioPath, audioPlayer)
+      console.log('\n🎵 Playback finished. Now rate the coherency level.')
+    } else {
+      console.log('⏭️  Skipping audio playback for this track.')
+    }
+  } else if (audioPath && !audioPlayer) {
+    console.log('⚠️ Audio playback not available, skipping preview')
+  }
+
+  while (true) {
+    const coherencyInput = await askQuestion(
+      `Enter coherency level (${COHERENCY_MIN_LEVEL}-${COHERENCY_MAX_LEVEL}, or press Enter for default 50): `
+    )
+
+    if (coherencyInput === '') {
+      return 50 // Default value for audio tracks
+    }
+
+    const coherencyLevel = parseInt(coherencyInput)
+
+    if (isNaN(coherencyLevel) || coherencyLevel < COHERENCY_MIN_LEVEL || coherencyLevel > COHERENCY_MAX_LEVEL) {
+      console.log(`❌ Please enter a number between ${COHERENCY_MIN_LEVEL} and ${COHERENCY_MAX_LEVEL}`)
+      continue
+    }
+
+    return coherencyLevel
+  }
+}
+
 // Fallback text for when markov generation fails
 const FALLBACK_TEXT = [
   'The quick brown fox jumps over the lazy dog.',
@@ -440,6 +638,7 @@ const main = async () => {
   fs.mkdirSync(destDir, { recursive: true })
 
   let movedFiles = [] // Track which files were moved
+  let localPlaybackFiles = [] // Track local paths for audio playback
 
   // Check if subfolder exists and contains WAV files
   if (
@@ -486,6 +685,11 @@ const main = async () => {
             duration: duration,
             storagePath: `audio/${uniqueFileName}`,
           })
+          // Store local path for playback in a separate array
+          localPlaybackFiles.push({
+            fileName: uniqueFileName,
+            localPath: sourcePath,
+          })
           console.log(
             `Uploaded file '${wavFile}' to Supabase as '${uniqueFileName}'.`
           )
@@ -527,6 +731,11 @@ const main = async () => {
         url: supabaseUrl,
         duration: duration,
         storagePath: `audio/${sanitizedName}.wav`,
+      })
+      // Store local path for playback in a separate array
+      localPlaybackFiles.push({
+        fileName: `${sanitizedName}.wav`,
+        localPath: singleFilePath,
       })
       console.log(
         `Uploaded file '${name}.wav' to Supabase as '${sanitizedName}.wav'.`
@@ -749,8 +958,41 @@ const main = async () => {
       // Create daily_audio entries for uploaded files
       if (movedFiles.length > 0) {
         console.log('🎵 Creating daily_audio entries...')
-        for (const file of movedFiles) {
+
+        // Check for available audio tools
+        const audioPlayer = getAudioPlayer()
+        if (audioPlayer) {
+          console.log(
+            `🔧 Audio player available: ${audioPlayer.tool} (${audioPlayer.description})`
+          )
+        } else {
+          console.warn('⚠️ No audio playback tools found on your system')
+          console.log(
+            "You can still set coherency levels, but won't be able to preview audio"
+          )
+        }
+
+        // Precompute a Map for O(1) lookup of localPlaybackFiles by fileName
+        const localPlaybackFileMap = new Map(
+          localPlaybackFiles.map(localFile => [localFile.fileName, localFile])
+        )
+
+        for (let i = 0; i < movedFiles.length; i++) {
+          const file = movedFiles[i]
           try {
+            // Find corresponding local path for audio playback
+            const localPlaybackFile = localPlaybackFileMap.get(file.fileName)
+            const localPath = localPlaybackFile ? localPlaybackFile.localPath : null
+            
+            // Get coherency level for this audio track
+            const audioCoherencyLevel = await getAudioCoherencyLevel(
+              askQuestion,
+              i + 1,
+              movedFiles.length,
+              localPath, // Use the local path for audio playback
+              audioPlayer
+            )
+
             const { error: audioError } = await supabase
               .from('daily_audio')
               .insert([
@@ -759,6 +1001,7 @@ const main = async () => {
                   storage_path: file.storagePath,
                   duration: file.duration,
                   format: 'audio/wav',
+                  coherency_level: audioCoherencyLevel,
                 },
               ])
 
@@ -768,7 +1011,9 @@ const main = async () => {
                 audioError.message
               )
             } else {
-              console.log(`✅ Created daily_audio entry for ${file.fileName}`)
+              console.log(
+                `✅ Created daily_audio entry for ${file.fileName} with coherency level ${audioCoherencyLevel}`
+              )
             }
           } catch (error) {
             console.error(
