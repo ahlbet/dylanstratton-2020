@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { usePresignedUrl } from '../../hooks/use-presigned-url'

@@ -96,19 +96,23 @@ export const HomepageAudioControls: React.FC<HomepageAudioControlsProps> = ({
       {/* Volume Control */}
       <div className="flex items-center space-x-2 mt-4">
         <Volume2 className="h-4 w-4 text-gray-400" />
-        <div
-          className="flex-1 bg-gray-800 rounded-full h-1 cursor-pointer"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect()
-            const clickX = e.clientX - rect.left
-            const newVolume = clickX / rect.width
-            onVolumeChange(Math.max(0, Math.min(1, newVolume)))
-          }}
-        >
+        <div className="flex-1 relative">
+          {/* Background track showing current volume level */}
+          <div className="absolute inset-0 bg-gray-800 rounded-full h-1"></div>
           <div
-            className="bg-white h-1 rounded-full"
+            className="absolute inset-0 bg-white rounded-full h-1 "
             style={{ width: `${volume * 100}%` }}
           ></div>
+          {/* Range input on top for interaction */}
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+            className="absolute inset-0 w-full h-1 appearance-none cursor-pointer bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:shadow-md focus:outline-none focus:[&::-webkit-slider-thumb]:shadow-[0_0_0_3px_rgba(59,130,246,0.3)] focus:[&::-moz-range-thumb]:shadow-[0_0_0_3px_rgba(59,130,246,0.3)]"
+          />
         </div>
       </div>
     </div>
