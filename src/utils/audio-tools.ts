@@ -10,7 +10,7 @@ import { execSync } from 'child_process'
 export const DEFAULT_AUDIO_KILL_TIMEOUT_MS = 3000
 
 /**
- * Coherncy level constants
+ * Coherency level constants
  */
 export const COHERENCY_MIN_LEVEL = 1
 export const COHERENCY_MAX_LEVEL = 100
