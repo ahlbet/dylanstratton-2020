@@ -268,6 +268,20 @@ const { generateCoverArt } = require('./src/utils/cover-art-generator')
 // Import coherency level utilities
 const { getCoherencyLevel } = require('./src/utils/coherency-level-utils')
 
+// Fallback text for when markov generation fails
+const FALLBACK_TEXT = [
+  'The quick brown fox jumps over the lazy dog.',
+  'A journey of a thousand miles begins with a single step.',
+  'All that glitters is not gold.',
+  'Actions speak louder than words.',
+  'Beauty is in the eye of the beholder.',
+  'Every cloud has a silver lining.',
+  'Time heals all wounds.',
+  'Actions speak louder than words.',
+  'The early bird catches the worm.',
+  "Don't judge a book by its cover.",
+]
+
 // Initialize Supabase client
 let supabase
 
@@ -568,52 +582,16 @@ const main = async () => {
       } else {
         console.warn('⚠️ Failed to load from Supabase, using fallback text')
         // Fallback to sample text if Supabase fails
-        const fallbackText = [
-          'The quick brown fox jumps over the lazy dog.',
-          'A journey of a thousand miles begins with a single step.',
-          'All that glitters is not gold.',
-          'Actions speak louder than words.',
-          'Beauty is in the eye of the beholder.',
-          'Every cloud has a silver lining.',
-          'Time heals all wounds.',
-          'Actions speak louder than words.',
-          'The early bird catches the worm.',
-          "Don't judge a book by its cover.",
-        ]
-        markovGenerator.loadTextFromArray(fallbackText)
+        markovGenerator.loadTextFromArray(FALLBACK_TEXT)
       }
     } else {
       console.warn('⚠️ Missing Supabase credentials, using fallback text')
-      const fallbackText = [
-        'The quick brown fox jumps over the lazy dog.',
-        'A journey of a thousand miles begins with a single step.',
-        'All that glitters is not gold.',
-        'Actions speak louder than words.',
-        'Beauty is in the eye of the beholder.',
-        'Every cloud has a silver lining.',
-        'Time heals all wounds.',
-        'Actions speak louder than words.',
-        'The early bird catches the worm.',
-        "Don't judge a book by its cover.",
-      ]
-      markovGenerator.loadTextFromArray(fallbackText)
+      markovGenerator.loadTextFromArray(FALLBACK_TEXT)
     }
   } catch (error) {
     console.error('❌ Failed to initialize markov generator:', error.message)
     // Use fallback text as last resort
-    const fallbackText = [
-      'The quick brown fox jumps over the lazy dog.',
-      'A journey of a thousand miles begins with a single step.',
-      'All that glitters is not gold.',
-      'Actions speak louder than words.',
-      'Beauty is in the eye of the beholder.',
-      'Every cloud has a silver lining.',
-      'Time heals all wounds.',
-      'Actions speak louder than words.',
-      'The early bird catches the worm.',
-      "Don't judge a book by its cover.",
-    ]
-    markovGenerator.loadTextFromArray(fallbackText)
+    markovGenerator.loadTextFromArray(FALLBACK_TEXT)
   }
 
   const markovTexts = []
