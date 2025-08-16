@@ -112,7 +112,7 @@ describe('HomepageAudioPlayer', () => {
 
   it('displays current track info', () => {
     render(<HomepageAudioPlayer {...defaultProps} />)
-    expect(screen.getByText('No track selected')).toBeInTheDocument()
+    expect(screen.getByText('Select a track to play')).toBeInTheDocument()
   })
 
   it('handles track selection', () => {

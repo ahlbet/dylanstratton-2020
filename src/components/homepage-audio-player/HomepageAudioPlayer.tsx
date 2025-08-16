@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react'
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Button } from '../ui/button'
 import {
   Calendar as CalendarIcon,
@@ -94,33 +94,218 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
-  const currentAudioSourceRef = useRef<string | null>(null)
+  const [currentAudioUrl, setCurrentAudioUrl] = useState('')
 
-  // Effect to handle audio source changes when currentIndex changes
+  // Generate presigned URL when current track changes
   useEffect(() => {
-    if (currentIndex !== null && playlist[currentIndex] && audioRef.current) {
-      const currentTrack = playlist[currentIndex]
+    const generateAudioUrl = async () => {
+      if (currentIndex !== null && playlist[currentIndex]) {
+        const currentTrack = playlist[currentIndex]
+        if (currentTrack.storagePath) {
+          try {
+            // Check if we should use local audio files for development
+            const isLocalDevMode = isLocalDev()
 
-      // Only update if the track has a URL and it's different from current source
-      // AND we don't have a valid source already loaded
-      if (
-        currentTrack.url &&
-        currentTrack.url !== currentAudioSourceRef.current &&
-        (!audioRef.current.src || audioRef.current.readyState === 0)
-      ) {
-        // Store the new source
-        currentAudioSourceRef.current = currentTrack.url
-        audioRef.current.src = currentTrack.url
+            let audioUrl: string | null = null
 
-        // If we're currently playing, start the new track
-        if (isPlaying) {
-          audioRef.current.play().catch(() => {
-            setError('Failed to play track')
-          })
+            if (isLocalDevMode) {
+              // Use local audio files for development
+              const filename = extractFilenameFromStoragePath(
+                currentTrack.storagePath
+              )
+              audioUrl = `/local-audio/${filename}.wav`
+            } else {
+              // Production mode: generate presigned URL on-demand
+              audioUrl = await getAudioUrl({
+                storagePath: currentTrack.storagePath,
+              })
+            }
+
+            if (audioUrl) {
+              setCurrentAudioUrl(audioUrl)
+            } else {
+              setCurrentAudioUrl('')
+            }
+          } catch (error) {
+            // Fall back to original URL if available
+            setCurrentAudioUrl(currentTrack.url || '')
+          }
+        } else {
+          setCurrentAudioUrl('')
         }
+      } else {
+        setCurrentAudioUrl('')
       }
     }
-  }, [currentIndex, playlist, isPlaying])
+
+    generateAudioUrl()
+  }, [currentIndex, playlist, getAudioUrl])
+
+  // Set up audio event listeners
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
+    const handleLoadedMetadata = () => setDuration(audio.duration)
+    const handleLoadStart = () => {
+      setIsLoading(true)
+      setError(null) // Clear errors when starting to load new audio
+      // Set volume when audio starts loading
+      if (audioRef.current) {
+        audioRef.current.volume = volume
+      }
+    }
+    const handleEnded = () => {
+      // Auto-play next track when current track ends
+      if (playlist.length > 0) {
+        handleNextTrack()
+      }
+    }
+    const handleError = (e: Event) => {
+      // Only show error if we have a track selected and audio source
+      if (currentIndex !== null && currentAudioUrl) {
+        setError('Audio playback error')
+      }
+      setIsLoading(false)
+    }
+    const handleCanPlay = () => {
+      setIsLoading(false)
+      setError(null) // Clear errors when audio can play
+    }
+
+    audio.addEventListener('timeupdate', handleTimeUpdate)
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+    audio.addEventListener('loadstart', handleLoadStart)
+    audio.addEventListener('ended', handleEnded)
+    audio.addEventListener('error', handleError)
+    audio.addEventListener('canplay', handleCanPlay)
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate)
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      audio.removeEventListener('loadstart', handleLoadStart)
+      audio.removeEventListener('ended', handleEnded)
+      audio.removeEventListener('error', handleError)
+      audio.removeEventListener('canplay', handleCanPlay)
+    }
+  }, [audioRef, volume, playlist, currentIndex, currentAudioUrl])
+
+  // Ensure audio element gets the source when currentAudioUrl changes
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio && currentAudioUrl) {
+      // Only update if the source is different
+      if (audio.src !== currentAudioUrl) {
+        audio.src = currentAudioUrl
+        // Load the new source
+        audio.load()
+      }
+    }
+  }, [currentAudioUrl])
+
+  // Auto-select first track when tracks become available
+  useEffect(() => {
+    if (currentBlogPostTracks.length > 0 && currentIndex === null) {
+      // Auto-select the first track
+      const firstTrack = currentBlogPostTracks[0]
+      onTrackSelect(firstTrack)
+    }
+  }, [currentBlogPostTracks, currentIndex, onTrackSelect])
+
+  // Handle initial state setup
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio) {
+      // Set initial volume
+      audio.volume = volume
+      // Clear any initial error state
+      setError(null)
+      setIsLoading(false)
+    }
+  }, [volume])
+
+  // Function to check if audio is ready to play
+  const isAudioReady = useCallback(() => {
+    const audio = audioRef.current
+    return (
+      audio &&
+      audio.src &&
+      audio.readyState >= 1 && // HAVE_METADATA or higher
+      currentAudioUrl
+    )
+  }, [currentAudioUrl])
+
+  // Function to wait for audio to be ready and then play
+  const waitForAudioAndPlay = useCallback(
+    (audio: HTMLAudioElement) => {
+      if (isAudioReady()) {
+        const playPromise = audio.play()
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            // Ignore AbortError as it's expected when navigating
+            if (error.name !== 'AbortError') {
+              // If play fails due to source issues, try to recover
+              if (error.name === 'NotSupportedError' && currentAudioUrl) {
+                audio.load()
+              } else {
+                setError('Failed to play track')
+              }
+            }
+          })
+        }
+        return true
+      }
+      return false
+    },
+    [currentAudioUrl, isAudioReady]
+  )
+
+  // Handle audio playback when isPlaying changes
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio) {
+      if (isPlaying) {
+        // Check if audio source is ready before attempting to play
+        if (!currentAudioUrl || audio.readyState === 0 || !audio.src) {
+          return
+        }
+
+        // Try to play immediately if ready
+        if (waitForAudioAndPlay(audio)) {
+          return
+        }
+
+        // If not ready, wait and try again
+        const timeoutId = setTimeout(() => {
+          if (isPlaying) {
+            waitForAudioAndPlay(audio)
+          }
+        }, 200)
+
+        return () => clearTimeout(timeoutId)
+      } else {
+        audio.pause()
+      }
+    }
+  }, [isPlaying, currentAudioUrl, waitForAudioAndPlay])
+
+  // Listen for audio metadata loading to know when it's ready to play
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const handleMetadataLoaded = () => {
+      // If user was waiting to play, try to play now
+      if (isPlaying && isAudioReady()) {
+        waitForAudioAndPlay(audio)
+      }
+    }
+
+    audio.addEventListener('loadedmetadata', handleMetadataLoaded)
+    return () =>
+      audio.removeEventListener('loadedmetadata', handleMetadataLoaded)
+  }, [isPlaying, isAudioReady, waitForAudioAndPlay])
 
   // Handle play/pause
   const handlePlayPause = async () => {
@@ -149,16 +334,10 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
 
           if (audioUrl) {
             if (audioRef.current) {
-              // Only update source if it's actually different
-              if (audioUrl !== currentAudioSourceRef.current) {
-                currentAudioSourceRef.current = audioUrl
-                audioRef.current.src = audioUrl
-              }
-              audioRef.current.play()
-              setIsPlaying(true)
               setError(null) // Clear any previous errors
               // Use playTrack to properly set the current index
               await playTrack(0)
+              // The useEffect will handle actual playback when isPlaying changes
             }
           } else {
             setError('Failed to get audio URL')
@@ -173,19 +352,9 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
         audioRef.current?.pause()
         setIsPlaying(false)
       } else {
-        // Ensure the audio source is correct before playing
-        const currentTrack = playlist[currentIndex]
-        if (currentTrack && currentTrack.url && audioRef.current) {
-          // Only update source if it's actually different
-          if (currentTrack.url !== currentAudioSourceRef.current) {
-            currentAudioSourceRef.current = currentTrack.url
-            audioRef.current.src = currentTrack.url
-          }
-          audioRef.current.play().catch(() => {
-            setError('Failed to play track')
-          })
-          setIsPlaying(true)
-        }
+        // Audio source is managed by currentAudioUrl state
+        // Just set playing state, the useEffect will handle actual playback
+        setIsPlaying(true)
       }
     }
   }
@@ -215,16 +384,10 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
 
         if (audioUrl) {
           if (audioRef.current) {
-            // Only update source if it's actually different
-            if (audioUrl !== currentAudioSourceRef.current) {
-              currentAudioSourceRef.current = audioUrl
-              audioRef.current.src = audioUrl
-            }
-            audioRef.current.play()
-            setIsPlaying(true)
             setError(null) // Clear any previous errors
             // Use playTrack to properly set the current index
             await playTrack(nextIndex)
+            // The useEffect will handle actual playback when isPlaying changes
           }
         } else {
           setError('Failed to get audio URL for next track')
@@ -259,16 +422,10 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
 
         if (audioUrl) {
           if (audioRef.current) {
-            // Only update source if it's actually different
-            if (audioUrl !== currentAudioSourceRef.current) {
-              currentAudioSourceRef.current = audioUrl
-              audioRef.current.src = audioUrl
-            }
-            audioRef.current.play()
-            setIsPlaying(true)
             setError(null) // Clear any previous errors
             // Use playTrack to properly set the current index
             await playTrack(prevIndex)
+            // The useEffect will handle actual playback when isPlaying changes
           }
         } else {
           setError('Failed to get audio URL for previous track')
@@ -282,7 +439,11 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   // Get current track info for display
   const currentTrackInfo = useMemo(() => {
     if (currentIndex === null || playlist.length === 0) {
-      return { title: 'No track selected', date: '' }
+      // Don't show "No track selected" if we have tracks available but none selected yet
+      if (currentBlogPostTracks.length > 0) {
+        return { title: 'Select a track to play', date: '' }
+      }
+      return { title: 'No tracks available', date: '' }
     }
 
     const track = playlist[currentIndex]
@@ -320,19 +481,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
         onVolumeChange={updateVolume}
         onTimeChange={(newTime) => {
           if (audioRef.current) {
-            // Store current playback state
-            const wasPlaying = !audioRef.current.paused
-            const currentSrc = audioRef.current.src
-
-            // Update the time
             audioRef.current.currentTime = newTime
-
-            // If audio was playing and we changed the source, restore playback
-            if (wasPlaying && audioRef.current.src === currentSrc) {
-              audioRef.current.play().catch(() => {
-                setError('Failed to resume playback after seeking')
-              })
-            }
           }
         }}
       />
@@ -354,36 +503,12 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
         onTrackSelect={onTrackSelect}
       />
 
-      {/* Hidden audio element for actual playback */}
+      {/* Audio element for playback */}
       <audio
         ref={audioRef}
-        onEnded={() => {
-          // Auto-play next track when current track ends
-          if (playlist.length > 0) {
-            handleNextTrack()
-          }
-        }}
-        onError={(e) => {
-          setError('Audio playback error')
-        }}
-        onLoadStart={() => {
-          setIsLoading(true)
-          setError(null) // Clear errors when starting to load new audio
-        }}
-        onTimeUpdate={() => {
-          if (audioRef.current) {
-            setCurrentTime(audioRef.current.currentTime)
-          }
-        }}
-        onLoadedMetadata={() => {
-          if (audioRef.current) {
-            setDuration(audioRef.current.duration)
-          }
-        }}
-        onCanPlay={() => {
-          setIsLoading(false)
-          setError(null) // Clear errors when audio can play
-        }}
+        src={currentAudioUrl}
+        preload="auto"
+        crossOrigin="anonymous"
       />
     </div>
   )
