@@ -1,16 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Button } from '../ui/button'
-import {
-  Calendar as CalendarIcon,
-  FileText,
-  Grid,
-  List,
-  Pause,
-  Play,
-  SkipBack,
-  SkipForward,
-  Volume2,
-} from 'lucide-react'
+
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { usePresignedUrl } from '../../hooks/use-presigned-url'
 import { HomepageAudioControls } from './HomepageAudioControls'
@@ -25,19 +14,6 @@ import {
 } from '../../utils/audio-utils'
 
 // Types
-interface AudioItem {
-  id: string
-  storagePath?: string
-  storage_path?: string
-  duration?: number | null
-  format?: string
-  title?: string
-  artist?: string
-  album?: string
-  displayFilename?: string
-  daily_id: string
-  created_at: string
-}
 
 interface ProcessedAudioTrack {
   id: string
@@ -69,7 +45,6 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
 }) => {
   const {
     playlist,
-    setPlaylist,
     currentIndex,
     isPlaying,
     setIsPlaying,
@@ -77,14 +52,6 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
     audioRef,
     volume,
     updateVolume,
-    isShuffleOn,
-    toggleShuffle,
-    isLoopOn,
-    toggleLoop,
-    isAutopilotOn,
-    toggleAutopilot,
-    shouldNavigateToRandomPost,
-    shuffledPlaylist,
   } = useAudioPlayer()
 
   const { getAudioUrl } = usePresignedUrl()
