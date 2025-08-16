@@ -207,11 +207,14 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   // Auto-select first track when tracks become available
   useEffect(() => {
     if (currentBlogPostTracks.length > 0 && currentIndex === null) {
-      // Auto-select the first track
+      // Auto-select the first track but don't auto-play
       const firstTrack = currentBlogPostTracks[0]
-      onTrackSelect(firstTrack)
+      // Use playTrack to set the current index without starting playback
+      playTrack(0)
+      // Ensure playback is stopped
+      setIsPlaying(false)
     }
-  }, [currentBlogPostTracks, currentIndex, onTrackSelect])
+  }, [currentBlogPostTracks, currentIndex, playTrack])
 
   // Handle initial state setup
   useEffect(() => {
