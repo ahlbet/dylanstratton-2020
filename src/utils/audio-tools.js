@@ -10,6 +10,12 @@ const { execSync } = require('child_process')
 const DEFAULT_AUDIO_KILL_TIMEOUT_MS = 3000
 
 /**
+ * Coherency level constants
+ */
+const COHERENCY_MIN_LEVEL = 1
+const COHERENCY_MAX_LEVEL = 100
+
+/**
  * Check if audio playback tools are available on the system
  * @returns {Array} Array of available audio tools with tool name and description
  */
@@ -90,4 +96,6 @@ module.exports = {
   getAvailableToolsList,
   isToolAvailable,
   DEFAULT_AUDIO_KILL_TIMEOUT_MS,
+  COHERENCY_MIN_LEVEL,
+  COHERENCY_MAX_LEVEL,
 }

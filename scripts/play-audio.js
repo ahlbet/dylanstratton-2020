@@ -324,8 +324,6 @@ const main = async () => {
 
 // Export functions for testing
 module.exports = {
-  checkAudioTools,
-  getAudioPlayer,
   playAudio,
   downloadAudio,
   showHelp,

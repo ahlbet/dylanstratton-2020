@@ -19,7 +19,7 @@ const fs = require('fs')
 const path = require('path')
 const readline = require('readline')
 const { spawn } = require('child_process')
-const { checkAudioTools, getAudioPlayer, DEFAULT_AUDIO_KILL_TIMEOUT_MS } = require('../src/utils/audio-tools')
+const { checkAudioTools, getAudioPlayer, DEFAULT_AUDIO_KILL_TIMEOUT_MS, COHERENCY_MIN_LEVEL, COHERENCY_MAX_LEVEL } = require('../src/utils/audio-tools')
 
 // Create readline interface for user input
 const rl = readline.createInterface({
@@ -181,7 +181,7 @@ const getAudioCoherencyLevel = async (
 
   while (true) {
     const coherencyInput = await askQuestion(
-      'Enter coherency level (1-100, or press Enter for default 50): '
+      `Enter coherency level (${COHERENCY_MIN_LEVEL}-${COHERENCY_MAX_LEVEL}, or press Enter for default 50): `
     )
 
     if (coherencyInput === '') {
@@ -190,8 +190,8 @@ const getAudioCoherencyLevel = async (
 
     const coherencyLevel = parseInt(coherencyInput)
 
-    if (isNaN(coherencyLevel) || coherencyLevel < 1 || coherencyLevel > 100) {
-      console.log('❌ Please enter a number between 1 and 100')
+    if (isNaN(coherencyLevel) || coherencyLevel < COHERENCY_MIN_LEVEL || coherencyLevel > COHERENCY_MAX_LEVEL) {
+      console.log(`❌ Please enter a number between ${COHERENCY_MIN_LEVEL} and ${COHERENCY_MAX_LEVEL}`)
       continue
     }
 
@@ -418,8 +418,6 @@ module.exports = {
   getAudioCoherencyLevel,
   extractAudioDuration,
   sanitizeFilename,
-  checkAudioTools,
-  getAudioPlayer,
   playAudio,
 }
 
