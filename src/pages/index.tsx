@@ -354,16 +354,6 @@ const BlogIndex = ({
       .slice(0, 5) // Show only first 5 texts for the current post
   }, [supabaseData?.markovTexts, currentBlogPost])
 
-  // Get recent posts from GraphQL data
-  const recentPosts = useMemo(() => {
-    return posts.slice(0, 5).map((post) => ({
-      id: post.node.fields.slug,
-      title: post.node.frontmatter.title,
-      date: post.node.frontmatter.date,
-      content: post.node.excerpt,
-    }))
-  }, [posts])
-
   // Current track info
   const currentTrackInfo = useMemo(() => {
     if (currentIndex === null || !playlist[currentIndex]) {
@@ -460,7 +450,6 @@ const BlogIndex = ({
           markovTexts={processedTexts}
           bottomView={bottomView}
           onBottomViewChange={setBottomView}
-          recentPosts={recentPosts}
           posts={posts}
           currentBlogPost={currentBlogPost}
           onPostClick={handlePostClick}
