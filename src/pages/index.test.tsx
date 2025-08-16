@@ -468,4 +468,36 @@ describe('BlogIndex Audio Functionality', () => {
     expect(postsButton).toBeInTheDocument()
     expect(calendarButton).toBeInTheDocument()
   })
+
+  it('stops audio playback when changing posts', () => {
+    // Mock audio player with playing state
+    const mockAudioPlayerPlaying = {
+      ...mockAudioPlayer,
+      currentIndex: 0,
+      isPlaying: true,
+      playlist: [
+        {
+          id: 'audio-1',
+          title: 'Test Track 1',
+          daily_id: 'test-daily-1',
+        },
+      ],
+    }
+    ;(useAudioPlayer as jest.Mock).mockReturnValue(mockAudioPlayerPlaying)
+
+    render(
+      <BlogIndex
+        data={mockData}
+        location={mockLocation}
+        pageContext={mockPageContext}
+      />
+    )
+
+    // Find and click on a different post to change the current blog post
+    const differentPost = screen.getByText('Another Post Title')
+    fireEvent.click(differentPost)
+
+    // Should call setIsPlaying(false) to stop audio playback
+    expect(mockAudioPlayerPlaying.setIsPlaying).toHaveBeenCalledWith(false)
+  })
 })

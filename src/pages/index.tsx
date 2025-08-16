@@ -128,7 +128,14 @@ const BlogIndex = ({
     ProcessedAudioTrack[]
   >([])
 
-  const { playlist, setPlaylist, currentIndex, playTrack } = useAudioPlayer()
+  const {
+    playlist,
+    setPlaylist,
+    currentIndex,
+    isPlaying,
+    setIsPlaying,
+    playTrack,
+  } = useAudioPlayer()
 
   const { getAudioUrl } = usePresignedUrl()
 
@@ -240,6 +247,11 @@ const BlogIndex = ({
   // Function to change the current blog post
   const changeBlogPost = (dailyId: string) => {
     if (supabaseData?.audio) {
+      // Stop current audio playback before changing posts
+      if (isPlaying) {
+        setIsPlaying(false)
+      }
+
       setCurrentBlogPost(dailyId)
 
       // Filter tracks for the selected blog post
