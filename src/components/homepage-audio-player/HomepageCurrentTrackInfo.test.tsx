@@ -10,6 +10,7 @@ describe('HomepageCurrentTrackInfo', () => {
     },
     error: null,
     supabaseError: null,
+    coverArt: null,
   }
 
   describe('Rendering', () => {
@@ -175,6 +176,84 @@ describe('HomepageCurrentTrackInfo', () => {
 
       render(<HomepageCurrentTrackInfo {...propsWithSpecialDate} />)
       expect(screen.getByText(specialDate)).toBeInTheDocument()
+    })
+  })
+
+  describe('Cover Art', () => {
+    it('displays cover art when provided', () => {
+      const propsWithCoverArt = {
+        ...defaultProps,
+        coverArt: 'https://example.com/cover-art.jpg',
+      }
+
+      render(<HomepageCurrentTrackInfo {...propsWithCoverArt} />)
+
+      const coverArtImage = screen.getByTestId('daily-cover-art')
+      expect(coverArtImage).toBeInTheDocument()
+      expect(coverArtImage).toHaveAttribute(
+        'src',
+        'https://example.com/cover-art.jpg'
+      )
+      expect(coverArtImage).toHaveAttribute('alt', 'Daily cover art')
+    })
+
+    it('displays placeholder when no cover art is provided', () => {
+      render(<HomepageCurrentTrackInfo {...defaultProps} />)
+
+      expect(screen.getByText('No Art')).toBeInTheDocument()
+      expect(screen.queryByTestId('daily-cover-art')).not.toBeInTheDocument()
+    })
+
+    it('displays placeholder when cover art is null', () => {
+      const propsWithNullCoverArt = {
+        ...defaultProps,
+        coverArt: null,
+      }
+
+      render(<HomepageCurrentTrackInfo {...propsWithNullCoverArt} />)
+
+      expect(screen.getByText('No Art')).toBeInTheDocument()
+      expect(screen.queryByTestId('daily-cover-art')).not.toBeInTheDocument()
+    })
+
+    it('displays placeholder when cover art is empty string', () => {
+      const propsWithEmptyCoverArt = {
+        ...defaultProps,
+        coverArt: '',
+      }
+
+      render(<HomepageCurrentTrackInfo {...propsWithEmptyCoverArt} />)
+
+      expect(screen.getByText('No Art')).toBeInTheDocument()
+      expect(screen.queryByTestId('daily-cover-art')).not.toBeInTheDocument()
+    })
+
+    it('processes storage path URLs correctly', () => {
+      const propsWithStoragePath = {
+        ...defaultProps,
+        coverArt: 'cover-art/25jul16.png',
+      }
+
+      render(<HomepageCurrentTrackInfo {...propsWithStoragePath} />)
+
+      const coverArtImage = screen.getByTestId('daily-cover-art')
+      expect(coverArtImage).toBeInTheDocument()
+      // The URL should be processed by getCoverArtUrl and convertCoverArtUrlToLocal
+      expect(coverArtImage).toHaveAttribute('src')
+    })
+
+    it('extracts correct filename from storage path for local development', () => {
+      const propsWithStoragePath = {
+        ...defaultProps,
+        coverArt: 'cover-art/25aug12.png',
+      }
+
+      render(<HomepageCurrentTrackInfo {...propsWithStoragePath} />)
+
+      const coverArtImage = screen.getByTestId('daily-cover-art')
+      expect(coverArtImage).toBeInTheDocument()
+      // Should extract '25aug12' from 'cover-art/25aug12.png'
+      expect(coverArtImage).toHaveAttribute('src')
     })
   })
 

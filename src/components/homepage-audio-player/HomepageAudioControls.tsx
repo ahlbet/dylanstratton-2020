@@ -130,7 +130,7 @@ export const HomepageAudioControls: React.FC<HomepageAudioControlsProps> = ({
           {/* Background track showing current volume level */}
           <div className="absolute inset-0 bg-gray-800 rounded-full h-1"></div>
           <div
-            className="absolute inset-0 bg-white rounded-full h-1 transition-all duration-150"
+            className="absolute inset-0 bg-white rounded-full h-1"
             style={{ width: `${volume * 100}%` }}
             data-testid="volume-background"
           ></div>

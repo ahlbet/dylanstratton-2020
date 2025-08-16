@@ -319,22 +319,40 @@ const BlogIndex = ({
     }
   }, [currentBlogPostTracks, setPlaylist])
 
-  // Process markov texts from Supabase data
+  // Get cover art for the current blog post
+  const currentCoverArt = useMemo(() => {
+    if (!supabaseData?.daily || !currentBlogPost) return null
+
+    // Find the daily data that matches the current blog post
+    const dailyEntry = supabaseData.daily.find(
+      (daily) => daily.id === currentBlogPost
+    )
+    if (dailyEntry && dailyEntry.cover_art) {
+      // Return the raw cover art data (storage path or URL) for the component to process
+      return dailyEntry.cover_art
+    }
+
+    return null
+  }, [supabaseData?.daily, currentBlogPost])
+
+  // Process markov texts from Supabase data for the current blog post
   const processedTexts = useMemo(() => {
-    if (!supabaseData?.markovTexts) return []
+    if (!supabaseData?.markovTexts || !currentBlogPost) return []
 
     return supabaseData.markovTexts
       .filter(
         (text): text is MarkovText =>
-          text.text_content !== undefined && text.text_content !== null
+          text.text_content !== undefined &&
+          text.text_content !== null &&
+          text.daily_id === currentBlogPost
       )
       .map((text) => ({
         id: text.id,
         content: text.text_content,
         coherencyLevel: text.coherency_level || '50',
       }))
-      .slice(0, 5) // Show only first 5 texts
-  }, [supabaseData?.markovTexts])
+      .slice(0, 5) // Show only first 5 texts for the current post
+  }, [supabaseData?.markovTexts, currentBlogPost])
 
   // Get recent posts from GraphQL data
   const recentPosts = useMemo(() => {
@@ -438,6 +456,7 @@ const BlogIndex = ({
             supabaseError={supabaseError}
             onTrackSelect={handleTrackSelect}
             parentError={error}
+            coverArt={currentCoverArt}
           />
 
           {/* Generated Text Section */}

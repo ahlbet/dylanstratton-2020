@@ -32,6 +32,7 @@ interface HomepageAudioPlayerProps {
   supabaseError: string | null
   onTrackSelect: (track: ProcessedAudioTrack) => void
   parentError?: string | null
+  coverArt?: string | null
 }
 
 export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
@@ -42,6 +43,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   supabaseError,
   onTrackSelect,
   parentError,
+  coverArt,
 }) => {
   const {
     playlist,
@@ -453,6 +455,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
         currentTrackInfo={currentTrackInfo}
         error={error || parentError}
         supabaseError={supabaseError}
+        coverArt={coverArt}
       />
 
       {/* Audio Controls */}

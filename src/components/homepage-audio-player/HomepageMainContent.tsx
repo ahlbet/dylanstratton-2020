@@ -43,6 +43,8 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
     return post.daily_id === currentBlogPost
   }
 
+  console.log('markovTexts', markovTexts)
+
   return (
     <div className="flex-1 flex flex-col">
       {/* P5 Sketch Visualization */}
