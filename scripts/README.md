@@ -7,6 +7,7 @@ This directory contains utility scripts for the project.
 A script to set up and manage the Supabase cover-art bucket system for blog post cover art.
 
 ### Usage
+
 ```bash
 # Initial setup - creates bucket with proper permissions
 node scripts/setup-cover-art-bucket.js setup
@@ -25,6 +26,7 @@ node scripts/setup-cover-art-bucket.js help
 ```
 
 ### What it does
+
 - Creates the `cover-art` bucket in Supabase Storage with public access
 - Configures proper MIME type restrictions (PNG, JPEG, JPG)
 - Sets file size limits (10MB maximum)
@@ -32,7 +34,9 @@ node scripts/setup-cover-art-bucket.js help
 - Works with the cover art generation system in `init.js`
 
 ### Cover Art System
+
 Cover art is automatically generated for each blog post using the Tat sketch algorithm:
+
 - **Deterministic**: Same post name always generates the same cover art
 - **High Quality**: 2500x2500 PNG images optimized for display
 - **Visual Style**: Matches the aesthetic of the Tat sketch with geometric patterns
@@ -43,6 +47,7 @@ Cover art is automatically generated for each blog post using the Tat sketch alg
 A script to add cover art to all existing blog posts that don't already have it.
 
 ### Usage
+
 ```bash
 # Preview what would be processed (recommended first step)
 node scripts/backfill-cover-art.js --dry-run
@@ -61,6 +66,7 @@ node scripts/backfill-cover-art.js --help
 ```
 
 ### What it does
+
 - Scans all blog posts in `content/blog/` for posts missing cover art
 - Generates 4x4 grid cover art using the Tat sketch algorithm
 - Uploads cover art to the Supabase `cover-art` bucket
@@ -69,6 +75,7 @@ node scripts/backfill-cover-art.js --help
 - Processes posts with 1-second delays to be gentle on Supabase
 
 ### Safety Features
+
 - **Dry run mode** to preview changes before execution
 - **Automatic backups** with timestamps (unless `--no-backup`)
 - **Smart detection** only processes posts that don't already have cover art
@@ -80,6 +87,7 @@ node scripts/backfill-cover-art.js --help
 A script to set up and manage the Supabase markov-text bucket system.
 
 ### Usage
+
 ```bash
 # Initial setup - creates bucket and uploads existing content
 node scripts/setup-markov-bucket.js setup
@@ -95,6 +103,7 @@ node scripts/setup-markov-bucket.js test
 ```
 
 ### What it does
+
 - Creates the `markov-text` bucket in Supabase Storage
 - Uploads txt files to the bucket for Markov text generation
 - Provides tools to manage and test the text corpus
@@ -107,6 +116,7 @@ See `MARKOV_TEXT_SETUP.md` for complete documentation.
 A script to replace existing Markov text in blog posts with newly generated content from the Supabase corpus.
 
 ### Usage
+
 ```bash
 # Preview what would be changed (recommended first step)
 node scripts/refresh-markov.js --dry-run
@@ -125,6 +135,7 @@ node scripts/refresh-markov.js --no-backup
 ```
 
 ### What it does
+
 - Finds blog posts with existing Markov text (trailing blockquotes)
 - Removes old Markov text while preserving all other content
 - Generates new text using the rich Supabase multi-file corpus
@@ -132,6 +143,7 @@ node scripts/refresh-markov.js --no-backup
 - Processes posts safely with built-in delays
 
 ### Safety Features
+
 - **Dry run mode** to preview changes
 - **Automatic backups** with timestamps
 - **Smart detection** only touches files with Markov text
@@ -143,6 +155,7 @@ node scripts/refresh-markov.js --no-backup
 A script to clean description fields from blog post frontmatter, leaving empty `description: ` fields.
 
 ### Usage
+
 ```bash
 # Preview what would be cleaned (recommended first step)
 node scripts/clean-descriptions.js --dry-run
@@ -158,12 +171,14 @@ node scripts/clean-descriptions.js --filter=25jul
 ```
 
 ### What it does
+
 - Finds all blog posts with description content in frontmatter
 - Removes any content after `description: ` while preserving the field
 - Creates timestamped backups for safety (unless `--no-backup`)
 - Only processes files that actually have description content to clean
 
 ### Safety Features
+
 - **Dry run mode** to preview changes before execution
 - **Automatic backups** with timestamps (optional)
 - **Smart detection** only touches files with actual description content
@@ -202,6 +217,7 @@ node scripts/convert-sketch.js ../p5-sketchbook/AnotherSketch/sketch.js src/comp
 ## Output
 
 The script creates a React component that:
+
 - Imports the P5Sketch wrapper
 - Defines the sketch function with proper p5 instance usage
 - Exports a React component that can be used in your Gatsby site
@@ -222,12 +238,12 @@ import P5Sketch from '../p5-sketch/p5-sketch'
 
 const MySketchSketch = (p) => {
   // Global variables converted to local scope
-  let particles = [];
-  let margin = 50;
+  let particles = []
+  let margin = 50
 
   p.setup = () => {
-    p.createCanvas(800, 600);
-    p.background(0);
+    p.createCanvas(800, 600)
+    p.background(0)
   }
 
   p.draw = () => {
@@ -237,11 +253,7 @@ const MySketchSketch = (p) => {
 
 const MySketch = ({ className = '', style = {} }) => {
   return (
-    <P5Sketch 
-      sketch={MySketchSketch}
-      className={className}
-      style={style}
-    />
+    <P5Sketch sketch={MySketchSketch} className={className} style={style} />
   )
 }
 
@@ -251,6 +263,7 @@ export default MySketch
 ## Testing
 
 After conversion, you can test your sketch by:
+
 1. Creating a test page that imports the component
 2. Running the development server with `yarn start`
 3. Visiting the test page to see the sketch in action
@@ -260,4 +273,4 @@ After conversion, you can test your sketch by:
 - The script may not handle all edge cases perfectly
 - Complex sketches with unusual structures may need manual adjustments
 - Some p5.js functions might need manual conversion
-- The script focuses on common p5.js patterns and may miss specialized usage 
+- The script focuses on common p5.js patterns and may miss specialized usage

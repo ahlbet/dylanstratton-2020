@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { Link } from 'gatsby'
 import { Play, Pause, ChevronUp, ChevronDown, Minus } from 'lucide-react'
 import TrackItem from '../track-item/TrackItem'
 import useIsMobile from '../../hooks/use-is-mobile'
@@ -258,7 +259,7 @@ const SongsTable = ({ audioUrlsWithMetadata }) => {
             <tr>
               <th className="play-header">Play</th>
               <SortableHeader columnKey="title">Title</SortableHeader>
-              <SortableHeader columnKey="postTitle">Post Title</SortableHeader>
+              <SortableHeader columnKey="postTitle">Post</SortableHeader>
               <SortableHeader columnKey="postDate">Date</SortableHeader>
               <SortableHeader columnKey="duration" className="duration-header">
                 Duration
@@ -307,7 +308,15 @@ const SongsTable = ({ audioUrlsWithMetadata }) => {
                       </div>
                     </td>
                     <td className="title-cell">{item.title}</td>
-                    <td className="post-title-cell">{item.postTitle}</td>
+                    <td className="post-title-cell">
+                      {item.postSlug ? (
+                        <Link to={item.postSlug} className="post-link">
+                          {item.postTitle}
+                        </Link>
+                      ) : (
+                        item.postTitle
+                      )}
+                    </td>
                     <td className="date-cell">{item.postDate}</td>
                     <td className="duration-cell">
                       {formatDuration(item.duration)}

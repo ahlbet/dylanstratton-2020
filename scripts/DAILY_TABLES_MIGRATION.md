@@ -7,10 +7,12 @@ This guide explains how to migrate your existing markdown blog posts to use the 
 The migration creates the following table structure:
 
 ### `daily` table
+
 - `id` (integer, primary key)
 - `title` (text) - matches your markdown file naming
 
 ### `daily_audio` table
+
 - `id` (integer, primary key)
 - `daily_id` (foreign key → daily.id)
 - `storage_path` (text) - points to your Supabase bucket key
@@ -19,6 +21,7 @@ The migration creates the following table structure:
 - `bitrate` (integer, optional) - audio bitrate
 
 ### `markov_texts` table (updated)
+
 - `id` (integer, primary key)
 - `daily_id` (foreign key → daily.id) - **NEW FIELD**
 - `text_content` (text)
@@ -29,6 +32,7 @@ The migration creates the following table structure:
 ### 1. Prerequisites
 
 Ensure you have:
+
 - Supabase project set up with the tables created
 - Environment variables configured in `.env`:
   ```
@@ -45,6 +49,7 @@ node scripts/migrate-to-daily-tables.js
 ```
 
 This script will:
+
 1. Add `daily_id` frontmatter to all existing markdown files
 2. Create corresponding entries in the `daily` table
 3. Link existing audio files to the `daily_audio` table
@@ -54,11 +59,13 @@ This script will:
 You can also run the scripts individually:
 
 #### Add daily_id to markdown files:
+
 ```bash
 node scripts/add-daily-ids-to-markdown.js
 ```
 
 #### Link audio files to daily_audio table:
+
 ```bash
 node scripts/link-audio-to-daily.js
 ```
@@ -76,21 +83,23 @@ node scripts/link-audio-to-daily.js
 ### Example Before/After:
 
 **Before:**
+
 ```yaml
 ---
 title: 25may25
 date: '2025-05-25T13:16:31.000Z'
-description: 
+description:
 cover_art: https://...
 ---
 ```
 
 **After:**
+
 ```yaml
 ---
 title: 25may25
 date: '2025-05-25T13:16:31.000Z'
-description: 
+description:
 cover_art: https://...
 daily_id: 1
 ---
@@ -110,7 +119,7 @@ After migration, new blog posts created with `node init.js <name>` will automati
 After running the migration, verify:
 
 1. **Check markdown files**: All should have `daily_id` in frontmatter
-2. **Check Supabase dashboard**: 
+2. **Check Supabase dashboard**:
    - `daily` table should have entries for each blog post
    - `daily_audio` table should have entries for each audio file
    - `markov_texts` table should have `daily_id` values populated
@@ -128,6 +137,7 @@ After running the migration, verify:
 ### Rollback:
 
 If you need to rollback:
+
 1. Remove `daily_id` from markdown frontmatter
 2. Delete entries from `daily` and `daily_audio` tables
 3. Remove `daily_id` from `markov_texts` table
@@ -139,4 +149,4 @@ This migration provides:
 - **Structured relationships** between blog posts, audio, and markov texts
 - **Better querying capabilities** for related content
 - **Consistent data model** for future features
-- **Easier content management** through database relationships 
+- **Easier content management** through database relationships

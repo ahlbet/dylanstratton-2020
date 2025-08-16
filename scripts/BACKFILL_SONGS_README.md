@@ -5,6 +5,7 @@ This script processes audio files from your downloads folder and creates blog po
 ## Setup
 
 1. **Create the downloads folder:**
+
    ```bash
    mkdir -p ~/Downloads/backfill-songs
    ```
@@ -24,16 +25,21 @@ This script processes audio files from your downloads folder and creates blog po
 ## Usage
 
 ### Test Run (Recommended First)
+
 ```bash
 node scripts/backfill-songs.js --dry-run
 ```
+
 This will show you what the script would do without making any changes.
 
 ### Process All Files
+
 ```bash
 node scripts/backfill-songs.js
 ```
+
 This will:
+
 1. Upload each audio file to Supabase storage
 2. Generate cover art using the song name as seed
 3. Upload cover art to Supabase storage
@@ -41,6 +47,7 @@ This will:
 5. Create blog post markdown files
 
 ### Help
+
 ```bash
 node scripts/backfill-songs.js --help
 ```
@@ -67,6 +74,7 @@ content/blog/
 ```
 
 Each blog post will have:
+
 - Frontmatter with title, date, description, and cover art URL
 - Audio player (using the `audio:` syntax)
 - 5 Markov-generated blockquotes
@@ -77,7 +85,7 @@ Each blog post will have:
 ---
 title: 24jul01
 date: '2025-01-27T10:30:00.000Z'
-description: 
+description:
 cover_art: https://your-supabase-url/storage/v1/object/public/cover-art/24jul01.png?v=1234567890
 ---
 
@@ -105,15 +113,19 @@ cover_art: https://your-supabase-url/storage/v1/object/public/cover-art/24jul01.
 ## Troubleshooting
 
 ### "Downloads directory not found"
+
 Make sure you've created `~/Downloads/backfill-songs/` and placed audio files there.
 
 ### "Missing Supabase credentials"
+
 Check your `.env` file has the required Supabase environment variables.
 
 ### "Upload failed"
+
 Check your internet connection and Supabase credentials. The script will continue with other files.
 
 ### "No audio files found"
+
 Make sure your audio files have supported extensions (`.wav`, `.mp3`, etc.).
 
 ## Notes
@@ -122,4 +134,4 @@ Make sure your audio files have supported extensions (`.wav`, `.mp3`, etc.).
 - Cover art is generated using a deterministic seed based on the song name
 - Markov text is generated using your existing Markov text corpus
 - All files are uploaded with cache-busting parameters
-- The script processes files sequentially to avoid overwhelming the server 
+- The script processes files sequentially to avoid overwhelming the server

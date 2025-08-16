@@ -89,7 +89,7 @@ describe('Layout component', () => {
     )
 
     const links = screen.getAllByTestId('gatsby-link')
-    const titleLink = links.find(link => link.getAttribute('href') === '/')
+    const titleLink = links.find((link) => link.getAttribute('href') === '/')
     expect(titleLink).toBeInTheDocument()
     expect(titleLink).toHaveAttribute('href', '/')
   })

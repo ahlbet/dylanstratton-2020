@@ -17,6 +17,7 @@ node scripts/add-coherency-level-column.js
 ```
 
 This will:
+
 - Add an `edited` boolean column to the `markov_texts` table
 - Add a `coherency_level` integer column (1-100) to the `markov_texts` table
 - Set appropriate default values and constraints
@@ -85,7 +86,7 @@ Press Ctrl+C at any time to exit
 
 📄 Current text:
 ────────────────────────────────────────
-The quick brown fox jumps over the lazy dog. 
+The quick brown fox jumps over the lazy dog.
 A journey of a thousand miles begins with a single step.
 ────────────────────────────────────────
 
@@ -103,7 +104,7 @@ Enter your choice (1-5): 1
 > The quick brown fox jumps over the lazy dog.
 > A journey of a thousand miles begins with a single step.
 > Every cloud has a silver lining.
-> 
+>
 
 📄 Edited text:
 ────────────────────────────────────────
@@ -147,13 +148,16 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ## Troubleshooting
 
 **"No unedited texts found"**
+
 - All texts in your database have been marked as edited
 - Run the tool again later after generating new texts
 
 **"Failed to get count"**
+
 - Check your Supabase credentials in `.env`
 - Verify the `markov_texts` table exists
 
 **"Error saving text"**
+
 - Check your internet connection
-- Verify you have write permissions to the database 
+- Verify you have write permissions to the database

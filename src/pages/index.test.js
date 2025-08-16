@@ -56,7 +56,6 @@ describe('BlogIndex', () => {
             frontmatter: {
               date: 'January 1, 2020',
               title: 'Test Post Title',
-              description: 'Test post description',
             },
           },
         },
@@ -69,7 +68,6 @@ describe('BlogIndex', () => {
             frontmatter: {
               date: 'January 2, 2020',
               title: 'Another Post Title',
-              description: '',
             },
           },
         },
@@ -109,15 +107,15 @@ describe('BlogIndex', () => {
     expect(screen.getByTestId('calendar')).toBeInTheDocument()
   })
 
-  // Note: Blog posts are currently commented out in the actual page
-  // These tests are kept for when the posts are uncommented
-  test.skip('renders correct number of blog posts', () => {
+  // Blog posts are implemented and rendered on the page
+  // These tests verify the blog post functionality
+  test('renders correct number of blog posts', () => {
     render(<BlogIndex data={mockData} location={mockLocation} />)
     const articles = screen.getAllByRole('article')
     expect(articles).toHaveLength(2)
   })
 
-  test.skip('renders post titles with correct links', () => {
+  test('renders post titles with correct links', () => {
     render(<BlogIndex data={mockData} location={mockLocation} />)
 
     const firstPostLink = screen.getByText('Test Post Title')
@@ -132,19 +130,20 @@ describe('BlogIndex', () => {
     )
   })
 
-  test.skip('displays post dates', () => {
+  test('displays post dates', () => {
     render(<BlogIndex data={mockData} location={mockLocation} />)
     expect(screen.getByText('January 1, 2020')).toBeInTheDocument()
     expect(screen.getByText('January 2, 2020')).toBeInTheDocument()
   })
 
-  test.skip('renders post description when available', () => {
+  test('renders post excerpt when available', () => {
     render(<BlogIndex data={mockData} location={mockLocation} />)
-    expect(screen.getByText('Test post description')).toBeInTheDocument()
+    expect(screen.getByText('Test excerpt')).toBeInTheDocument()
   })
 
-  test.skip('falls back to excerpt when description is not available', () => {
+  test('renders post excerpt for all posts', () => {
     render(<BlogIndex data={mockData} location={mockLocation} />)
+    expect(screen.getByText('Test excerpt')).toBeInTheDocument()
     expect(screen.getByText('Another excerpt')).toBeInTheDocument()
   })
 })
