@@ -62,6 +62,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const [currentAudioUrl, setCurrentAudioUrl] = useState('')
+  const [isMuted, setIsMuted] = useState<boolean>(false)
 
   // Generate presigned URL when current track changes
   useEffect(() => {
@@ -194,6 +195,14 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
       setIsLoading(false)
     }
   }, [volume])
+
+  // Sync muted state with audio element
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio) {
+      audio.muted = isMuted
+    }
+  }, [isMuted])
 
   // Function to check if audio is ready to play
   const isAudioReady = useCallback(() => {
@@ -406,6 +415,13 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
     }
   }
 
+  const handleMuteToggle = () => {
+    setIsMuted(!isMuted)
+    if (audioRef.current) {
+      audioRef.current.muted = !isMuted
+    }
+  }
+
   // Get current track info for display
   const currentTrackInfo = useMemo(() => {
     if (currentIndex === null || playlist.length === 0) {
@@ -445,6 +461,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
         currentTime={currentTime}
         duration={duration}
         volume={volume}
+        isMuted={isMuted}
         onPlayPause={handlePlayPause}
         onNextTrack={handleNextTrack}
         onPreviousTrack={handlePreviousTrack}
@@ -454,6 +471,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
             audioRef.current.currentTime = newTime
           }
         }}
+        onMuteToggle={handleMuteToggle}
       />
 
       {/* Playlist View Toggle */}

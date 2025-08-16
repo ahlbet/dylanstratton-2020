@@ -1,6 +1,13 @@
 import React from 'react'
 import { Button } from '../ui/button'
-import { Pause, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react'
+import {
+  Pause,
+  Play,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+} from 'lucide-react'
 import { formatDuration } from '../../utils/audio-utils'
 
 interface HomepageAudioControlsProps {
@@ -9,11 +16,13 @@ interface HomepageAudioControlsProps {
   currentTime: number
   duration: number
   volume: number
+  isMuted: boolean
   onPlayPause: () => void
   onNextTrack: () => void
   onPreviousTrack: () => void
   onVolumeChange: (volume: number) => void
   onTimeChange: (time: number) => void
+  onMuteToggle: () => void
 }
 
 export const HomepageAudioControls: React.FC<HomepageAudioControlsProps> = ({
@@ -22,11 +31,13 @@ export const HomepageAudioControls: React.FC<HomepageAudioControlsProps> = ({
   currentTime,
   duration,
   volume,
+  isMuted,
   onPlayPause,
   onNextTrack,
   onPreviousTrack,
   onVolumeChange,
   onTimeChange,
+  onMuteToggle,
 }) => {
   return (
     <div className="p-6 border-b border-gray-800">
@@ -95,7 +106,17 @@ export const HomepageAudioControls: React.FC<HomepageAudioControlsProps> = ({
 
       {/* Volume Control */}
       <div className="flex items-center space-x-2 mt-4">
-        <Volume2 className="h-4 w-4 text-gray-400" />
+        <button
+          onClick={onMuteToggle}
+          className="text-gray-400 hover:text-gray-300 transition-colors duration-150 p-1 rounded"
+          aria-label={isMuted ? 'Unmute' : 'Mute'}
+        >
+          {isMuted ? (
+            <VolumeX className="h-4 w-4" />
+          ) : (
+            <Volume2 className="h-4 w-4" />
+          )}
+        </button>
         <div className="flex-1 relative">
           {/* Background track showing current volume level */}
           <div className="absolute inset-0 bg-gray-800 rounded-full h-1"></div>
