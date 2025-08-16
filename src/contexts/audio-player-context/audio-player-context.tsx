@@ -64,7 +64,7 @@ export const AudioPlayerProvider: React.FC<AudioPlayerProviderProps> = ({
   const [shuffledPlaylist, setShuffledPlaylist] = useState<AudioTrack[]>([])
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  // Load volume, shuffle, and loop from localStorage on mount
+  // Load volume, shuffle, loop, and autopilot from localStorage on mount
   useEffect(() => {
     const savedVolume = localStorage.getItem('audioPlayerVolume')
     if (savedVolume !== null) {
@@ -86,14 +86,7 @@ export const AudioPlayerProvider: React.FC<AudioPlayerProviderProps> = ({
 
     const savedAutopilot = localStorage.getItem('audioPlayerAutopilot')
     if (savedAutopilot !== null) {
-      // Don't load autopilot state if we're on the /all page
-      if (
-        typeof window !== 'undefined' &&
-        window.location.pathname !== '/all' &&
-        window.location.pathname !== '/all/'
-      ) {
-        setIsAutopilotOn(savedAutopilot === 'true')
-      }
+      setIsAutopilotOn(savedAutopilot === 'true')
     }
   }, [])
 
@@ -188,12 +181,6 @@ export const AudioPlayerProvider: React.FC<AudioPlayerProviderProps> = ({
   // Function to check if autopilot navigation is needed
   const shouldNavigateToRandomPost = (): boolean => {
     if (!isAutopilotOn) return false
-
-    // Check if we're on home or /all page
-    if (typeof window !== 'undefined') {
-      const pathname = window.location.pathname
-      return pathname === '/' || pathname === '/all' || pathname === '/all/'
-    }
 
     return false
   }
