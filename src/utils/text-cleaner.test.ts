@@ -108,10 +108,40 @@ describe('text-cleaner', () => {
       expect(result).toBe('Content here')
     })
 
-    test('should remove by statements', () => {
-      const text = 'by someone\nContent here'
+    test('should remove by statements with capital letter (Project Gutenberg format)', () => {
+      const text = 'by Someone\nContent here'
       const result = cleanText(text)
       expect(result).toBe('Content here')
+    })
+
+    test('should remove Project Gutenberg author lines starting with by', () => {
+      const text = 'by William Shakespeare\nContent here'
+      const result = cleanText(text)
+      expect(result).toBe('Content here')
+    })
+
+    test('should remove Project Gutenberg author lines with full names', () => {
+      const text = 'by Charles Dickens\nContent here'
+      const result = cleanText(text)
+      expect(result).toBe('Content here')
+    })
+
+    test('should NOT remove content that contains by in the middle', () => {
+      const text = 'This book was written by someone famous\nContent here'
+      const result = cleanText(text)
+      expect(result).toBe('This book was written by someone famous\nContent here')
+    })
+
+    test('should NOT remove by statements with lowercase first letter', () => {
+      const text = 'by someone with lowercase\nContent here'
+      const result = cleanText(text)
+      expect(result).toBe('by someone with lowercase\nContent here')
+    })
+
+    test('should remove by statements only when they start a line with capital letter', () => {
+      const text = 'Some text\nby Mark Twain\nMore content'
+      const result = cleanText(text)
+      expect(result).toBe('Some text\nMore content')
     })
 
     test('should remove transcriber notes', () => {
