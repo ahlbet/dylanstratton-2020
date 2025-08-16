@@ -125,7 +125,7 @@ describe('useIsMobile', () => {
   it('handles server-side rendering gracefully', () => {
     // Mock server-side environment where navigator is undefined
     const originalNavigator = global.navigator
-    delete global.navigator
+    delete (global as any).navigator
 
     const { result } = renderHook(() => useIsMobile())
 

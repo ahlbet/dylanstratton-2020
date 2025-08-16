@@ -3,8 +3,8 @@ import typography, { rhythm, scale } from './typography'
 // Mock the typography module
 jest.mock('typography', () => {
   return jest.fn().mockImplementation(() => ({
-    rhythm: jest.fn((value) => `${value * 16}px`),
-    scale: jest.fn((value) => `${(value * 1.2).toFixed(1)}em`),
+    rhythm: jest.fn((value: number) => `${value * 16}px`),
+    scale: jest.fn((value: number) => `${(value * 1.2).toFixed(1)}em`),
     injectStyles: jest.fn(),
   }))
 })
@@ -32,8 +32,8 @@ jest.mock('typography-theme-wordpress-2016', () => ({
 }))
 
 describe('typography', () => {
-  let mockTypography
-  let originalNodeEnv
+  let mockTypography: any
+  let originalNodeEnv: string | undefined
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -239,19 +239,19 @@ describe('typography', () => {
 
   describe('edge cases', () => {
     test('should handle undefined rhythm values', () => {
-      expect(() => rhythm(undefined)).not.toThrow()
+      expect(() => rhythm(undefined as any)).not.toThrow()
     })
 
     test('should handle undefined scale values', () => {
-      expect(() => scale(undefined)).not.toThrow()
+      expect(() => scale(undefined as any)).not.toThrow()
     })
 
     test('should handle null rhythm values', () => {
-      expect(() => rhythm(null)).not.toThrow()
+      expect(() => rhythm(null as any)).not.toThrow()
     })
 
     test('should handle null scale values', () => {
-      expect(() => scale(null)).not.toThrow()
+      expect(() => scale(null as any)).not.toThrow()
     })
   })
 })

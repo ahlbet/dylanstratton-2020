@@ -168,8 +168,8 @@ describe('usePresignedUrl', () => {
   })
 
   test('sets isGenerating state during URL generation', async () => {
-    let resolvePromise
-    const promise = new Promise((resolve) => {
+    let resolvePromise: (value: string) => void
+    const promise = new Promise<string>((resolve) => {
       resolvePromise = resolve
     })
     mockGeneratePresignedUrlOnDemand.mockReturnValue(promise)

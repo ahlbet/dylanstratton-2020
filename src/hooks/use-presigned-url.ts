@@ -2,23 +2,39 @@ import { useState, useCallback, useRef } from 'react'
 import { generatePresignedUrlOnDemand } from '../utils/presigned-urls'
 import { isLocalDev } from '../utils/local-dev-utils'
 
+interface Track {
+  url?: string
+  storagePath?: string
+}
+
+interface CachedUrl {
+  url: string
+  expiresAt: number
+}
+
+interface UsePresignedUrlReturn {
+  getAudioUrl: (track: Track) => Promise<string | null>
+  isGenerating: boolean
+  clearCache: () => void
+}
+
 /**
  * Custom hook for on-demand presigned URL generation
  * Only generates presigned URLs when tracks are actually played
  */
-export const usePresignedUrl = () => {
-  const [urlCache, setUrlCache] = useState(new Map())
-  const [isGenerating, setIsGenerating] = useState(false)
-  const urlCacheRef = useRef(urlCache)
+export const usePresignedUrl = (): UsePresignedUrlReturn => {
+  const [urlCache, setUrlCache] = useState<Map<string, CachedUrl>>(new Map())
+  const [isGenerating, setIsGenerating] = useState<boolean>(false)
+  const urlCacheRef = useRef<Map<string, CachedUrl>>(urlCache)
 
   // Keep ref in sync with state
   urlCacheRef.current = urlCache
 
   const getAudioUrl = useCallback(
-    async (track) => {
+    async (track: Track): Promise<string | null> => {
       // In development, always use the URL as-is
       if (isLocalDev()) {
-        return track.url
+        return track.url || null
       }
 
       // If track already has a presigned URL, use it
@@ -37,7 +53,7 @@ export const usePresignedUrl = () => {
         // Check if we have a cached presigned URL
         if (urlCacheRef.current.has(cacheKey)) {
           const cached = urlCacheRef.current.get(cacheKey)
-          if (cached.expiresAt > Date.now()) {
+          if (cached && cached.expiresAt > Date.now()) {
             return cached.url
           }
         }

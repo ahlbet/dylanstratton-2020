@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react'
  * Hook to detect if the user is on a mobile device
  * @returns {boolean} True if the user is on a mobile device
  */
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false)
+const useIsMobile = (): boolean => {
+  const [isMobile, setIsMobile] = useState<boolean>(false)
 
   useEffect(() => {
     // Check if we're in a browser environment
     if (typeof navigator !== 'undefined') {
-      const checkIsMobile = () => {
+      const checkIsMobile = (): void => {
         const mobileRegex = /iPhone|iPad|iPod|Android/i
         setIsMobile(mobileRegex.test(navigator.userAgent))
       }
