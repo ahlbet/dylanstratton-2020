@@ -171,8 +171,9 @@ const BlogIndex = ({
 
   // Utility function to format duration
   const formatDuration = (seconds: number): string => {
+    if (!seconds || isNaN(seconds)) return '0:00'
     const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
+    const secs = Math.floor(seconds % 60)
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
@@ -196,10 +197,12 @@ const BlogIndex = ({
     if (process.env.NODE_ENV === 'test') {
       return false
     }
-    
-    return process.env.NODE_ENV === 'development' && 
-           typeof window !== 'undefined' && 
-           window.location.hostname === 'localhost'
+
+    return (
+      process.env.NODE_ENV === 'development' &&
+      typeof window !== 'undefined' &&
+      window.location.hostname === 'localhost'
+    )
   }
 
   // Utility function to extract filename from storage path
@@ -391,20 +394,24 @@ const BlogIndex = ({
     if (playlistIndex !== -1) {
       // Get the presigned URL for the track
       const trackToGetUrlFor = playlist[playlistIndex]
-      
+
       try {
         // Check if we should use local audio files for development
         const isLocalDevMode = isLocalDev()
-        
+
         let audioUrl: string | null = null
-        
+
         if (isLocalDevMode) {
           // Use local audio files for development
-          const filename = extractFilenameFromStoragePath(trackToGetUrlFor.storagePath)
+          const filename = extractFilenameFromStoragePath(
+            trackToGetUrlFor.storagePath
+          )
           audioUrl = `/local-audio/${filename}.wav`
         } else {
           // Production mode: generate presigned URL on-demand
-          audioUrl = await getAudioUrl({ storagePath: trackToGetUrlFor.storagePath })
+          audioUrl = await getAudioUrl({
+            storagePath: trackToGetUrlFor.storagePath,
+          })
         }
 
         console.log('audioUrl', audioUrl)
@@ -448,16 +455,20 @@ const BlogIndex = ({
         try {
           // Check if we should use local audio files for development
           const isLocalDevMode = isLocalDev()
-          
+
           let audioUrl: string | null = null
-          
+
           if (isLocalDevMode) {
             // Use local audio files for development
-            const filename = extractFilenameFromStoragePath(firstTrack.storagePath)
+            const filename = extractFilenameFromStoragePath(
+              firstTrack.storagePath
+            )
             audioUrl = `/local-audio/${filename}.wav`
           } else {
             // Production mode: generate presigned URL on-demand
-            audioUrl = await getAudioUrl({ storagePath: firstTrack.storagePath })
+            audioUrl = await getAudioUrl({
+              storagePath: firstTrack.storagePath,
+            })
           }
 
           if (audioUrl) {
@@ -469,13 +480,13 @@ const BlogIndex = ({
             }
 
             setPlaylist(updatedPlaylist)
-            
+
             // Set the audio source and play
             if (audioRef.current) {
               audioRef.current.src = audioUrl
               audioRef.current.play()
             }
-            
+
             // Now call playTrack to update the player state
             playTrack(0, updatedPlaylist)
           } else {
@@ -516,9 +527,9 @@ const BlogIndex = ({
       try {
         // Check if we should use local audio files for development
         const isLocalDevMode = isLocalDev()
-        
+
         let audioUrl: string | null = null
-        
+
         if (isLocalDevMode) {
           // Use local audio files for development
           const filename = extractFilenameFromStoragePath(nextTrack.storagePath)
@@ -563,9 +574,9 @@ const BlogIndex = ({
       try {
         // Check if we should use local audio files for development
         const isLocalDevMode = isLocalDev()
-        
+
         let audioUrl: string | null = null
-        
+
         if (isLocalDevMode) {
           // Use local audio files for development
           const filename = extractFilenameFromStoragePath(prevTrack.storagePath)
