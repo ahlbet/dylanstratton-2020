@@ -622,6 +622,7 @@ const main = async () => {
   fs.mkdirSync(destDir, { recursive: true })
 
   let movedFiles = [] // Track which files were moved
+  let localPlaybackFiles = [] // Track local paths for audio playback
 
   // Check if subfolder exists and contains WAV files
   if (
@@ -667,7 +668,11 @@ const main = async () => {
             url: supabaseUrl,
             duration: duration,
             storagePath: `audio/${uniqueFileName}`,
-            localPath: sourcePath, // Store original local path for audio playback
+          })
+          // Store local path for playback in a separate array
+          localPlaybackFiles.push({
+            fileName: uniqueFileName,
+            localPath: sourcePath,
           })
           console.log(
             `Uploaded file '${wavFile}' to Supabase as '${uniqueFileName}'.`
@@ -710,7 +715,11 @@ const main = async () => {
         url: supabaseUrl,
         duration: duration,
         storagePath: `audio/${sanitizedName}.wav`,
-        localPath: singleFilePath, // Store original local path for audio playback
+      })
+      // Store local path for playback in a separate array
+      localPlaybackFiles.push({
+        fileName: `${sanitizedName}.wav`,
+        localPath: singleFilePath,
       })
       console.log(
         `Uploaded file '${name}.wav' to Supabase as '${sanitizedName}.wav'.`
@@ -950,12 +959,18 @@ const main = async () => {
         for (let i = 0; i < movedFiles.length; i++) {
           const file = movedFiles[i]
           try {
+            // Find corresponding local path for audio playback
+            const localPlaybackFile = localPlaybackFiles.find(
+              (localFile) => localFile.fileName === file.fileName
+            )
+            const localPath = localPlaybackFile ? localPlaybackFile.localPath : null
+            
             // Get coherency level for this audio track
             const audioCoherencyLevel = await getAudioCoherencyLevel(
               askQuestion,
               i + 1,
               movedFiles.length,
-              file.localPath, // Use the stored local path for audio playback
+              localPath, // Use the local path for audio playback
               audioPlayer
             )
 
