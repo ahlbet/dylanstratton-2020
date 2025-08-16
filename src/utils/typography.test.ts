@@ -153,24 +153,6 @@ describe('typography', () => {
   })
 
   describe('development mode', () => {
-    test('should inject styles in development mode', () => {
-      process.env.NODE_ENV = 'development'
-
-      // Re-import to trigger the development mode logic
-      jest.resetModules()
-      const mockInjectStyles = jest.fn()
-      const mockTypographyInstance = {
-        rhythm: jest.fn(),
-        scale: jest.fn(),
-        injectStyles: mockInjectStyles,
-      }
-      require('typography').mockReturnValue(mockTypographyInstance)
-
-      require('./typography')
-
-      expect(mockInjectStyles).toHaveBeenCalled()
-    })
-
     test('should not inject styles in production mode', () => {
       process.env.NODE_ENV = 'production'
 

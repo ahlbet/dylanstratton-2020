@@ -232,7 +232,7 @@ const BlogIndex = ({
   return (
     <Layout location={location} title={siteTitle}>
       <SEO title="All posts" />
-      <div className="flex flex-col lg:flex-row min-h-screen">
+      <div className="flex flex-col lg:flex-row min-h-screen bg-black">
         {/* Left Sidebar - Audio Player */}
         <div className="lg:w-1/3 border-r border-gray-800 flex flex-col">
           {/* Current Track Info */}
@@ -450,12 +450,9 @@ const BlogIndex = ({
                       className="bg-black border-gray-800 hover:border-gray-700 transition-colors"
                     >
                       <div className="p-6">
-                        <div className="flex items-baseline space-x-4 mb-3">
-                          <h3 className="text-red-400 font-medium">
-                            <Link
-                              to={post.id}
-                              className="hover:text-red-300 transition-colors"
-                            >
+                        <div className="flex items-baseline space-x-4 mb-3 group">
+                          <h3 className="text-red-400 font-medium group-hover:text-red-300 transition-colors duration-200">
+                            <Link to={post.id} className="">
                               {post.title}
                             </Link>
                           </h3>

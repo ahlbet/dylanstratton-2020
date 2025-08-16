@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
     './src/**/*.{js,jsx,ts,tsx}',
     './src/pages/**/*.{js,jsx,ts,tsx}',
@@ -71,57 +71,7 @@ module.exports = {
           'monospace',
         ],
       },
-      typography: {
-        DEFAULT: {
-          css: {
-            maxWidth: '65ch',
-            color: 'inherit',
-            a: {
-              color: '#3182ce',
-              '&:hover': {
-                color: '#2c5aa0',
-              },
-            },
-            h1: {
-              color: 'inherit',
-            },
-            h2: {
-              color: 'inherit',
-            },
-            h3: {
-              color: 'inherit',
-            },
-            h4: {
-              color: 'inherit',
-            },
-            code: {
-              color: 'inherit',
-            },
-            'pre code': {
-              backgroundColor: 'transparent',
-              borderRadius: 0,
-              padding: 0,
-            },
-            hr: {
-              borderColor: '#e2e8f0',
-            },
-            blockquote: {
-              borderLeftColor: '#e2e8f0',
-              color: 'inherit',
-            },
-            strong: {
-              color: 'inherit',
-            },
-            'thead th': {
-              color: 'inherit',
-            },
-            'tbody tr': {
-              borderBottomColor: '#e2e8f0',
-            },
-          },
-        },
-      },
     },
   },
-  plugins: [require('@tailwindcss/typography')],
+  plugins: [],
 }
