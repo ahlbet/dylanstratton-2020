@@ -28,11 +28,5 @@
     "gatsby-ssr.js"
   ],
   "typeRoots": ["./node_modules/@types", "./src/types"],
-  "exclude": [
-    "node_modules",
-    "public",
-    ".cache",
-    "dist",
-    "build"
-  ]
+  "exclude": ["node_modules", "public", ".cache", "dist", "build"]
 }
