@@ -972,13 +972,16 @@ const main = async () => {
           )
         }
 
+        // Precompute a Map for O(1) lookup of localPlaybackFiles by fileName
+        const localPlaybackFileMap = new Map(
+          localPlaybackFiles.map(localFile => [localFile.fileName, localFile])
+        )
+
         for (let i = 0; i < movedFiles.length; i++) {
           const file = movedFiles[i]
           try {
             // Find corresponding local path for audio playback
-            const localPlaybackFile = localPlaybackFiles.find(
-              (localFile) => localFile.fileName === file.fileName
-            )
+            const localPlaybackFile = localPlaybackFileMap.get(file.fileName)
             const localPath = localPlaybackFile ? localPlaybackFile.localPath : null
             
             // Get coherency level for this audio track

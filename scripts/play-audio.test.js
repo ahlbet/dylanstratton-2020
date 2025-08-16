@@ -2,7 +2,8 @@
  * Tests for the play-audio.js script
  */
 
-const { checkAudioTools, getAudioPlayer, showHelp } = require('./play-audio')
+const { playAudio, downloadAudio, showHelp } = require('./play-audio')
+const { checkAudioTools, getAudioPlayer } = require('../src/utils/audio-tools')
 
 // Mock execSync for testing
 jest.mock('child_process', () => ({
