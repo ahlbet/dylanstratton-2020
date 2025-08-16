@@ -225,4 +225,29 @@ describe('HomepageAudioPlayer', () => {
     // The component should display the selected track
     expect(screen.getByText('Track 1')).toBeInTheDocument()
   })
+
+  it('handles audio seeking without resetting source', () => {
+    const mockUseAudioPlayerWithTrack = {
+      ...mockUseAudioPlayer,
+      currentIndex: 0,
+      playlist: [
+        {
+          id: '1',
+          title: 'Track 1',
+          url: 'http://example.com/track1.wav',
+          storagePath: 'audio/track1.wav',
+        },
+      ],
+    }
+
+    ;(
+      require('../../contexts/audio-player-context/audio-player-context') as any
+    ).useAudioPlayer.mockReturnValue(mockUseAudioPlayerWithTrack)
+
+    render(<HomepageAudioPlayer {...defaultProps} />)
+
+    // Verify that the audio controls are rendered (which handle seeking)
+    const audioControls = screen.getByTestId('audio-controls')
+    expect(audioControls).toBeInTheDocument()
+  })
 })

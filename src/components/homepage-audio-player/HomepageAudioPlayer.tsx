@@ -94,6 +94,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const currentAudioSourceRef = useRef<string | null>(null)
 
   // Effect to handle audio source changes when currentIndex changes
   useEffect(() => {
@@ -101,8 +102,16 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
       const currentTrack = playlist[currentIndex]
 
       // Only update if the track has a URL and it's different from current source
-      if (currentTrack.url && audioRef.current.src !== currentTrack.url) {
+      // AND we don't have a valid source already loaded
+      if (
+        currentTrack.url &&
+        currentTrack.url !== currentAudioSourceRef.current &&
+        (!audioRef.current.src || audioRef.current.readyState === 0)
+      ) {
+        // Store the new source
+        currentAudioSourceRef.current = currentTrack.url
         audioRef.current.src = currentTrack.url
+
         // If we're currently playing, start the new track
         if (isPlaying) {
           audioRef.current.play().catch(() => {
@@ -140,7 +149,11 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
 
           if (audioUrl) {
             if (audioRef.current) {
-              audioRef.current.src = audioUrl
+              // Only update source if it's actually different
+              if (audioUrl !== currentAudioSourceRef.current) {
+                currentAudioSourceRef.current = audioUrl
+                audioRef.current.src = audioUrl
+              }
               audioRef.current.play()
               setIsPlaying(true)
               setError(null) // Clear any previous errors
@@ -163,8 +176,9 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
         // Ensure the audio source is correct before playing
         const currentTrack = playlist[currentIndex]
         if (currentTrack && currentTrack.url && audioRef.current) {
-          // Check if the audio source matches the current track
-          if (audioRef.current.src !== currentTrack.url) {
+          // Only update source if it's actually different
+          if (currentTrack.url !== currentAudioSourceRef.current) {
+            currentAudioSourceRef.current = currentTrack.url
             audioRef.current.src = currentTrack.url
           }
           audioRef.current.play().catch(() => {
@@ -201,7 +215,11 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
 
         if (audioUrl) {
           if (audioRef.current) {
-            audioRef.current.src = audioUrl
+            // Only update source if it's actually different
+            if (audioUrl !== currentAudioSourceRef.current) {
+              currentAudioSourceRef.current = audioUrl
+              audioRef.current.src = audioUrl
+            }
             audioRef.current.play()
             setIsPlaying(true)
             setError(null) // Clear any previous errors
@@ -241,7 +259,11 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
 
         if (audioUrl) {
           if (audioRef.current) {
-            audioRef.current.src = audioUrl
+            // Only update source if it's actually different
+            if (audioUrl !== currentAudioSourceRef.current) {
+              currentAudioSourceRef.current = audioUrl
+              audioRef.current.src = audioUrl
+            }
             audioRef.current.play()
             setIsPlaying(true)
             setError(null) // Clear any previous errors
@@ -298,7 +320,19 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
         onVolumeChange={updateVolume}
         onTimeChange={(newTime) => {
           if (audioRef.current) {
+            // Store current playback state
+            const wasPlaying = !audioRef.current.paused
+            const currentSrc = audioRef.current.src
+
+            // Update the time
             audioRef.current.currentTime = newTime
+
+            // If audio was playing and we changed the source, restore playback
+            if (wasPlaying && audioRef.current.src === currentSrc) {
+              audioRef.current.play().catch(() => {
+                setError('Failed to resume playback after seeking')
+              })
+            }
           }
         }}
       />
