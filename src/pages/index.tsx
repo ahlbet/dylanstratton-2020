@@ -408,19 +408,20 @@ const BlogIndex = ({
     <Layout location={location} title={siteTitle}>
       <SEO title="All posts" />
       <div className="flex flex-col lg:flex-row min-h-screen bg-black">
-        {/* Left Sidebar - Audio Player */}
-        <HomepageAudioPlayer
-          currentBlogPostTracks={currentBlogPostTracks}
-          currentBlogPost={currentBlogPost}
-          posts={posts}
-          supabaseLoading={supabaseLoading}
-          supabaseError={supabaseError}
-          onTrackSelect={handleTrackSelect}
-        />
+        <div className="lg:w-1/3 border-r border-gray-800 flex flex-col">
+          {/* Left Sidebar - Audio Player */}
+          <HomepageAudioPlayer
+            currentBlogPostTracks={currentBlogPostTracks}
+            currentBlogPost={currentBlogPost}
+            posts={posts}
+            supabaseLoading={supabaseLoading}
+            supabaseError={supabaseError}
+            onTrackSelect={handleTrackSelect}
+          />
 
-        {/* Generated Text Section */}
-        <HomepageGeneratedText processedTexts={processedTexts} />
-
+          {/* Generated Text Section */}
+          <HomepageGeneratedText processedTexts={processedTexts} />
+        </div>
         {/* Main Content Area */}
         <HomepageMainContent
           bottomView={bottomView}

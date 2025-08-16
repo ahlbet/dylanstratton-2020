@@ -238,7 +238,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   }, [currentIndex, playlist])
 
   return (
-    <div className="lg:w-1/3 border-r border-gray-800 flex flex-col">
+    <div className="border-r border-gray-800 flex flex-col">
       {/* Current Track Info */}
       <HomepageCurrentTrackInfo
         currentTrackInfo={currentTrackInfo}
