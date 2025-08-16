@@ -32,7 +32,7 @@ function cleanText(text: string | null | undefined): string | null | undefined {
     .replace(/Creating the works from.*?$/gim, '')
     .replace(/The Foundation's EBook.*?$/gim, '')
     .replace(/EBook of .*?$/gim, '')
-    .replace(/^by [A-Z][^\n]*$/gim, '')
+    .replace(/^by [A-Z][^\n]*$/gm, '')
     .replace(/Transcriber's Note:.*?$/gim, '')
     .replace(/Produced by .*?$/gim, '')
     // Remove common metadata patterns
