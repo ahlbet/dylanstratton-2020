@@ -2,13 +2,29 @@
  * Shared utility functions for coherency level handling
  */
 
+interface Text {
+  coherency_level?: number
+  [key: string]: any
+}
+
+interface AskQuestionFunction {
+  (prompt: string): Promise<string>
+}
+
+interface SaveCoherencyLevelFunction {
+  (text: Text, level: number): Promise<any>
+}
+
 /**
  * Helper function to get coherency level from user
  * @param {Function} askQuestion - Function to prompt user for input
  * @param {number} textNumber - The text number being edited
  * @returns {Promise<number>} The coherency level (1-100)
  */
-const getCoherencyLevel = async (askQuestion, textNumber) => {
+export const getCoherencyLevel = async (
+  askQuestion: AskQuestionFunction,
+  textNumber: number
+): Promise<number> => {
   console.log(`\n📊 Coherency Level for Text #${textNumber}`)
   console.log('1 = Least coherent (random/jumbled)')
   console.log('100 = Fully coherent (clear, logical flow)')
@@ -40,7 +56,11 @@ const getCoherencyLevel = async (askQuestion, textNumber) => {
  * @param {Function} saveCoherencyLevel - Function to save the coherency level
  * @returns {Promise<Object|null>} Result object or null if cancelled
  */
-const editCoherencyLevel = async (question, text, saveCoherencyLevel) => {
+export const editCoherencyLevel = async (
+  question: AskQuestionFunction,
+  text: Text,
+  saveCoherencyLevel: SaveCoherencyLevelFunction
+): Promise<any | null> => {
   console.log('\n📊 Coherency Level Editor')
   console.log('1 = Least coherent (random/jumbled)')
   console.log('100 = Fully coherent (clear, logical flow)')
@@ -73,9 +93,4 @@ const editCoherencyLevel = async (question, text, saveCoherencyLevel) => {
       return null
     }
   }
-}
-
-module.exports = {
-  getCoherencyLevel,
-  editCoherencyLevel,
 }

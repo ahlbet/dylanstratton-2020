@@ -1,8 +1,16 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, RefObject } from 'react'
 
-export const useScrollToTrack = (currentIndex, isShuffleOn) => {
-  const trackListRef = useRef(null)
-  const trackItemRefs = useRef({})
+interface UseScrollToTrackReturn {
+  trackListRef: RefObject<HTMLDivElement>
+  setTrackItemRef: (index: number, element: HTMLDivElement | null) => void
+}
+
+export const useScrollToTrack = (
+  currentIndex: number | null,
+  isShuffleOn: boolean
+): UseScrollToTrackReturn => {
+  const trackListRef = useRef<HTMLDivElement>(null)
+  const trackItemRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
 
   // Scroll current track into view when shuffle is on
   useEffect(() => {
@@ -33,7 +41,7 @@ export const useScrollToTrack = (currentIndex, isShuffleOn) => {
   }, [currentIndex, isShuffleOn])
 
   // Function to set track item ref
-  const setTrackItemRef = (index, element) => {
+  const setTrackItemRef = (index: number, element: HTMLDivElement | null): void => {
     trackItemRefs.current[index] = element
   }
 

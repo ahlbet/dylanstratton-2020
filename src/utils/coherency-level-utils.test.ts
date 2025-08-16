@@ -1,13 +1,13 @@
-const {
+import {
   getCoherencyLevel,
   editCoherencyLevel,
-} = require('./coherency-level-utils')
+} from './coherency-level-utils'
 
 describe('coherency-level-utils', () => {
-  let mockAskQuestion
-  let mockQuestion
-  let mockSaveCoherencyLevel
-  let mockConsoleLog
+  let mockAskQuestion: jest.Mock<Promise<string>, [string]>
+  let mockQuestion: jest.Mock<Promise<string>, [string]>
+  let mockSaveCoherencyLevel: jest.Mock<Promise<any>, [any, number]>
+  let mockConsoleLog: jest.SpyInstance
 
   beforeEach(() => {
     mockAskQuestion = jest.fn()

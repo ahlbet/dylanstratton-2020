@@ -8,8 +8,13 @@ const mockGetBoundingClientRect = jest.fn()
 const mockScrollIntoView = jest.fn()
 
 describe('useScrollToTrack', () => {
-  let mockTrackElement
-  let mockTrackList
+  let mockTrackElement: {
+    getBoundingClientRect: jest.Mock
+    scrollIntoView: jest.Mock
+  }
+  let mockTrackList: {
+    getBoundingClientRect: jest.Mock
+  }
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -36,8 +41,8 @@ describe('useScrollToTrack', () => {
     const { result } = renderHook(() => useScrollToTrack(0, false))
 
     // Set up refs
-    result.current.trackListRef.current = mockTrackList
-    result.current.setTrackItemRef(0, mockTrackElement)
+    result.current.trackListRef.current = mockTrackList as any
+    result.current.setTrackItemRef(0, mockTrackElement as any)
 
     // Trigger effect by changing currentIndex
     renderHook(() => useScrollToTrack(1, false))
@@ -49,8 +54,8 @@ describe('useScrollToTrack', () => {
     const { result } = renderHook(() => useScrollToTrack(null, true))
 
     // Set up refs
-    result.current.trackListRef.current = mockTrackList
-    result.current.setTrackItemRef(0, mockTrackElement)
+    result.current.trackListRef.current = mockTrackList as any
+    result.current.setTrackItemRef(0, mockTrackElement as any)
 
     // Trigger effect by changing currentIndex
     renderHook(() => useScrollToTrack(0, true))
@@ -67,8 +72,8 @@ describe('useScrollToTrack', () => {
     const { result } = renderHook(() => useScrollToTrack(0, true))
 
     // Set up refs
-    result.current.trackListRef.current = mockTrackList
-    result.current.setTrackItemRef(0, mockTrackElement)
+    result.current.trackListRef.current = mockTrackList as any
+    result.current.setTrackItemRef(0, mockTrackElement as any)
 
     // The hook should scroll when isShuffleOn is true and track is not visible
     // Note: This test verifies the hook's internal logic, but we can't directly test
@@ -86,8 +91,8 @@ describe('useScrollToTrack', () => {
     const { result } = renderHook(() => useScrollToTrack(0, true))
 
     // Set up refs
-    result.current.trackListRef.current = mockTrackList
-    result.current.setTrackItemRef(0, mockTrackElement)
+    result.current.trackListRef.current = mockTrackList as any
+    result.current.setTrackItemRef(0, mockTrackElement as any)
 
     // Trigger effect by changing currentIndex
     renderHook(() => useScrollToTrack(1, true))
@@ -99,7 +104,7 @@ describe('useScrollToTrack', () => {
     const { result } = renderHook(() => useScrollToTrack(0, true))
 
     // Set up only trackList ref, but not track element ref
-    result.current.trackListRef.current = mockTrackList
+    result.current.trackListRef.current = mockTrackList as any
 
     // Should not throw error
     expect(() => {
@@ -113,7 +118,7 @@ describe('useScrollToTrack', () => {
     const { result } = renderHook(() => useScrollToTrack(0, true))
 
     // Set up only track element ref, but not track list ref
-    result.current.setTrackItemRef(0, mockTrackElement)
+    result.current.setTrackItemRef(0, mockTrackElement as any)
 
     // Should not throw error
     expect(() => {
@@ -162,7 +167,7 @@ describe('useScrollToTrack', () => {
     const { result } = renderHook(() => useScrollToTrack(0, true))
 
     const mockRef = { current: mockTrackElement }
-    result.current.setTrackItemRef(0, mockRef)
+    result.current.setTrackItemRef(0, mockRef as any)
 
     // The ref should be set (we can't directly test the internal ref, but we can verify the function exists)
     expect(typeof result.current.setTrackItemRef).toBe('function')
@@ -177,7 +182,7 @@ describe('useScrollToTrack', () => {
     expect(typeof result.current.setTrackItemRef).toBe('function')
 
     // Should not expose internal functions
-    expect(result.current.scrollToTrack).toBeUndefined()
-    expect(result.current.setTrackListRef).toBeUndefined()
+    expect((result.current as any).scrollToTrack).toBeUndefined()
+    expect((result.current as any).setTrackListRef).toBeUndefined()
   })
 })

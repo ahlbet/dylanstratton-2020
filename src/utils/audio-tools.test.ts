@@ -1,4 +1,4 @@
-const { execSync } = require('child_process')
+import { execSync } from 'child_process'
 
 // Mock the child_process module
 jest.mock('child_process', () => ({
@@ -6,12 +6,12 @@ jest.mock('child_process', () => ({
 }))
 
 // Import the functions after mocking
-const {
+import {
   checkAudioTools,
   getAudioPlayer,
   getAvailableToolsList,
   isToolAvailable,
-} = require('./audio-tools')
+} from './audio-tools'
 
 describe('audio-tools', () => {
   beforeEach(() => {
@@ -22,7 +22,7 @@ describe('audio-tools', () => {
   describe('checkAudioTools', () => {
     test('should return empty array when no tools are available', () => {
       // Mock execSync to throw error for all tools (simulating none available)
-      execSync.mockImplementation(() => {
+      (execSync as jest.Mock).mockImplementation(() => {
         throw new Error('Command not found')
       })
 
@@ -33,7 +33,7 @@ describe('audio-tools', () => {
 
     test('should return available tools when some are found', () => {
       // Mock execSync to succeed for some tools and fail for others
-      execSync.mockImplementation((command) => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
         if (command.includes('afplay') || command.includes('mpv')) {
           return Buffer.from('/usr/bin/afplay') // Success
         }
@@ -50,7 +50,7 @@ describe('audio-tools', () => {
 
     test('should return all tools when all are available', () => {
       // Mock execSync to succeed for all tools
-      execSync.mockImplementation(() => Buffer.from('/usr/bin/tool'))
+      (execSync as jest.Mock).mockImplementation(() => Buffer.from('/usr/bin/tool'))
 
       const result = checkAudioTools()
       expect(result).toEqual([
@@ -65,7 +65,7 @@ describe('audio-tools', () => {
 
     test('should handle execSync errors gracefully', () => {
       // Mock execSync to throw different types of errors
-      execSync.mockImplementation((command) => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
         if (command.includes('afplay')) {
           throw new Error('Permission denied')
         } else if (command.includes('mpv')) {
@@ -85,7 +85,7 @@ describe('audio-tools', () => {
 
   describe('getAudioPlayer', () => {
     test('should return null when no tools are available', () => {
-      execSync.mockImplementation(() => {
+      (execSync as jest.Mock).mockImplementation(() => {
         throw new Error('Command not found')
       })
 
@@ -94,7 +94,7 @@ describe('audio-tools', () => {
     })
 
     test('should prefer mpv when available', () => {
-      execSync.mockImplementation((command) => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
         if (command.includes('mpv') || command.includes('afplay')) {
           return Buffer.from('/usr/bin/tool')
         }
@@ -109,7 +109,7 @@ describe('audio-tools', () => {
     })
 
     test('should fall back to first available tool when mpv is not available', () => {
-      execSync.mockImplementation((command) => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
         if (command.includes('afplay')) {
           return Buffer.from('/usr/bin/afplay')
         }
@@ -124,7 +124,7 @@ describe('audio-tools', () => {
     })
 
     test('should return first available tool when multiple are available but mpv is not', () => {
-      execSync.mockImplementation((command) => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
         if (command.includes('afplay') || command.includes('ffplay')) {
           return Buffer.from('/usr/bin/tool')
         }
@@ -141,7 +141,7 @@ describe('audio-tools', () => {
 
   describe('getAvailableToolsList', () => {
     test('should return "No audio tools found" when no tools are available', () => {
-      execSync.mockImplementation(() => {
+      (execSync as jest.Mock).mockImplementation(() => {
         throw new Error('Command not found')
       })
 
@@ -150,7 +150,7 @@ describe('audio-tools', () => {
     })
 
     test('should return formatted list when tools are available', () => {
-      execSync.mockImplementation((command) => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
         if (command.includes('afplay') || command.includes('mpv')) {
           return Buffer.from('/usr/bin/tool')
         }
@@ -164,7 +164,7 @@ describe('audio-tools', () => {
     })
 
     test('should return single tool when only one is available', () => {
-      execSync.mockImplementation((command) => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
         if (command.includes('afplay')) {
           return Buffer.from('/usr/bin/afplay')
         }
@@ -178,7 +178,7 @@ describe('audio-tools', () => {
 
   describe('isToolAvailable', () => {
     test('should return true when tool is available', () => {
-      execSync.mockReturnValue(Buffer.from('/usr/bin/afplay'))
+      (execSync as jest.Mock).mockReturnValue(Buffer.from('/usr/bin/afplay'))
 
       const result = isToolAvailable('afplay')
       expect(result).toBe(true)
@@ -186,7 +186,7 @@ describe('audio-tools', () => {
     })
 
     test('should return false when tool is not available', () => {
-      execSync.mockImplementation(() => {
+      (execSync as jest.Mock).mockImplementation(() => {
         throw new Error('Command not found')
       })
 
@@ -198,7 +198,7 @@ describe('audio-tools', () => {
     })
 
     test('should handle different tool names correctly', () => {
-      execSync.mockImplementation((command) => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
         if (command.includes('mpv')) {
           return Buffer.from('/usr/bin/mpv')
         }
@@ -210,7 +210,7 @@ describe('audio-tools', () => {
     })
 
     test('should handle execSync errors gracefully', () => {
-      execSync.mockImplementation(() => {
+      (execSync as jest.Mock).mockImplementation(() => {
         throw new Error('Permission denied')
       })
 
@@ -221,7 +221,7 @@ describe('audio-tools', () => {
 
   describe('integration scenarios', () => {
     test('should work correctly in a macOS-like environment', () => {
-      execSync.mockImplementation((command) => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
         if (command.includes('afplay')) {
           return Buffer.from('/usr/bin/afplay')
         }
@@ -247,7 +247,7 @@ describe('audio-tools', () => {
     })
 
     test('should work correctly in a Linux-like environment', () => {
-      execSync.mockImplementation((command) => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
         if (command.includes('aplay') || command.includes('mpv')) {
           return Buffer.from('/usr/bin/tool')
         }
@@ -272,7 +272,7 @@ describe('audio-tools', () => {
     })
 
     test('should work correctly in a cross-platform environment with multiple tools', () => {
-      execSync.mockImplementation((command) => {
+      (execSync as jest.Mock).mockImplementation((command: string) => {
         if (
           command.includes('mpv') ||
           command.includes('ffplay') ||
