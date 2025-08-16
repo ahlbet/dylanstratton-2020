@@ -5,17 +5,18 @@ A comprehensive table component for displaying songs with advanced sorting, filt
 ## Features
 
 - **Full-width table layout** with responsive design
-- **Sortable columns** for all data fields (Title, Post Title, Date, Duration)
+- **Sortable columns** for all data fields (Title, Post, Date, Duration)
 - **Real-time search/filtering** across all text fields
+- **Post title links** that navigate to blog posts when postSlug is available
 - **Pagination** with configurable items per page (default: 20)
 - **Mobile-responsive** with optimized mobile view using TrackItem components
 - **Modern dark theme** consistent with the site design
 
 ## Props
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `audioUrlsWithMetadata` | Array | Yes | Array of song objects with metadata |
+| Prop                    | Type  | Required | Description                         |
+| ----------------------- | ----- | -------- | ----------------------------------- |
+| `audioUrlsWithMetadata` | Array | Yes      | Array of song objects with metadata |
 
 ## Song Object Structure
 
@@ -28,7 +29,8 @@ Each song object should contain:
   postDate: string,        // Date string (e.g., "January 1, 2024")
   duration: number,        // Duration in seconds (can be null)
   storagePath: string,     // Storage path for audio file
-  url: string | null       // Direct URL (if available)
+  url: string | null,      // Direct URL (if available)
+  postSlug: string | null  // Blog post URL slug (optional, for post links)
 }
 ```
 
@@ -56,6 +58,7 @@ Each song object should contain:
 ## Mobile View
 
 On mobile devices, the component automatically switches to:
+
 - **Simplified list layout** using TrackItem components
 - **Vertical stacking** for better mobile UX
 - **Touch-friendly** pagination controls
@@ -79,6 +82,7 @@ const AllSongsPage = ({ audioData }) => {
 ## Styling
 
 The component uses CSS classes for styling:
+
 - `.songs-table-container` - Main container
 - `.songs-table` - Table element
 - `.sortable-header` - Sortable column headers
@@ -97,3 +101,13 @@ The component uses CSS classes for styling:
 - **Screen reader** friendly with proper ARIA labels
 - **High contrast** design for better visibility
 - **Focus indicators** for interactive elements
+
+## Post Links
+
+When a song object includes a `postSlug` field, the post title in the "Post" column becomes a clickable link that navigates to the corresponding blog post. If no `postSlug` is provided, the post title is displayed as plain text.
+
+The links are styled with:
+- **Brand color** (#DE3163) for consistency
+- **Hover effects** with white text and underline
+- **Focus indicators** for accessibility
+- **Smooth transitions** for better UX

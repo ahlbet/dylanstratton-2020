@@ -14,17 +14,17 @@ A reusable React component for displaying individual audio tracks in a playlist 
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `track` | Object | Required | Track object containing title, artist, album, duration, etc. |
-| `index` | Number | Required | Index of the track in the playlist |
-| `isCurrentTrack` | Boolean | false | Whether this track is currently selected |
-| `isPlayingCurrent` | Boolean | false | Whether the current track is currently playing |
-| `onTrackClick` | Function | Required | Callback when track is clicked |
-| `onTrackRef` | Function | Optional | Callback for setting track element refs |
-| `showDownloadButton` | Boolean | false | Whether to show the download button |
-| `onDownload` | Function | Optional | Callback when download button is clicked |
-| `isMobile` | Boolean | false | Whether the component is on mobile |
+| Prop                 | Type     | Default  | Description                                                  |
+| -------------------- | -------- | -------- | ------------------------------------------------------------ |
+| `track`              | Object   | Required | Track object containing title, artist, album, duration, etc. |
+| `index`              | Number   | Required | Index of the track in the playlist                           |
+| `isCurrentTrack`     | Boolean  | false    | Whether this track is currently selected                     |
+| `isPlayingCurrent`   | Boolean  | false    | Whether the current track is currently playing               |
+| `onTrackClick`       | Function | Required | Callback when track is clicked                               |
+| `onTrackRef`         | Function | Optional | Callback for setting track element refs                      |
+| `showDownloadButton` | Boolean  | false    | Whether to show the download button                          |
+| `onDownload`         | Function | Optional | Callback when download button is clicked                     |
+| `isMobile`           | Boolean  | false    | Whether the component is on mobile                           |
 
 ## Track Object Structure
 
@@ -33,7 +33,7 @@ The `track` prop should have the following structure:
 ```javascript
 {
   title: "Track Title",
-  artist: "Artist Name", 
+  artist: "Artist Name",
   album: "Album Name",
   duration: "3:45",
   downloadUrl: "https://example.com/track.wav",
@@ -48,7 +48,7 @@ The `track` prop should have the following structure:
 ```javascript
 import TrackItem from './components/track-item/TrackItem'
 
-<TrackItem
+;<TrackItem
   track={track}
   index={0}
   isCurrentTrack={false}

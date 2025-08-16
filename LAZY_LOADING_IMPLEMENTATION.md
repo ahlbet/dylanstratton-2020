@@ -7,11 +7,13 @@ This document describes the implementation of lazy loading for audio files in th
 ## What Was Changed
 
 ### 1. **Removed `useTrackDurations` Hook**
+
 **Before**: The hook automatically loaded metadata for ALL audio files when the component mounted, using `preload="metadata"` on Audio elements.
 
 **After**: **REMOVED** - Audio durations are now stored directly in the Supabase `daily_audio` table and passed through the component props.
 
 **Key Changes**:
+
 - Completely removed the `useTrackDurations` hook
 - Durations are now fetched from the database instead of audio files
 - No more client-side audio metadata loading
@@ -20,7 +22,8 @@ This document describes the implementation of lazy loading for audio files in th
 
 **Before**: Used `preload="auto"` which could trigger audio loading
 
-**After**: 
+**After**:
+
 - Changed to `preload="none"` to prevent automatic loading
 - Removed duration loading logic since durations come from database
 - Only loads audio when actually needed for playback
@@ -30,6 +33,7 @@ This document describes the implementation of lazy loading for audio files in th
 **Before**: Used the old `useTrackDurations` hook that loaded all durations at once
 
 **After**:
+
 - **REMOVED** duration loading hooks
 - Uses duration data directly from Supabase `daily_audio` table
 - Durations are passed through `audioUrlsWithMetadata` prop
@@ -39,6 +43,7 @@ This document describes the implementation of lazy loading for audio files in th
 **Before**: Used the old `useTrackDurations` hook that loaded all durations at once
 
 **After**:
+
 - **REMOVED** duration loading hooks
 - Uses duration data directly from Supabase `daily_audio` table
 - Durations are passed through `audioData` prop
@@ -48,6 +53,7 @@ This document describes the implementation of lazy loading for audio files in th
 **Before**: Had `loadTrackAudio()` function for lazy loading audio metadata
 
 **After**:
+
 - **REMOVED** `loadTrackAudio()` function
 - Simplified `playTrack()` function since no metadata loading is needed
 - Audio is only loaded when actually played
@@ -57,6 +63,7 @@ This document describes the implementation of lazy loading for audio files in th
 **Before**: Extracted audio URLs from markdown files (no duration data)
 
 **After**:
+
 - **PRIORITY**: Uses custom API endpoint `/api/all-audio` for complete audio metadata with proper integer IDs
 - **FALLBACK**: GraphQL data with UUID conversion handling
 - **LEGACY**: Markdown extraction for posts without Supabase data
@@ -68,6 +75,7 @@ This document describes the implementation of lazy loading for audio files in th
 **Purpose**: Bypass Gatsby Supabase plugin's UUID conversion to get proper integer IDs
 
 **Features**:
+
 - Direct Supabase client queries (no UUID conversion)
 - Proper foreign key relationships between `daily_audio` and `daily` tables
 - Returns pre-linked data with audio metadata and daily entry information
@@ -79,17 +87,20 @@ This document describes the implementation of lazy loading for audio files in th
 ## How It Works Now
 
 ### 1. **Page Load**
+
 - Playlist is set with track URLs and durations from Supabase database
 - **NO** audio files are loaded
 - **NO** metadata extraction from audio files
 - All duration data comes from the `daily_audio.duration` field
 
 ### 2. **Track Selection**
+
 - When a user clicks on a track, duration is already available from database
 - **NO** additional loading needed
 - Audio file is only fetched when `playTrack()` is called
 
 ### 3. **Audio Playback**
+
 - Audio is only fetched when `playTrack()` is called
 - The main audio element in FixedAudioPlayer only loads audio when actually needed
 - **NO** preloading of audio metadata
@@ -121,6 +132,7 @@ CREATE TABLE daily_audio (
 ## Backward Compatibility
 
 The changes maintain backward compatibility:
+
 - All existing components continue to work
 - Fallback to markdown extraction for posts without Supabase data
 - Existing playlist functionality is preserved
@@ -136,6 +148,7 @@ The changes maintain backward compatibility:
 ## Usage Examples
 
 ### Getting Duration from Audio Metadata
+
 ```javascript
 // Duration is now part of the audioItem object from Supabase
 const audioData = supabaseData.audio.map((audio) => ({
@@ -146,13 +159,14 @@ const audioData = supabaseData.audio.map((audio) => ({
 ```
 
 ### Using the Custom API Endpoint
+
 ```javascript
 // Fetch audio data with proper integer IDs (no UUID conversion)
 const fetchAudioData = async () => {
   try {
     const response = await fetch('/api/all-audio')
     const data = await response.json()
-    
+
     // Data is pre-linked with proper relationships
     const audioWithMetadata = data.audio.map((audio) => ({
       url: audio.storage_path,
@@ -160,7 +174,7 @@ const fetchAudioData = async () => {
       postTitle: audio.daily?.title || 'Unknown',
       postDate: audio.daily?.created_at || 'Unknown Date',
     }))
-    
+
     return audioWithMetadata
   } catch (error) {
     console.error('Failed to fetch audio data:', error)
@@ -170,6 +184,7 @@ const fetchAudioData = async () => {
 ```
 
 ### Displaying Duration in Components
+
 ```javascript
 // No need to load duration - it's already available
 const formatDuration = (seconds) => {
@@ -184,6 +199,7 @@ const duration = item.duration ? formatDuration(item.duration) : '0:00'
 ```
 
 ### No More Duration Loading
+
 ```javascript
 // This is no longer needed - durations come from database
 // const { loadSingleTrackDuration } = useTrackDurations([])

@@ -229,17 +229,18 @@ export const createAudioReactiveGridSketch =
         // Add subtle color variation based on time and particle seed
         let colorVariation =
           Math.sin(p.frameCount * 0.01 + this.seed * 0.1) * 30
-        
+
         // Apply color variation with special handling for green to avoid bright green
         r = Math.max(0, Math.min(255, r + colorVariation))
-        
+
         // Limit green variation to prevent bright green particles
         let greenVariation = colorVariation
-        if (this.frequencyBand === 1) { // Bass/Mid frequency band
+        if (this.frequencyBand === 1) {
+          // Bass/Mid frequency band
           greenVariation = Math.min(colorVariation, 15) // Reduce green variation for this band
         }
         g = Math.max(0, Math.min(200, g + greenVariation)) // Cap green at 200 max
-        
+
         b = Math.max(0, Math.min(255, b + colorVariation))
 
         // Dynamic radius that responds to frequency band audio intensity
