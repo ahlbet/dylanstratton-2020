@@ -5,11 +5,23 @@ import { useStaticQuery } from 'gatsby'
 
 // Mock the gatsby dependencies
 jest.mock('gatsby', () => ({
-  Link: jest.fn().mockImplementation(({ to, children, ...rest }) => (
-    <a href={to} {...rest}>
-      {children}
-    </a>
-  )),
+  Link: jest
+    .fn()
+    .mockImplementation(
+      ({
+        to,
+        children,
+        ...rest
+      }: {
+        to: string
+        children: React.ReactNode
+        [key: string]: any
+      }) => (
+        <a href={to} {...rest}>
+          {children}
+        </a>
+      )
+    ),
   graphql: jest.fn(),
   useStaticQuery: jest.fn(),
 }))
@@ -18,12 +30,22 @@ jest.mock('gatsby', () => ({
 jest.mock('../components/bio/bio', () => () => (
   <div data-testid="bio">Bio Component</div>
 ))
-jest.mock('../components/layout/layout', () => ({ children, ...props }) => (
-  <div data-testid="layout" {...props}>
-    {children}
-  </div>
-))
-jest.mock('../components/seo/seo', () => ({ title }) => (
+jest.mock(
+  '../components/layout/layout',
+  () =>
+    ({
+      children,
+      ...props
+    }: {
+      children: React.ReactNode
+      [key: string]: any
+    }) => (
+      <div data-testid="layout" {...props}>
+        {children}
+      </div>
+    )
+)
+jest.mock('../components/seo/seo', () => ({ title }: { title: string }) => (
   <div data-testid="seo" data-title={title}>
     SEO Component
   </div>
@@ -35,11 +57,38 @@ jest.mock('../components/calendar/calendar', () => () => (
 ))
 
 jest.mock('../utils/typography', () => ({
-  rhythm: jest.fn().mockImplementation((n) => n * 16),
+  rhythm: jest.fn().mockImplementation((n: number) => n * 16),
 }))
 
+// Types
+interface MockData {
+  site: {
+    siteMetadata: {
+      title: string
+    }
+  }
+  allMarkdownRemark: {
+    edges: Array<{
+      node: {
+        excerpt: string
+        fields: {
+          slug: string
+        }
+        frontmatter: {
+          date: string
+          title: string
+        }
+      }
+    }>
+  }
+}
+
+interface MockLocation {
+  pathname: string
+}
+
 describe('BlogIndex', () => {
-  const mockData = {
+  const mockData: MockData = {
     site: {
       siteMetadata: {
         title: 'Test Site Title',
@@ -75,7 +124,7 @@ describe('BlogIndex', () => {
     },
   }
 
-  const mockLocation = {
+  const mockLocation: MockLocation = {
     pathname: '/',
   }
 

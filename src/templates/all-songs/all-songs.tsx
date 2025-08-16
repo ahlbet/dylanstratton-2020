@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { PageProps } from 'gatsby'
 import Layout from '../../components/layout/layout'
 import SEO from '../../components/seo/seo'
 import { rhythm } from '../../utils/typography'
@@ -17,8 +18,44 @@ import {
   generatePresignedUrlsForAudio,
 } from '../../utils/presigned-urls'
 
+// Types
+interface AudioItem {
+  url?: string | null
+  storagePath?: string
+  duration?: number | null
+  title: string
+  postTitle: string
+  postDate: string
+  postSlug: string
+}
+
+interface DailyEntry {
+  id: string
+  title?: string
+  date?: string
+  created_at?: string
+}
+
+interface SupabaseData {
+  audio?: Array<{
+    daily_id: string
+    storage_path: string
+    duration?: number | null
+    displayFilename?: string
+  }>
+  daily?: DailyEntry[]
+}
+
+interface PageContext {
+  supabaseData?: SupabaseData
+}
+
+interface AllSongsPageProps extends PageProps<{}, PageContext> {
+  location: any
+}
+
 // Component to handle autopilot state on /all page
-const AllSongsAutopilotHandler = () => {
+const AllSongsAutopilotHandler: React.FC = () => {
   const { isAutopilotOn, toggleAutopilot } = useAudioPlayer()
 
   useEffect(() => {
@@ -26,14 +63,14 @@ const AllSongsAutopilotHandler = () => {
     if (isAutopilotOn) {
       toggleAutopilot()
     }
-  }, []) // Only run once on mount
+  }, [isAutopilotOn, toggleAutopilot]) // Include dependencies
 
   return null
 }
 
-const AllSongsPage = ({ pageContext, location }) => {
+const AllSongsPage: React.FC<AllSongsPageProps> = ({ pageContext, location }) => {
   const { supabaseData } = pageContext
-  const [allAudioUrlsWithMetadata, setAllAudioUrlsWithMetadata] = useState([])
+  const [allAudioUrlsWithMetadata, setAllAudioUrlsWithMetadata] = useState<AudioItem[]>([])
   const [allMarkovText, setAllMarkovText] = useState('')
 
   // Generate audio URLs using useEffect (similar to blog post template)
@@ -47,7 +84,7 @@ const AllSongsPage = ({ pageContext, location }) => {
         try {
           if (isLocalDev()) {
             // Development mode: use local audio files
-            const localAudio = dailyAudio.map((audio) => {
+            const localAudio: AudioItem[] = dailyAudio.map((audio) => {
               const dailyEntry = dailyEntries.find(
                 (daily) => daily.id === audio.daily_id
               )
@@ -82,7 +119,7 @@ const AllSongsPage = ({ pageContext, location }) => {
             )
           } else {
             // Production mode: store storage paths, generate presigned URLs on-demand when played
-            const productionAudio = dailyAudio.map((audio) => {
+            const productionAudio: AudioItem[] = dailyAudio.map((audio) => {
               const dailyEntry = dailyEntries.find(
                 (daily) => daily.id === audio.daily_id
               )
@@ -122,7 +159,7 @@ const AllSongsPage = ({ pageContext, location }) => {
         } catch (error) {
           console.error('Error generating audio URLs:', error)
           // Fall back to public URLs on error
-          const fallbackAudio = supabaseData.audio.map((audio) => {
+          const fallbackAudio: AudioItem[] = supabaseData.audio.map((audio) => {
             const dailyEntry = dailyEntries.find(
               (daily) => daily.id === audio.daily_id
             )

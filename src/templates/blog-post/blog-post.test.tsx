@@ -6,16 +6,24 @@ import BlogPostTemplate from './blog-post'
 jest.mock('../../components/bio/bio', () => () => (
   <div data-testid="bio">Bio Component</div>
 ))
-jest.mock('../../components/layout/layout', () => ({ children, title }) => (
-  <div data-testid="layout" title={title}>
-    {children}
-  </div>
-))
-jest.mock('../../components/seo/seo', () => ({ title, description }) => (
-  <div data-testid="seo" title={title} description={description}>
-    SEO Component
-  </div>
-))
+jest.mock(
+  '../../components/layout/layout',
+  () =>
+    ({ children, title }: { children: React.ReactNode; title: string }) => (
+      <div data-testid="layout" title={title}>
+        {children}
+      </div>
+    )
+)
+jest.mock(
+  '../../components/seo/seo',
+  () =>
+    ({ title, description }: { title: string; description?: string }) => (
+      <div data-testid="seo" title={title} description={description}>
+        SEO Component
+      </div>
+    )
+)
 jest.mock('../../components/calendar/calendar', () => () => (
   <div data-testid="calendar">Calendar Component</div>
 ))
@@ -32,7 +40,7 @@ jest.mock('../../components/calendar/user-preferences-context', () => ({
 
 // Mock the audio player context
 jest.mock('../../contexts/audio-player-context/audio-player-context', () => ({
-  AudioPlayerProvider: ({ children }) => (
+  AudioPlayerProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="audio-provider">{children}</div>
   ),
   useAudioPlayer: () => ({
@@ -68,7 +76,7 @@ jest.mock('../../components/audio-fft/AudioFFT', () => () => (
 // Mock utility functions
 jest.mock('../../utils/extractAudioUrls', () => ({
   extractAudioUrls: jest.fn(() => []),
-  removeAudioFromHtml: jest.fn((html) => html),
+  removeAudioFromHtml: jest.fn((html: string) => html),
 }))
 
 jest.mock('../../utils/local-audio-urls', () => ({
@@ -79,8 +87,8 @@ jest.mock('../../utils/local-audio-urls', () => ({
 
 jest.mock('../../utils/presigned-urls', () => ({
   generatePresignedUrlsForAudio: jest.fn(() => []),
-  removeBucketPrefix: jest.fn((path) => path),
-  extractFilenameFromStoragePath: jest.fn((path) => 'test-file'),
+  removeBucketPrefix: jest.fn((path: string) => path),
+  extractFilenameFromStoragePath: jest.fn((path: string) => 'test-file'),
 }))
 
 jest.mock('../../utils/local-dev-utils', () => ({
@@ -95,19 +103,59 @@ jest.mock('./blog-post.css', () => ({}), { virtual: true })
 jest.mock('gatsby', () => ({
   Link: jest
     .fn()
-    .mockImplementation(({ children, to }) => <a href={to}>{children}</a>),
+    .mockImplementation(
+      ({ children, to }: { children: React.ReactNode; to: string }) => (
+        <a href={to}>{children}</a>
+      )
+    ),
   graphql: jest.fn(),
   useStaticQuery: jest.fn(),
 }))
 
 // Mock typography
 jest.mock('../../utils/typography', () => ({
-  rhythm: jest.fn((n) => n * 10),
+  rhythm: jest.fn((n: number) => n * 10),
   scale: jest.fn(() => ({ fontSize: '0.8rem' })),
 }))
 
+// Types
+interface MockData {
+  site: {
+    siteMetadata: {
+      title: string
+    }
+  }
+  markdownRemark: {
+    id: string
+    excerpt: string
+    html: string
+    frontmatter: {
+      title: string
+      date: string
+      description: string
+    }
+  }
+}
+
+interface MockPageContext {
+  previous?: {
+    fields: { slug: string }
+    frontmatter: { title: string }
+  }
+  next?: {
+    fields: { slug: string }
+    frontmatter: { title: string }
+  }
+  markdownData?: any
+  supabaseData?: any
+}
+
+interface MockLocation {
+  pathname: string
+}
+
 describe('BlogPostTemplate', () => {
-  const mockData = {
+  const mockData: MockData = {
     site: {
       siteMetadata: {
         title: 'Test Site Title',
@@ -125,7 +173,7 @@ describe('BlogPostTemplate', () => {
     },
   }
 
-  const mockPageContext = {
+  const mockPageContext: MockPageContext = {
     previous: {
       fields: { slug: '/previous-post/' },
       frontmatter: { title: 'Previous Post' },
@@ -138,7 +186,7 @@ describe('BlogPostTemplate', () => {
     supabaseData: null,
   }
 
-  const mockLocation = {
+  const mockLocation: MockLocation = {
     pathname: '/blog/test-post/',
   }
 
@@ -194,7 +242,10 @@ describe('BlogPostTemplate', () => {
   })
 
   test('does not render previous link when there is no previous post', () => {
-    const contextWithoutPrevious = { ...mockPageContext, previous: null }
+    const contextWithoutPrevious: MockPageContext = {
+      ...mockPageContext,
+      previous: undefined,
+    }
 
     render(
       <BlogPostTemplate
@@ -209,7 +260,10 @@ describe('BlogPostTemplate', () => {
   })
 
   test('does not render next link when there is no next post', () => {
-    const contextWithoutNext = { ...mockPageContext, next: null }
+    const contextWithoutNext: MockPageContext = {
+      ...mockPageContext,
+      next: undefined,
+    }
 
     render(
       <BlogPostTemplate
@@ -224,7 +278,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with markov data when available', () => {
-    const contextWithMarkov = {
+    const contextWithMarkov: MockPageContext = {
       ...mockPageContext,
       markdownData: {
         markovText: 'Sample markov text content',
@@ -244,7 +298,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with supabase data when available', () => {
-    const contextWithSupabase = {
+    const contextWithSupabase: MockPageContext = {
       ...mockPageContext,
       supabaseData: {
         audio: [
@@ -267,7 +321,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with both markov and supabase data', () => {
-    const contextWithBoth = {
+    const contextWithBoth: MockPageContext = {
       ...mockPageContext,
       supabaseData: {
         audio: [
@@ -315,7 +369,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with empty markov data', () => {
-    const contextWithEmptyMarkov = {
+    const contextWithEmptyMarkov: MockPageContext = {
       ...mockPageContext,
       supabaseData: {
         markovTexts: [],
@@ -335,7 +389,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with empty supabase data', () => {
-    const contextWithEmptySupabase = {
+    const contextWithEmptySupabase: MockPageContext = {
       ...mockPageContext,
       supabaseData: {
         audio: [],
@@ -356,7 +410,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with null markov data', () => {
-    const contextWithNullMarkov = {
+    const contextWithNullMarkov: MockPageContext = {
       ...mockPageContext,
       supabaseData: {
         markovTexts: null,
@@ -376,7 +430,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with null supabase data', () => {
-    const contextWithNullSupabase = {
+    const contextWithNullSupabase: MockPageContext = {
       ...mockPageContext,
       supabaseData: null,
     }
@@ -394,7 +448,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with undefined markov data', () => {
-    const contextWithUndefinedMarkov = {
+    const contextWithUndefinedMarkov: MockPageContext = {
       ...mockPageContext,
       supabaseData: {
         markovTexts: undefined,
@@ -414,7 +468,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with undefined supabase data', () => {
-    const contextWithUndefinedSupabase = {
+    const contextWithUndefinedSupabase: MockPageContext = {
       ...mockPageContext,
       supabaseData: undefined,
     }
@@ -440,7 +494,7 @@ describe('BlogPostTemplate', () => {
     expect(() => {
       render(
         <BlogPostTemplate
-          data={dataWithoutSite}
+          data={dataWithoutSite as any}
           pageContext={mockPageContext}
           location={mockLocation}
         />
@@ -457,7 +511,7 @@ describe('BlogPostTemplate', () => {
     expect(() => {
       render(
         <BlogPostTemplate
-          data={dataWithoutMarkdown}
+          data={dataWithoutMarkdown as any}
           pageContext={mockPageContext}
           location={mockLocation}
         />
@@ -466,7 +520,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with complex HTML content', () => {
-    const dataWithComplexHtml = {
+    const dataWithComplexHtml: MockData = {
       ...mockData,
       markdownRemark: {
         ...mockData.markdownRemark,
@@ -497,7 +551,7 @@ describe('BlogPostTemplate', () => {
 
   test('renders with long content', () => {
     const longContent = '<p>' + 'A'.repeat(1000) + '</p>'
-    const dataWithLongContent = {
+    const dataWithLongContent: MockData = {
       ...mockData,
       markdownRemark: {
         ...mockData.markdownRemark,
@@ -518,7 +572,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with special characters in title', () => {
-    const dataWithSpecialChars = {
+    const dataWithSpecialChars: MockData = {
       ...mockData,
       markdownRemark: {
         ...mockData.markdownRemark,
@@ -543,7 +597,7 @@ describe('BlogPostTemplate', () => {
   })
 
   test('renders with unicode characters in title', () => {
-    const dataWithUnicode = {
+    const dataWithUnicode: MockData = {
       ...mockData,
       markdownRemark: {
         ...mockData.markdownRemark,

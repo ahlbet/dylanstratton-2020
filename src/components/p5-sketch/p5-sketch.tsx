@@ -1,9 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { applyMobileFix } from '../../utils/p5-mobile-fix'
 
-const P5Sketch = ({ sketch, className = '', style = {} }) => {
-  const canvasRef = useRef(null)
-  const p5InstanceRef = useRef(null)
+// Types
+interface P5SketchProps {
+  sketch: (p: any) => void
+  className?: string
+  style?: React.CSSProperties
+}
+
+interface P5Instance {
+  remove: () => void
+}
+
+declare global {
+  interface Window {
+    p5: any
+  }
+}
+
+const P5Sketch: React.FC<P5SketchProps> = ({ sketch, className = '', style = {} }) => {
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const p5InstanceRef = useRef<P5Instance | null>(null)
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {

@@ -7,6 +7,21 @@ jest.mock('../../utils/p5-mobile-fix', () => ({
   applyMobileFix: jest.fn(),
 }))
 
+// Types
+interface MockP5Instance {
+  remove: jest.Mock
+}
+
+interface MockP5Constructor {
+  (sketch: any, element: HTMLElement): MockP5Instance
+}
+
+declare global {
+  interface Window {
+    p5?: MockP5Constructor
+  }
+}
+
 describe('P5Sketch', () => {
   const mockSketch = jest.fn()
   const mockApplyMobileFix = require('../../utils/p5-mobile-fix').applyMobileFix
@@ -19,11 +34,15 @@ describe('P5Sketch', () => {
 
   afterEach(() => {
     // Clean up any p5 instances that might have been created
-    if (window.p5 && window.p5.prototype && window.p5.prototype.remove) {
+    if (
+      window.p5 &&
+      window.p5.prototype &&
+      (window.p5.prototype as any).remove
+    ) {
       const instances = document.querySelectorAll('canvas')
       instances.forEach((canvas) => {
-        if (canvas._p5Instance && canvas._p5Instance.remove) {
-          canvas._p5Instance.remove()
+        if ((canvas as any)._p5Instance && (canvas as any)._p5Instance.remove) {
+          ;(canvas as any)._p5Instance.remove()
         }
       })
     }
@@ -56,7 +75,7 @@ describe('P5Sketch', () => {
   })
 
   it('handles null sketch gracefully', () => {
-    render(<P5Sketch sketch={null} />)
+    render(<P5Sketch sketch={null as any} />)
     expect(document.querySelector('div')).toBeInTheDocument()
   })
 
@@ -83,10 +102,10 @@ describe('P5Sketch', () => {
 
   it('creates p5 instance when p5 is available', () => {
     // Mock p5 constructor
-    const mockP5Instance = {
+    const mockP5Instance: MockP5Instance = {
       remove: jest.fn(),
     }
-    const mockP5Constructor = jest.fn(() => mockP5Instance)
+    const mockP5Constructor: MockP5Constructor = jest.fn(() => mockP5Instance)
 
     // Set up window.p5
     Object.defineProperty(window, 'p5', {
@@ -111,10 +130,10 @@ describe('P5Sketch', () => {
   })
 
   it('applies mobile fix to p5 instance', () => {
-    const mockP5Instance = {
+    const mockP5Instance: MockP5Instance = {
       remove: jest.fn(),
     }
-    const mockP5Constructor = jest.fn(() => mockP5Instance)
+    const mockP5Constructor: MockP5Constructor = jest.fn(() => mockP5Instance)
 
     Object.defineProperty(window, 'p5', {
       value: mockP5Constructor,
@@ -132,10 +151,10 @@ describe('P5Sketch', () => {
   })
 
   it('cleans up existing p5 instance before creating new one', () => {
-    const mockP5Instance = {
+    const mockP5Instance: MockP5Instance = {
       remove: jest.fn(),
     }
-    const mockP5Constructor = jest.fn(() => mockP5Instance)
+    const mockP5Constructor: MockP5Constructor = jest.fn(() => mockP5Instance)
 
     Object.defineProperty(window, 'p5', {
       value: mockP5Constructor,
@@ -163,10 +182,10 @@ describe('P5Sketch', () => {
   })
 
   it('handles sketch prop changes', () => {
-    const mockP5Instance = {
+    const mockP5Instance: MockP5Instance = {
       remove: jest.fn(),
     }
-    const mockP5Constructor = jest.fn(() => mockP5Instance)
+    const mockP5Constructor: MockP5Constructor = jest.fn(() => mockP5Instance)
 
     Object.defineProperty(window, 'p5', {
       value: mockP5Constructor,
@@ -203,16 +222,16 @@ describe('P5Sketch', () => {
     expect(container).toBeInTheDocument()
 
     // Check if loading state styles are applied (these may be applied during SSR)
-    const computedStyle = window.getComputedStyle(container)
+    const computedStyle = window.getComputedStyle(container!)
     // Note: In test environment, some styles might not be fully computed
     // We're mainly checking that the element exists and can receive styles
   })
 
   it('renders canvas container when client-side', () => {
-    const mockP5Instance = {
+    const mockP5Instance: MockP5Instance = {
       remove: jest.fn(),
     }
-    const mockP5Constructor = jest.fn(() => mockP5Instance)
+    const mockP5Constructor: MockP5Constructor = jest.fn(() => mockP5Instance)
 
     Object.defineProperty(window, 'p5', {
       value: mockP5Constructor,
@@ -233,10 +252,10 @@ describe('P5Sketch', () => {
   })
 
   it('handles component unmounting gracefully', () => {
-    const mockP5Instance = {
+    const mockP5Instance: MockP5Instance = {
       remove: jest.fn(),
     }
-    const mockP5Constructor = jest.fn(() => mockP5Instance)
+    const mockP5Constructor: MockP5Constructor = jest.fn(() => mockP5Instance)
 
     Object.defineProperty(window, 'p5', {
       value: mockP5Constructor,
@@ -257,10 +276,10 @@ describe('P5Sketch', () => {
   })
 
   it('handles multiple rapid sketch changes', () => {
-    const mockP5Instance = {
+    const mockP5Instance: MockP5Instance = {
       remove: jest.fn(),
     }
-    const mockP5Constructor = jest.fn(() => mockP5Instance)
+    const mockP5Constructor: MockP5Constructor = jest.fn(() => mockP5Instance)
 
     Object.defineProperty(window, 'p5', {
       value: mockP5Constructor,

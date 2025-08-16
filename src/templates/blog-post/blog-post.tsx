@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { Link, graphql } from 'gatsby'
+import { Link, graphql, PageProps } from 'gatsby'
 
 import Bio from '../../components/bio/bio'
 import Layout from '../../components/layout/layout'
@@ -33,10 +33,78 @@ import {
   useAudioPlayer,
 } from '../../contexts/audio-player-context/audio-player-context'
 import { FixedAudioPlayer } from '../../components/fixed-audio-player/FixedAudioPlayer'
-import AudioFFT from '../../components/audio-fft/AudioFFT' // Add this import for the audio FFT component
+import AudioFFT from '../../components/audio-fft/AudioFFT'
+
+// Types
+interface AudioItem {
+  url?: string | null
+  storagePath?: string
+  duration?: number | null
+  format?: string
+  title?: string
+  artist?: string
+  album?: string
+  displayFilename?: string
+}
+
+interface MarkovText {
+  id: string
+  text_content: string
+  coherency_level?: string
+}
+
+interface DailyData {
+  coherency_level?: string
+  cover_art?: string
+}
+
+interface SupabaseData {
+  audio?: AudioItem[]
+  markovTexts?: MarkovText[]
+  daily?: DailyData
+}
+
+interface PageContext {
+  previous?: {
+    fields: { slug: string }
+    frontmatter: { title: string }
+  }
+  next?: {
+    fields: { slug: string }
+    frontmatter: { title: string }
+  }
+  markdownData?: any
+  supabaseData?: SupabaseData
+}
+
+interface BlogPostData {
+  site: {
+    siteMetadata: {
+      title: string
+    }
+  }
+  markdownRemark: {
+    id: string
+    excerpt: string
+    html: string
+    frontmatter: {
+      title: string
+      date: string
+      cover_art?: string
+      daily_id?: string
+    }
+    fields: {
+      slug: string
+    }
+  }
+}
+
+interface AutopilotAutoPlayProps {
+  audioData: AudioItem[]
+}
 
 // Component to handle autopilot auto-play and playlist setup
-const AutopilotAutoPlay = ({ audioData }) => {
+const AutopilotAutoPlay: React.FC<AutopilotAutoPlayProps> = ({ audioData }) => {
   const { setPlaylist, playlist, playTrack } = useAudioPlayer()
 
   useEffect(() => {
@@ -44,17 +112,17 @@ const AutopilotAutoPlay = ({ audioData }) => {
     if (audioData.length > 0) {
       const tracks = audioData.map((audioItem, index) => {
         // Handle both old string format and new object format
-        let url, filename
+        let url: string, filename: string
 
         if (typeof audioItem === 'string') {
           url = audioItem
           filename = url
             .split('/')
             .pop()
-            .replace(/\.[^/.]+$/, '')
+            ?.replace(/\.[^/.]+$/, '') || 'Unknown Track'
         } else {
           // New format: use title if available, otherwise extract from storage path
-          url = audioItem.url
+          url = audioItem.url || ''
           filename =
             audioItem.title ||
             (audioItem.storagePath
@@ -145,7 +213,11 @@ const AutopilotAutoPlay = ({ audioData }) => {
 }
 
 // Main component that wraps everything in AudioPlayerProvider
-const BlogPostTemplate = ({ data, pageContext, location }) => {
+const BlogPostTemplate: React.FC<PageProps<BlogPostData, PageContext>> = ({ 
+  data, 
+  pageContext, 
+  location 
+}) => {
   const post = data.markdownRemark
   const siteTitle = data.site.siteMetadata.title
   const { previous, next, markdownData, supabaseData } = pageContext
@@ -155,7 +227,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
   let cleanedHtml = post.html
 
   // Generate audio URLs (local or presigned based on environment) - use useMemo for stability
-  const audioData = useMemo(() => {
+  const audioData = useMemo((): AudioItem[] => {
     if (supabaseData && supabaseData.audio && supabaseData.audio.length > 0) {
       try {
         // Check if we should use local audio files
@@ -165,7 +237,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
           // Use local audio files for development
           return supabaseData.audio.map((audio) => {
             // Extract clean filename from storage_path
-            const filename = extractFilenameFromStoragePath(audio.storage_path)
+            const filename = extractFilenameFromStoragePath(audio.storagePath || '')
 
             // Convert to local audio URL
             const localUrl = `/local-audio/${filename}.wav`
@@ -186,14 +258,14 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
             // Use the display filename that was already extracted
             const filename =
               audio.displayFilename ||
-              extractFilenameFromStoragePath(audio.storage_path)
+              extractFilenameFromStoragePath(audio.storagePath || '')
 
             return {
               ...audio,
               // No initial URL - will be generated on-demand when track is played
               url: null,
               // Store storage path for on-demand presigned URL generation
-              storagePath: audio.storage_path,
+              storagePath: audio.storagePath,
               duration: audio.duration || null,
               format: audio.format || 'audio/wav',
               title: filename, // Clean title without extension
@@ -207,12 +279,12 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
         // Fall back to storage paths only on error
         return supabaseData.audio.map((audio) => {
           // Extract clean filename from storage_path
-          const filename = extractFilenameFromStoragePath(audio.storage_path)
+          const filename = extractFilenameFromStoragePath(audio.storagePath || '')
 
           return {
             ...audio,
             url: null, // No URL - will be generated on-demand
-            storagePath: audio.storage_path, // Keep storage path for on-demand generation
+            storagePath: audio.storagePath, // Keep storage path for on-demand generation
             duration: audio.duration || null,
             format: audio.format || 'audio/wav',
             title: filename, // Clean title without extension
@@ -252,7 +324,7 @@ const BlogPostTemplate = ({ data, pageContext, location }) => {
       .join(' ')
   } else {
     // Fall back to extracting from markdown HTML
-    const extractMarkovText = (html) => {
+    const extractMarkovText = (html: string): string => {
       // Find all blockquote elements in the HTML
       const blockquoteRegex = /<blockquote[^>]*>(.*?)<\/blockquote>/gs
       const matches = html.match(blockquoteRegex)

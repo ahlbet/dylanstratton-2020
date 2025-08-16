@@ -1,17 +1,43 @@
-import { Link, graphql } from 'gatsby'
+import React from 'react'
+import { Link, graphql, PageProps } from 'gatsby'
 
 import Bio from '../components/bio/bio'
 import Layout from '../components/layout/layout'
-import React from 'react'
 import SEO from '../components/seo/seo'
 import { rhythm } from '../utils/typography'
 import Calendar from '../components/calendar/calendar'
 import AudioReactiveGridSketch from '../components/audio-reactive-grid-sketch/audio-reactive-grid-sketch'
 import GridSketch from '../components/grid-sketch/grid-sketch'
 
+// Types
+interface BlogPost {
+  node: {
+    excerpt: string
+    fields: {
+      slug: string
+    }
+    frontmatter: {
+      date: string
+      title: string
+      description?: string
+    }
+  }
+}
+
+interface IndexPageData {
+  site: {
+    siteMetadata: {
+      title: string
+    }
+  }
+  allMarkdownRemark: {
+    edges: BlogPost[]
+  }
+}
+
 const markovText = 'Hello, world!'
 
-const BlogIndex = ({ data, location }) => {
+const BlogIndex: React.FC<PageProps<IndexPageData>> = ({ data, location }) => {
   const siteTitle = data.site.siteMetadata.title
   const posts = data.allMarkdownRemark.edges
 
