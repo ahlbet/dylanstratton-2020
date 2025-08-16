@@ -24,7 +24,7 @@ const getCleanDateString = (date) => {
 
 // Initial state
 const getInitialState = () => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && window.localStorage) {
     const saved = localStorage.getItem('calendarState')
     if (saved) {
       try {
@@ -78,7 +78,7 @@ const calendarReducer = (state, action) => {
   }
 
   // Save to localStorage
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && window.localStorage) {
     localStorage.setItem('calendarState', JSON.stringify(newState))
   }
 

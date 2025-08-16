@@ -12,7 +12,7 @@ const USER_PREFERENCES_ACTIONS = {
 // Initial state
 const getInitialState = () => {
   // Check if we're in a browser environment
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && window.localStorage) {
     const saved = localStorage.getItem('userPreferences')
     if (saved) {
       try {
@@ -52,7 +52,7 @@ const userPreferencesReducer = (state, action) => {
   }
 
   // Save to localStorage only in browser environment
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && window.localStorage) {
     try {
       localStorage.setItem('userPreferences', JSON.stringify(newState))
     } catch (e) {

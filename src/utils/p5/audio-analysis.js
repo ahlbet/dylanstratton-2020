@@ -23,15 +23,25 @@ export const FREQUENCY_RANGES = [
  * @returns {number} Average energy in the frequency range
  */
 export const getFrequencyEnergy = (fft, startFreq, endFreq) => {
+  if (!fft || !fft.logAverages || !fft.getOctaveBands) {
+    return 0
+  }
+
   const spectrum = fft.logAverages(fft.getOctaveBands(1))
+  if (!spectrum || spectrum.length === 0) {
+    return 0
+  }
+
   const startIndex = Math.floor(startFreq / (22050 / spectrum.length))
   const endIndex = Math.floor(endFreq / (22050 / spectrum.length))
 
   let total = 0
   let count = 0
   for (let i = startIndex; i <= endIndex && i < spectrum.length; i++) {
-    total += spectrum[i]
-    count++
+    if (i >= 0) {
+      total += spectrum[i]
+      count++
+    }
   }
   return count > 0 ? total / count : 0
 }
@@ -48,9 +58,26 @@ export const smoothFrequencyData = (
   newData,
   smoothingFactor = 0.7
 ) => {
-  return currentData.map(
+  // Handle null/undefined inputs
+  if (!currentData || !newData) {
+    return newData || currentData || []
+  }
+
+  // Ensure arrays have the same length
+  const maxLength = Math.max(currentData.length, newData.length)
+  const paddedCurrent =
+    currentData.length < maxLength
+      ? [...currentData, ...Array(maxLength - currentData.length).fill(0)]
+      : currentData
+  const paddedNew =
+    newData.length < maxLength
+      ? [...newData, ...Array(maxLength - newData.length).fill(0)]
+      : newData
+
+  return paddedCurrent.map(
     (current, index) =>
-      current * smoothingFactor + newData[index] * (1 - smoothingFactor)
+      (current || 0) * smoothingFactor +
+      (paddedNew[index] || 0) * (1 - smoothingFactor)
   )
 }
 
@@ -66,6 +93,13 @@ export const analyzeFrequencyBands = (
   smoothedData = [],
   smoothingFactor = 0.7
 ) => {
+  if (!fft) {
+    return {
+      frequencyData: Array(8).fill(0),
+      smoothedData: Array(8).fill(0),
+    }
+  }
+
   const frequencyData = []
 
   // Get energy from each frequency range
@@ -93,6 +127,11 @@ export const analyzeFrequencyBands = (
  * @returns {Array} Array of band objects with amplitude, band index, name, and spawn area
  */
 export const getFrequencyBands = (frequencyData) => {
+  // Handle null/undefined inputs
+  if (!frequencyData) {
+    frequencyData = []
+  }
+
   return FREQUENCY_RANGES.map((range, index) => ({
     amp: frequencyData[index] || 0,
     band: index,

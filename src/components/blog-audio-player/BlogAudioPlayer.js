@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import JSZip from 'jszip'
-import { Play, Pause } from 'lucide-react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent } from '../../utils/plausible-analytics'
 import { useScrollToTrack } from '../../hooks/use-scroll-to-track'
+import useIsMobile from '../../hooks/use-is-mobile'
+import TrackItem from '../track-item/TrackItem'
 import './BlogAudioPlayer.css'
 
 // Custom playlist component
@@ -17,6 +18,7 @@ const CustomPlaylist = ({
   totalDuration,
   trackListRef,
   setTrackItemRef,
+  isMobile,
 }) => {
   return (
     <div className="custom-playlist">
@@ -94,128 +96,17 @@ const CustomPlaylist = ({
           const isPlayingCurrent = isCurrentTrack && isPlaying
 
           return (
-            <div
+            <TrackItem
               key={index}
-              className={`track-item ${isCurrentTrack ? 'current-track' : ''}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '12px 16px',
-                borderBottom: '1px solid #f3f4f6',
-                // backgroundColor: 'transparent',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s ease',
-                position: 'relative',
-                minHeight: '60px', // Ensure clickable area
-                userSelect: 'none', // Prevent text selection
-                zIndex: 10, // Ensure track items are above other content
-                borderLeft: isCurrentTrack
-                  ? '4px solid #DE3163'
-                  : '4px solid transparent',
-              }}
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                handleTrackClick(index)
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-              ref={(el) => setTrackItemRef(index, el)}
-            >
-              {/* Play/Pause Button */}
-              <div
-                style={{
-                  marginRight: '12px',
-                  width: '24px',
-                  textAlign: 'center',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {isPlayingCurrent ? (
-                  <Pause size={16} color="#DE3163" />
-                ) : (
-                  <Play size={16} color={isCurrentTrack ? '#DE3163' : '#fff'} />
-                )}
-              </div>
-
-              {/* Track Info */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontWeight: isCurrentTrack ? '600' : '500',
-                    color: isCurrentTrack ? '#DE3163' : '#fff',
-                    fontSize: '14px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {track.title}
-                </div>
-                <div
-                  style={{
-                    color: isCurrentTrack ? '#DE3163' : '#fff',
-                    fontSize: '12px',
-                    marginTop: '2px',
-                  }}
-                >
-                  {track.artist} • {track.album}
-                </div>
-              </div>
-
-              {/* Duration */}
-              <div
-                style={{
-                  color: isCurrentTrack ? '#DE3163' : '#fff',
-                  fontSize: '12px',
-                  marginLeft: '12px',
-                  minWidth: '40px',
-                  textAlign: 'right',
-                }}
-              >
-                {track.duration}
-              </div>
-
-              {/* Download Button */}
-              {/* {!isMobile && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      downloadAudio(track.downloadUrl, track.downloadFilename)
-                    }}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      padding: '4px 8px',
-                      marginLeft: '8px',
-                      borderRadius: '4px',
-                      opacity: 1,
-                      position: 'relative',
-                      zIndex: 100,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = '#DE3163'
-                      e.target.style.color = '#fff'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = 'transparent'
-                      e.target.style.color = '#fff'
-                    }}
-                    title="Download audio file"
-                  >
-                    ⬇
-                  </button>
-                )} */}
-            </div>
+              track={track}
+              index={index}
+              isCurrentTrack={isCurrentTrack}
+              isPlayingCurrent={isPlayingCurrent}
+              onTrackClick={handleTrackClick}
+              onTrackRef={setTrackItemRef}
+              showDownloadButton={false}
+              isMobile={isMobile}
+            />
           )
         })}
       </div>
@@ -226,7 +117,7 @@ const CustomPlaylist = ({
 const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
   const [isMuted, setIsMuted] = useState(false)
   const [isDownloadingZip, setIsDownloadingZip] = useState(false)
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  const isMobile = useIsMobile()
 
   // Normalize audioData to handle both string URLs and objects with metadata
   const normalizedAudioData = useMemo(() => {
@@ -646,6 +537,7 @@ const BlogAudioPlayer = ({ audioData, postTitle, postDate, coverArtUrl }) => {
         totalDuration={totalDuration}
         trackListRef={trackListRef}
         setTrackItemRef={setTrackItemRef}
+        isMobile={isMobile}
       />
     </div>
   )

@@ -16,11 +16,11 @@ export const getContainerDimensions = (
   defaultHeight = 400
 ) => {
   const containerWidth =
-    canvas && canvas.parentElement
+    canvas && canvas.parentElement && canvas.parentElement.offsetWidth
       ? canvas.parentElement.offsetWidth
       : defaultWidth
   const containerHeight =
-    canvas && canvas.parentElement
+    canvas && canvas.parentElement && canvas.parentElement.offsetHeight
       ? canvas.parentElement.offsetHeight
       : defaultHeight
 
@@ -89,7 +89,6 @@ export const setupAudioContext = (p, audioElement) => {
 export const setupFFT = (P5, sourceNode, smoothing = 0.9, fftSize = 2048) => {
   // Validate inputs
   if (!sourceNode) {
-    console.warn('🎵 No source node provided for FFT setup')
     return null
   }
 
@@ -103,10 +102,6 @@ export const setupFFT = (P5, sourceNode, smoothing = 0.9, fftSize = 2048) => {
 
       return globalFFT
     } catch (error) {
-      console.warn(
-        '🎵 Failed to set input on global FFT, creating new instance:',
-        error
-      )
       // Clear the problematic global instance
       window.__globalFFTInstance = null
     }
@@ -118,7 +113,6 @@ export const setupFFT = (P5, sourceNode, smoothing = 0.9, fftSize = 2048) => {
     fft.setInput(sourceNode)
     return fft
   } catch (error) {
-    console.error('Failed to create FFT instance:', error)
     throw error
   }
 }

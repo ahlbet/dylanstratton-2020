@@ -7,10 +7,9 @@ import {
   useAudioPlayer,
 } from '../../contexts/audio-player-context/audio-player-context'
 import { FixedAudioPlayer } from '../../components/fixed-audio-player/FixedAudioPlayer'
-import AllSongsPlaylist from '../../components/all-songs-playlist/all-songs-playlist'
-import DynamicMarkovText from '../../components/dynamic-markov-text/DynamicMarkovText'
-import AudioFFT from '../../components/audio-fft/AudioFFT'
+import SongsTable from '../../components/songs-table/SongsTable'
 import { SUPABASE_PUBLIC_URL_DOMAIN } from '../../utils/supabase-config'
+import './all-songs.css'
 import { isLocalDev } from '../../utils/local-dev-utils'
 import {
   removeBucketPrefix,
@@ -66,15 +65,12 @@ const AllSongsPage = ({ pageContext, location }) => {
                     : null,
                 title: filename, // Clean title without extension (same as blog posts)
                 postTitle: dailyEntry?.title || 'Unknown', // Keep for other uses
-                postDate: dailyEntry?.created_at
-                  ? new Date(dailyEntry.created_at).toLocaleDateString(
-                      'en-US',
-                      {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                      }
-                    )
+                postDate: dailyEntry?.date
+                  ? new Date(dailyEntry.date).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })
                   : 'Unknown Date',
                 postSlug: `/${dailyEntry?.title || 'unknown'}`,
               }
@@ -107,15 +103,12 @@ const AllSongsPage = ({ pageContext, location }) => {
                     : null,
                 title: filename, // Clean title without extension (same as blog posts)
                 postTitle: dailyEntry?.title || 'Unknown', // Keep for other uses
-                postDate: dailyEntry?.created_at
-                  ? new Date(dailyEntry.created_at).toLocaleDateString(
-                      'en-US',
-                      {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                      }
-                    )
+                postDate: dailyEntry?.date
+                  ? new Date(dailyEntry.date).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })
                   : 'Unknown Date',
                 postSlug: `/${dailyEntry?.title || 'unknown'}`,
               }
@@ -172,65 +165,18 @@ const AllSongsPage = ({ pageContext, location }) => {
   return (
     <AudioPlayerProvider>
       <AllSongsAutopilotHandler />
-      <Layout location={location} title="All Songs">
-        <SEO title="All" description="Complete" />
+      <Layout location={location} title="degreesminutesseconds">
+        <SEO title="All Songs" description="Complete collection of all songs" />
 
-        {/* 2-Column Layout Container */}
-        <div className="blog-layout-container">
-          {/* Left Column - Content */}
-          <div className="left-column">
-            {/* Header */}
-
-            {/* Audio Player Section */}
-            <div
-              className="audio-player-section"
-              style={{ marginTop: rhythm(1) }}
-            >
-              {allAudioUrlsWithMetadata.length > 0 ? (
-                <div style={{ marginBottom: rhythm(1) }}>
-                  <AllSongsPlaylist
-                    audioUrlsWithMetadata={allAudioUrlsWithMetadata}
-                  />
-                </div>
-              ) : (
-                <div></div>
-              )}
-            </div>
-
-            {/* Markov Generator Section */}
-            <div className="post-content-section">
-              <article>
-                <section style={{ marginBottom: rhythm(2) }}>
-                  <DynamicMarkovText maxLines={200} />
-                </section>
-              </article>
-            </div>
-          </div>
-
-          {/* Right Column - Audio Reactive Grid Sketch */}
-          <div className="right-column">
-            {typeof window !== 'undefined' && (
-              <React.Suspense
-                fallback={
-                  <div
-                    style={{
-                      width: '100%',
-                      height: 'calc(100% - 300px)',
-                      backgroundColor: '#000',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '14px',
-                    }}
-                  ></div>
-                }
-              >
-                <AudioFFT markovText={allMarkovText} />
-              </React.Suspense>
-            )}
-          </div>
+        {/* Full-width table layout */}
+        <div className="all-songs-container">
+          {allAudioUrlsWithMetadata.length > 0 ? (
+            <SongsTable audioUrlsWithMetadata={allAudioUrlsWithMetadata} />
+          ) : (
+            <div className="no-songs-available">No songs available</div>
+          )}
         </div>
+
         <FixedAudioPlayer />
       </Layout>
     </AudioPlayerProvider>

@@ -7,10 +7,51 @@
  * Audio-reactive particle class
  */
 export class Particle {
+  // Helper function to map all colors to blue-to-red spectrum (eliminates green entirely)
+  static avoidGreenHue(hue) {
+    // Map the full 360° spectrum to blue-to-red (240° to 0°/360°)
+    // This creates a continuous blue -> purple -> red -> orange -> yellow -> blue gradient
+
+    if (hue >= 0 && hue < 60) {
+      // Red to orange (0-59°) - keep as is
+      return hue
+    } else if (hue >= 60 && hue < 120) {
+      // Orange to yellow (60-119°) - map to red-orange range
+      return 0 + ((hue - 60) / 59) * 30 // Map 60-119 to 0-30
+    } else if (hue >= 120 && hue < 180) {
+      // Green to cyan (120-179°) - map to blue range
+      return 240 - ((hue - 120) / 59) * 40 // Map 120-179 to 240-200
+    } else if (hue >= 180 && hue < 240) {
+      // Cyan to blue (180-239°) - keep in blue range
+      return hue
+    } else if (hue >= 240 && hue < 300) {
+      // Blue to magenta (240-299°) - keep as is
+      return hue
+    } else if (hue >= 300 && hue < 360) {
+      // Magenta to red (300-359°) - map to red range
+      return 0 + ((hue - 300) / 59) * 30 // Map 300-359 to 0-30
+    }
+
+    return hue
+  }
+
+  // Helper function to adjust saturation and brightness for blue-to-red spectrum
+  static adjustGreenishColors(hue, saturation, brightness) {
+    // Since we're eliminating green entirely, we can be more generous with saturation and brightness
+    // Just ensure colors aren't too intense
+    return {
+      saturation: Math.max(50, Math.min(100, saturation * 0.9)), // Slight reduction, min 50
+      brightness: Math.max(60, Math.min(100, brightness * 0.9)), // Slight reduction, min 60
+    }
+  }
+
   constructor(p, x, y, amp, frequencyBand, markovSeed = 0) {
     this.p = p
     this.pos = p.createVector(x, y)
+    this.vel = p.createVector(0, 0)
+    this.acc = p.createVector(0, 0)
     this.frequencyBand = frequencyBand // 0-7: different frequency ranges
+    this.lifeFrames = 0
 
     // Individual particle properties for unique movement
     this.noiseOffsetX = p.random(1000)
@@ -25,15 +66,24 @@ export class Particle {
     // Individual color variation properties based on markov seed
     const primaryHue = markovSeed % 360 // Use markov seed for primary hue
     const hueVariation = p.random(-30, 30) // ±30 degree variation
-    this.colorHue = (primaryHue + hueVariation + 360) % 360
-    this.colorSaturation = p.random(60, 100)
-    this.colorBrightness = p.random(70, 100)
+    this.colorHue = Particle.avoidGreenHue(
+      (primaryHue + hueVariation + 360) % 360
+    )
+    const baseSaturationInit = p.random(60, 100)
+    const baseBrightnessInit = p.random(70, 100)
+    const adjustedColorsInit = Particle.adjustGreenishColors(
+      this.colorHue,
+      baseSaturationInit,
+      baseBrightnessInit
+    )
+    this.colorSaturation = adjustedColorsInit.saturation
+    this.colorBrightness = adjustedColorsInit.brightness
     this.colorShiftSpeed = p.random(0.5, 2.0)
     this.colorShiftDirection = p.random([-1, 1])
 
-    // More dramatic amplitude mapping using exponential scaling
+    // Much more dramatic amplitude mapping using exponential scaling
     const normalizedAmp = amp / 255
-    const exponentialAmp = Math.pow(normalizedAmp, 0.3) // Makes low values more sensitive
+    const exponentialAmp = Math.pow(normalizedAmp, 0.15) // Much more sensitive to low values (increased from 0.3)
 
     // Configure particle based on frequency band
     this.configureByFrequencyBand(exponentialAmp, primaryHue)
@@ -66,9 +116,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (180 + boostedAmp * 120) * lifespanVariation
         )
-        this.colorHue = (primaryHue + p.random(-10, 10) + 360) % 360
-        this.colorSaturation = p.random(90, 100)
-        this.colorBrightness = p.random(90, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + p.random(-10, 10) + 360) % 360
+        )
+        const baseSaturation = p.random(90, 100)
+        const baseBrightness = p.random(90, 100)
+        const adjustedColors = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation,
+          baseBrightness
+        )
+        this.colorSaturation = adjustedColors.saturation
+        this.colorBrightness = adjustedColors.brightness
         this.noiseStrength *= 0.3
         break
       case 1: // Bass (60-250 Hz) - most dramatic
@@ -78,9 +137,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (150 + boostedAmp * 100) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 30 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(85, 100)
-        this.colorBrightness = p.random(85, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 30 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation1 = p.random(85, 100)
+        const baseBrightness1 = p.random(85, 100)
+        const adjustedColors1 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation1,
+          baseBrightness1
+        )
+        this.colorSaturation = adjustedColors1.saturation
+        this.colorBrightness = adjustedColors1.brightness
         this.noiseStrength *= 0.6
         break
       case 2: // Low Mid (250-500 Hz)
@@ -90,9 +158,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (120 + boostedAmp * 80) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 60 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(80, 100)
-        this.colorBrightness = p.random(80, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 60 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation2 = p.random(80, 100)
+        const baseBrightness2 = p.random(80, 100)
+        const adjustedColors2 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation2,
+          baseBrightness2
+        )
+        this.colorSaturation = adjustedColors2.saturation
+        this.colorBrightness = adjustedColors2.brightness
         this.noiseStrength *= 1.0
         break
       case 3: // Mid (500-2000 Hz) - very responsive
@@ -102,9 +179,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (100 + boostedAmp * 60) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 90 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(75, 100)
-        this.colorBrightness = p.random(75, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 90 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation3 = p.random(75, 100)
+        const baseBrightness3 = p.random(75, 100)
+        const adjustedColors3 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation3,
+          baseBrightness3
+        )
+        this.colorSaturation = adjustedColors3.saturation
+        this.colorBrightness = adjustedColors3.brightness
         this.noiseStrength *= 1.4
         break
       case 4: // High Mid (2000-4000 Hz)
@@ -114,9 +200,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (80 + boostedAmp * 40) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 120 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(70, 100)
-        this.colorBrightness = p.random(70, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 140 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation4 = p.random(70, 100)
+        const baseBrightness4 = p.random(70, 100)
+        const adjustedColors4 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation4,
+          baseBrightness4
+        )
+        this.colorSaturation = adjustedColors4.saturation
+        this.colorBrightness = adjustedColors4.brightness
         this.noiseStrength *= 1.8
         break
       case 5: // Presence (4000-6000 Hz)
@@ -126,9 +221,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (60 + boostedAmp * 30) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 150 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(65, 100)
-        this.colorBrightness = p.random(65, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 150 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation5 = p.random(65, 100)
+        const baseBrightness5 = p.random(65, 100)
+        const adjustedColors5 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation5,
+          baseBrightness5
+        )
+        this.colorSaturation = adjustedColors5.saturation
+        this.colorBrightness = adjustedColors5.brightness
         this.noiseStrength *= 2.2
         break
       case 6: // Brilliance (6000-8000 Hz)
@@ -138,9 +242,18 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (40 + boostedAmp * 20) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 180 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(60, 100)
-        this.colorBrightness = p.random(60, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 180 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation6 = p.random(60, 100)
+        const baseBrightness6 = p.random(60, 100)
+        const adjustedColors6 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation6,
+          baseBrightness6
+        )
+        this.colorSaturation = adjustedColors6.saturation
+        this.colorBrightness = adjustedColors6.brightness
         this.noiseStrength *= 2.6
         break
       case 7: // Air (8000-20000 Hz)
@@ -150,41 +263,58 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (30 + boostedAmp * 15) * lifespanVariation
         )
-        this.colorHue = (primaryHue + 210 + p.random(-8, 8) + 360) % 360
-        this.colorSaturation = p.random(55, 100)
-        this.colorBrightness = p.random(55, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + 210 + p.random(-8, 8) + 360) % 360
+        )
+        const baseSaturation7 = p.random(55, 100)
+        const baseBrightness7 = p.random(55, 100)
+        const adjustedColors7 = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturation7,
+          baseBrightness7
+        )
+        this.colorSaturation = adjustedColors7.saturation
+        this.colorBrightness = adjustedColors7.brightness
         this.noiseStrength *= 3.0
         break
       default:
         this.speed = p.map(boostedAmp, 0, 1, 0, 25)
         this.size = p.map(boostedAmp, 0, 1, 4, 25)
         this.alphaDecay = 3
-        this.colorHue = (primaryHue + p.random(-20, 20) + 360) % 360
-        this.colorSaturation = p.random(50, 100)
-        this.colorBrightness = p.random(60, 100)
+        this.colorHue = Particle.avoidGreenHue(
+          (primaryHue + p.random(-20, 20) + 360) % 360
+        )
+        const baseSaturationDefault = p.random(50, 100)
+        const baseBrightnessDefault = p.random(60, 100)
+        const adjustedColorsDefault = Particle.adjustGreenishColors(
+          this.colorHue,
+          baseSaturationDefault,
+          baseBrightnessDefault
+        )
+        this.colorSaturation = adjustedColorsDefault.saturation
+        this.colorBrightness = adjustedColorsDefault.brightness
     }
   }
 
-  update() {
-    const p = this.p
-
+  update(p, audioData, frequencyBands) {
+    const p5 = p || this.p
     // Individual noise-based movement
-    const noiseX = p.noise(this.noiseOffsetX) * 2 - 1
-    const noiseY = p.noise(this.noiseOffsetY) * 2 - 1
+    const noiseX = p5.noise(this.noiseOffsetX) * 2 - 1
+    const noiseY = p5.noise(this.noiseOffsetY) * 2 - 1
 
     // Add smooth noise movement
-    const noiseForce = p
+    const noiseForce = p5
       .createVector(noiseX, noiseY)
       .mult(this.noiseStrength * 0.05)
     this.vel.add(noiseForce)
 
     // Individual oscillation
     const oscillationX =
-      p.sin(p.frameCount * this.oscillationSpeed + this.individualSeed) *
+      p5.sin(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
       0.005
     const oscillationY =
-      p.cos(p.frameCount * this.oscillationSpeed + this.individualSeed) *
+      p5.cos(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
       0.005
     this.vel.add(oscillationX, oscillationY)
@@ -201,77 +331,245 @@ export class Particle {
     this.noiseOffsetX += this.noiseScale
     this.noiseOffsetY += this.noiseScale
 
-    // Apply frequency band-specific movement patterns
-    this.applyFrequencyBandMovement()
+    // Check if particle is already too far from spawn before applying movement
+    const currentDistance = Math.sqrt(
+      Math.pow(this.pos.x - this.spawnX, 2) +
+        Math.pow(this.pos.y - this.spawnY, 2)
+    )
 
-    // Limit velocity based on audio reactivity
-    this.vel.limit(1.0 + this.audioReactivity * 2.0)
+    // If already too far, reduce movement forces - much more aggressive for sub-bass
+    let distanceMultiplier
+    if (this.frequencyBand === 0) {
+      // Sub-bass - extremely aggressive force reduction
+      distanceMultiplier =
+        currentDistance > 30 ? 0.1 : currentDistance > 20 ? 0.3 : 1.0
+    } else {
+      // Other frequencies - standard force reduction
+      distanceMultiplier = currentDistance > 60 ? 0.3 : 1.0
+    }
+
+    // Make distance multiplier more responsive to audio - allow more movement when audio is loud
+    distanceMultiplier = distanceMultiplier * (0.5 + this.audioReactivity * 0.5) // Audio affects how much movement is allowed
+
+    // Apply frequency band-specific movement patterns
+    this.applyFrequencyBandMovement(p5, distanceMultiplier)
+
+    // Limit velocity based on audio reactivity and distance from spawn - much more dramatic variation
+    const maxVelocity =
+      (0.5 + this.audioReactivity * 4.0) * distanceMultiplier * 0.75 // Much more dramatic speed variation with audio
+    this.vel.limit(maxVelocity)
+
+    // Constrain particle position to stay close to spawn position
+    this.constrainToSpawnArea(p5)
   }
 
-  applyFrequencyBandMovement() {
-    const p = this.p
+  applyFrequencyBandMovement(p, distanceMultiplier = 1.0) {
+    const p5 = p || this.p
 
     switch (this.frequencyBand) {
-      case 0: // Sub-bass - strong gravitational pull to center
-        const center = p.createVector(p.width / 2, p.height / 2)
-        const toCenter = p.createVector(
+      case 0: // Sub-bass - much more controlled pulsing movement
+        // Create a pulsing force that expands and contracts based on audio
+        const center = p5.createVector(p5.width / 2, p5.height / 2)
+        const toCenter = p5.createVector(
           center.x - this.pos.x,
           center.y - this.pos.y
         )
-        toCenter.normalize()
-        toCenter.mult(0.6 * this.audioReactivity)
-        this.vel.add(toCenter)
+
+        // Much more dramatic pulsing effect - directly tied to audio level
+        const pulseStrength = 2.0 * this.audioReactivity // Increased from 0.8 to 2.0 (much more dramatic)
+        // Use audio reactivity to control the frequency and intensity of pulsing
+        const audioFrequency = 0.1 + this.audioReactivity * 0.3 // Audio affects pulse frequency
+        const pulseDirection =
+          p5.sin(p5.frameCount * audioFrequency + this.individualSeed) *
+          pulseStrength *
+          (1 + this.audioReactivity * 2)
+
+        if (pulseDirection > 0) {
+          // Expand outward - controlled dramatic effect with audio-reactive variation
+          toCenter.normalize()
+          const expandForce = pulseDirection * distanceMultiplier * 0.5
+          // Add some chaotic variation based on audio level
+          const chaoticVariation =
+            p5.sin(
+              p5.frameCount * (0.3 + this.audioReactivity * 0.6) +
+                this.individualSeed * 0.3
+            ) *
+            this.audioReactivity *
+            0.8
+          toCenter.mult(expandForce + chaoticVariation)
+          this.vel.add(toCenter)
+        } else {
+          // Contract inward - controlled dramatic effect with audio-reactive variation
+          toCenter.normalize()
+          const contractForce = pulseDirection * 0.6 * distanceMultiplier * 0.5
+          // Add some chaotic variation based on audio level
+          const chaoticVariation =
+            p5.sin(
+              p5.frameCount * (0.25 + this.audioReactivity * 0.4) +
+                this.individualSeed * 0.5
+            ) *
+            this.audioReactivity *
+            0.6
+          toCenter.mult(contractForce + chaoticVariation)
+          this.vel.add(toCenter)
+        }
+
+        // Much more responsive velocity limit for sub-bass - varies dramatically with audio
+        this.vel.limit((0.3 + this.audioReactivity * 1.5) * 0.75) // Much more dramatic speed variation with audio
         break
-      case 1: // Bass - spiral movement
-        this.vel.rotate(this.rotationSpeed * this.audioReactivity)
+      case 1: // Bass - much more dramatic spiral movement directly tied to audio
+        // Audio affects both rotation speed and adds chaotic variation
+        const audioRotationSpeed =
+          this.rotationSpeed * this.audioReactivity * 5.0
+        const chaoticVariation =
+          p5.sin(p5.frameCount * (0.2 + this.audioReactivity * 0.5)) *
+          this.audioReactivity *
+          2.0
+        this.vel.rotate(audioRotationSpeed + chaoticVariation)
+
+        // Much more responsive velocity limit for bass - varies dramatically with audio
+        this.vel.limit((0.5 + this.audioReactivity * 2.0) * 0.75) // Much more dramatic speed variation with audio
         break
-      case 2: // Low Mid - bouncing off edges with audio-reactive bounciness
-        if (this.pos.x < 0 || this.pos.x > p.width)
-          this.vel.x *= -(0.6 + this.audioReactivity * 0.4)
-        if (this.pos.y < 0 || this.pos.y > p.height)
-          this.vel.y *= -(0.6 + this.audioReactivity * 0.4)
+      case 2: // Low Mid - much more dramatic bouncing with audio-reactive bounciness
+        if (this.pos.x < 0 || this.pos.x > p5.width)
+          this.vel.x *= -(0.8 + this.audioReactivity * 2.5) // Increased from 1.2 to 2.5 (much more dramatic)
+        if (this.pos.y < 0 || this.pos.y > p5.height)
+          this.vel.y *= -(0.8 + this.audioReactivity * 2.5) // Increased from 1.2 to 2.5 (much more dramatic)
         break
-      case 3: // Mid - wavey movement
+      case 3: // Mid - much more dramatic wavey movement directly tied to audio
+        // Audio affects both frequency and amplitude of wavey movement
+        const audioWaveFreq = 0.2 + this.audioReactivity * 0.4 // Audio affects wave frequency
+        const audioWaveAmp =
+          0.8 * this.audioReactivity * (1 + this.audioReactivity * 3) // Audio affects wave amplitude
+
         this.vel.x +=
-          p.sin(p.frameCount * 0.15 + this.individualSeed) *
-          0.1 *
-          this.audioReactivity
+          p5.sin(p5.frameCount * audioWaveFreq + this.individualSeed) *
+          audioWaveAmp
         this.vel.y +=
-          p.cos(p.frameCount * 0.15 + this.individualSeed) *
-          0.1 *
-          this.audioReactivity
+          p5.cos(p5.frameCount * audioWaveFreq + this.individualSeed) *
+          audioWaveAmp
         break
-      case 4: // High Mid - expanding/contracting movement
-        const expansionForce = p.createVector(
-          this.pos.x - p.width / 2,
-          this.pos.y - p.height / 2
+      case 4: // High Mid - much more dramatic expanding/contracting movement
+        const expansionForce = p5.createVector(
+          this.pos.x - p5.width / 2,
+          this.pos.y - p5.height / 2
         )
         expansionForce.normalize()
-        expansionForce.mult(0.2 * this.audioReactivity)
+        expansionForce.mult(1.5 * this.audioReactivity) // Increased from 0.8 to 1.5 (much more dramatic)
         this.vel.add(expansionForce)
         break
-      case 5: // Presence - chaotic movement
+      case 5: // Presence - much more dramatic chaotic movement
         this.vel.add(
-          p
-            .createVector(p.random(-0.2, 0.2), p.random(-0.2, 0.2))
+          p5
+            .createVector(p5.random(-1.0, 1.0), p5.random(-1.0, 1.0)) // Increased from 0.6 to 1.0 (much more dramatic)
             .mult(this.audioReactivity)
         )
         break
-      case 6: // Brilliance - rapid oscillation
+      case 6: // Brilliance - much more dramatic rapid oscillation directly tied to audio
+        // Audio affects both oscillation frequency and creates chaotic patterns
+        const audioOscFreq = 0.4 + this.audioReactivity * 0.8 // Audio affects oscillation frequency
+        const audioOscAmp =
+          1.2 * this.audioReactivity * (1 + this.audioReactivity * 4) // Audio affects oscillation amplitude
+
+        // Add chaotic variation based on audio level
+        const chaoticX =
+          p5.sin(p5.frameCount * audioOscFreq * 2 + this.individualSeed * 0.5) *
+          this.audioReactivity *
+          0.5
+        const chaoticY =
+          p5.cos(
+            p5.frameCount * audioOscFreq * 1.5 + this.individualSeed * 0.7
+          ) *
+          this.audioReactivity *
+          0.5
+
         this.vel.x +=
-          p.sin(p.frameCount * 0.3 + this.individualSeed) *
-          0.15 *
-          this.audioReactivity
+          p5.sin(p5.frameCount * audioOscFreq + this.individualSeed) *
+            audioOscAmp +
+          chaoticX
         this.vel.y +=
-          p.cos(p.frameCount * 0.3 + this.individualSeed) *
-          0.15 *
-          this.audioReactivity
+          p5.sin(p5.frameCount * audioOscFreq + this.individualSeed) *
+            audioOscAmp +
+          chaoticY
         break
-      case 7: // Air - random direction changes
-        if (p.random() < 0.1 * this.audioReactivity) {
-          this.vel.rotate(p.random(-p.PI / 4, p.PI / 4))
+      case 7: // Air - much more dramatic random direction changes
+        if (p5.random() < 0.5 * this.audioReactivity) {
+          // Increased from 0.3 to 0.5 (much more frequent)
+          this.vel.rotate(p5.random(-p5.PI, p5.PI)) // Increased from PI/2 to PI (much more dramatic)
         }
         break
+    }
+  }
+
+  constrainToSpawnArea(p) {
+    const p5 = p || this.p
+
+    // Calculate distance from spawn position manually (for test compatibility)
+    const dx = this.pos.x - this.spawnX
+    const dy = this.pos.y - this.spawnY
+    const distanceFromSpawn = Math.sqrt(dx * dx + dy * dy)
+
+    // Maximum allowed distance from spawn position - much more restrictive
+    // Sub-bass and bass get even tighter constraints due to their strong movement patterns
+    let maxDistance
+    if (this.frequencyBand === 0) {
+      // Sub-bass - extremely tight constraints due to dramatic pulsing
+      maxDistance = 25 + this.audioReactivity * 15 // 25px to 40px max
+    } else if (this.frequencyBand === 1) {
+      // Bass - very tight constraints due to spiral movement
+      maxDistance = 30 + this.audioReactivity * 20 // 30px to 50px max
+    } else {
+      // Other frequencies - standard tight constraints
+      maxDistance = 40 + this.audioReactivity * 30 // 40px to 70px max
+    }
+
+    if (distanceFromSpawn > maxDistance) {
+      // Calculate direction back to spawn position
+      const toSpawn = p5.createVector(
+        this.spawnX - this.pos.x,
+        this.spawnY - this.pos.y
+      )
+      toSpawn.normalize()
+
+      // Move particle back to allowed area
+      const overshoot = distanceFromSpawn - maxDistance
+      this.pos.add(toSpawn.mult(overshoot))
+
+      // Reduce velocity in the direction away from spawn
+      const awayFromSpawn = p5.createVector(
+        this.pos.x - this.spawnX,
+        this.pos.y - this.spawnY
+      )
+      awayFromSpawn.normalize()
+      const velocityComponent = this.vel.dot(awayFromSpawn)
+
+      if (velocityComponent > 0) {
+        // Much more aggressive velocity reduction in the direction away from spawn
+        this.vel.sub(awayFromSpawn.mult(velocityComponent * 0.8)) // Increased from 0.5 to 0.8
+      }
+    } else if (distanceFromSpawn > maxDistance * 0.7) {
+      // Add gentle pull back toward spawn when getting close to boundary
+      const toSpawn = p5.createVector(
+        this.spawnX - this.pos.x,
+        this.spawnY - this.pos.y
+      )
+      toSpawn.normalize()
+
+      // Stronger pull force for sub-bass and bass due to their strong movement patterns
+      let pullStrength
+      if (this.frequencyBand === 0) {
+        // Sub-bass - much stronger pull due to dramatic pulsing
+        pullStrength = 0.3 * (distanceFromSpawn - maxDistance * 0.7)
+      } else if (this.frequencyBand === 1) {
+        // Bass - stronger pull due to spiral movement
+        pullStrength = 0.2 * (distanceFromSpawn - maxDistance * 0.7)
+      } else {
+        // Other frequencies - standard gentle pull
+        pullStrength = 0.1 * (distanceFromSpawn - maxDistance * 0.7)
+      }
+
+      toSpawn.mult(pullStrength)
+      this.vel.add(toSpawn)
     }
   }
 
@@ -288,32 +586,56 @@ export class Particle {
     if (this.colorHue > 360) this.colorHue -= 360
     if (this.colorHue < 0) this.colorHue += 360
 
+    // Ensure we still avoid green hues after dynamic shifting
+    this.colorHue = Particle.avoidGreenHue(this.colorHue)
+
+    // Adjust saturation and brightness to avoid greenish appearance
+    const adjustedColors = Particle.adjustGreenishColors(
+      this.colorHue,
+      this.colorSaturation,
+      this.colorBrightness
+    )
+
     // Create color with current properties
     p.colorMode(p.HSB, 360, 100, 100, 1)
     const currentColor = p.color(
       this.colorHue,
-      this.colorSaturation,
-      this.colorBrightness,
+      adjustedColors.saturation,
+      adjustedColors.brightness,
       this.alpha / 255
     )
 
-    // Size pulsing based on frequency band and audio reactivity
+    // Much more dramatic size pulsing based on frequency band and audio reactivity
     let pulseSize = this.size
-    const pulseIntensity = this.audioReactivity * 0.5
+
+    // Use audio reactivity to control the intensity of the pulse
+    const audioMultiplier = Math.max(0.1, this.audioReactivity) // Minimum 0.1, maximum 1.0
 
     if (this.frequencyBand === 0) {
-      // Sub-bass pulses more dramatically
-      pulseSize *= 1 + p.sin(p.frameCount * 0.3) * pulseIntensity
+      // Sub-bass pulses much more dramatically - very obvious difference
+      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 0.4) // 0 to 1 range
+      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
+      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
     } else if (this.frequencyBand === 1) {
-      // Bass pulses
-      pulseSize *= 1 + p.sin(p.frameCount * 0.25) * pulseIntensity
+      // Bass pulses more dramatically
+      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 0.3) // 0 to 1 range
+      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
+      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
     } else if (this.frequencyBand >= 6) {
-      // High frequencies vibrate rapidly
-      pulseSize *= 1 + p.sin(p.frameCount * 0.8) * pulseIntensity
+      // High frequencies vibrate much more rapidly
+      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 1.0) // 0 to 1 range
+      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
+      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
     } else {
-      // Mid frequencies have moderate pulsing
-      pulseSize *= 1 + p.sin(p.frameCount * 0.15) * pulseIntensity
+      // Mid frequencies have much more dramatic pulsing
+      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 0.2) // 0 to 1 range
+      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
+      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
     }
+
+    // Safety check - ensure size never goes below 50% of original size
+    const absoluteMinSize = this.size * 0.5
+    pulseSize = Math.max(pulseSize, absoluteMinSize)
 
     p.fill(currentColor)
     p.ellipse(this.pos.x, this.pos.y, pulseSize)
@@ -338,36 +660,58 @@ export const calculateParticleCount = (band, exponentialAmp, canvasScale) => {
   let baseParticles
   switch (band) {
     case 0:
-      baseParticles = 8
-      break // Sub-bass - more dramatic
-    case 1:
-      baseParticles = 12
-      break // Bass - most dramatic
-    case 2:
-      baseParticles = 10
-      break // Low Mid
-    case 3:
       baseParticles = 15
-      break // Mid - very responsive
+      break // Sub-bass - more dramatic, higher base count
+    case 1:
+      baseParticles = 20
+      break // Bass - most dramatic, highest base count
+    case 2:
+      baseParticles = 18
+      break // Low Mid - high base count
+    case 3:
+      baseParticles = 25
+      break // Mid - very responsive, highest base count
     case 4:
-      baseParticles = 12
-      break // High Mid
+      baseParticles = 20
+      break // High Mid - high base count
     case 5:
-      baseParticles = 10
-      break // Presence
+      baseParticles = 15
+      break // Presence - moderate base count
     case 6:
-      baseParticles = 8
-      break // Brilliance
+      baseParticles = 12
+      break // Brilliance - lower base count
     case 7:
-      baseParticles = 6
-      break // Air
-    default:
       baseParticles = 10
+      break // Air - lowest base count
+    default:
+      baseParticles = 15
   }
 
-  // Much more dramatic response to audio
-  const audioMultiplier = exponentialAmp > 0.05 ? 8 : 1 // 8x boost when audio detected
-  const dramaticResponse = Math.pow(exponentialAmp, 0.15) // Much more sensitive curve
+  // Much more granular response to audio - particle count directly correlates with loudness
+  let audioMultiplier
+
+  if (exponentialAmp < 0.01) {
+    // Very quiet - minimal particles
+    audioMultiplier = 0.1
+  } else if (exponentialAmp < 0.05) {
+    // Quiet - few particles
+    audioMultiplier = 0.5
+  } else if (exponentialAmp < 0.1) {
+    // Moderate - normal particles
+    audioMultiplier = 1.0
+  } else if (exponentialAmp < 0.2) {
+    // Loud - many particles
+    audioMultiplier = 3.0
+  } else if (exponentialAmp < 0.4) {
+    // Very loud - lots of particles
+    audioMultiplier = 6.0
+  } else {
+    // Extremely loud - maximum particles
+    audioMultiplier = 10.0
+  }
+
+  // Much more sensitive curve for dramatic response
+  const dramaticResponse = Math.pow(exponentialAmp, 0.1) // Even more sensitive than 0.15
 
   return Math.max(
     1,
@@ -383,18 +727,19 @@ export const calculateParticleCount = (band, exponentialAmp, canvasScale) => {
  * @returns {Object} Spawn timing information
  */
 export const calculateStaggeredSpawn = (band, frameCount, totalParticles) => {
-  // Different spawn intervals for different frequency bands
-  const spawnIntervals = [8, 6, 7, 5, 6, 7, 8, 9] // Frames between spawns for each band
-  const interval = spawnIntervals[band] || 7
+  // Shorter spawn intervals for more continuous particle flow
+  const spawnIntervals = [3, 2, 3, 2, 3, 2, 3, 2] // Frames between spawns for each band
+  const interval = spawnIntervals[band] || 3
 
   // Offset each band to prevent all spawning at once
-  const bandOffset = band * 3
+  const bandOffset = band * 2
   const adjustedFrame = frameCount + bandOffset
 
   // Check if it's time to spawn
   const shouldSpawn = adjustedFrame % interval === 0
 
   // Calculate which particle in the sequence to spawn
+  // Use modulo to cycle through particles continuously
   const spawnIndex = Math.floor(adjustedFrame / interval) % totalParticles
 
   return {

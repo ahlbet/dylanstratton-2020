@@ -1,10 +1,14 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent } from '../../utils/plausible-analytics'
+import useIsMobile from '../../hooks/use-is-mobile'
+import TrackItem from '../track-item/TrackItem'
 import './all-songs-playlist.css'
 
 const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
   const [isMuted, setIsMuted] = useState(false)
+  const isMobile = useIsMobile()
+
   const {
     playlist,
     currentIndex,
@@ -99,6 +103,7 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
   const totalDuration = useMemo(() => {
     const totalSeconds =
       audioUrlsWithMetadata?.reduce((sum, item) => {
+        if (!item) return sum
         return sum + (item.duration || 0)
       }, 0) || 0
     return formatDuration(totalSeconds)
@@ -108,6 +113,7 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
   useEffect(() => {
     const totalSeconds =
       audioUrlsWithMetadata?.reduce((sum, item) => {
+        if (!item) return sum
         return sum + (item.duration || 0)
       }, 0) || 0
     updateTotalPlaylistDuration(totalSeconds)
@@ -230,93 +236,16 @@ const AllSongsPlaylist = ({ audioUrlsWithMetadata }) => {
             const isPlayingCurrent = isCurrentTrack && isPlaying
 
             return (
-              <div
+              <TrackItem
                 key={index}
-                className={`track-item ${isCurrentTrack ? 'current-track' : ''}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '12px 16px',
-                  borderBottom: '1px solid #f3f4f6',
-
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s ease',
-                  position: 'relative',
-                  minHeight: '60px',
-                  userSelect: 'none',
-                  zIndex: 10,
-                  borderLeft: isCurrentTrack
-                    ? '4px solid #DE3163'
-                    : '4px solid transparent',
-                }}
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  handleTrackClick(index)
-                }}
-              >
-                {/* Play/Pause Button */}
-                <div
-                  style={{
-                    marginRight: '12px',
-                    width: '24px',
-                    textAlign: 'center',
-                  }}
-                >
-                  {isPlayingCurrent ? (
-                    <span style={{ color: '#DE3163', fontSize: '16px' }}>
-                      ⏸
-                    </span>
-                  ) : (
-                    <span
-                      style={{
-                        color: isCurrentTrack ? '#DE3163' : '#fff',
-                        fontSize: '16px',
-                      }}
-                    >
-                      ▶
-                    </span>
-                  )}
-                </div>
-
-                {/* Track Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontWeight: isCurrentTrack ? '600' : '500',
-                      color: isCurrentTrack ? '#DE3163' : '#fff',
-                      fontSize: '14px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {track.title}
-                  </div>
-                  <div
-                    style={{
-                      color: isCurrentTrack ? '#DE3163' : '#fff',
-                      fontSize: '12px',
-                      marginTop: '2px',
-                    }}
-                  >
-                    {track.artist} • {track.album}
-                  </div>
-                </div>
-
-                {/* Duration */}
-                <div
-                  style={{
-                    color: isCurrentTrack ? '#DE3163' : '#fff',
-                    fontSize: '12px',
-                    marginLeft: '12px',
-                    minWidth: '40px',
-                    textAlign: 'right',
-                  }}
-                >
-                  {track.duration}
-                </div>
-              </div>
+                track={track}
+                index={index}
+                isCurrentTrack={isCurrentTrack}
+                isPlayingCurrent={isPlayingCurrent}
+                onTrackClick={handleTrackClick}
+                showDownloadButton={false}
+                isMobile={isMobile}
+              />
             )
           })}
         </div>

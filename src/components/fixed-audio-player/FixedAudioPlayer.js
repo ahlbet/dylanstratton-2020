@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useAudioPlayer } from '../../contexts/audio-player-context/audio-player-context'
 import { trackAudioEvent, getPostName } from '../../utils/plausible-analytics'
 import { navigate, useStaticQuery, graphql } from 'gatsby'
@@ -96,7 +96,6 @@ export const FixedAudioPlayer = () => {
           const audioUrl = await getAudioUrl(currentTrack)
           setCurrentAudioUrl(audioUrl)
         } catch (error) {
-          console.error('Failed to generate audio URL:', error)
           // Fall back to original URL
           setCurrentAudioUrl(currentTrack.url)
         }
@@ -123,7 +122,7 @@ export const FixedAudioPlayer = () => {
     const handleEnded = () => {
       if (isLoopOn) {
         // If loop is on, restart the current track
-        if (audioRef.current) {
+        if (audioRef.current && currentAudioUrl) {
           audioRef.current.currentTime = 0
           audioRef.current.play()
         }
@@ -179,26 +178,70 @@ export const FixedAudioPlayer = () => {
     shuffledPlaylist,
     navigateToRandomPost,
     volume,
+    currentAudioUrl,
   ])
 
-  useEffect(() => {
+  // Function to check if audio is ready to play
+  const isAudioReady = useCallback(() => {
     const audio = audioRef.current
-    if (audio) {
-      if (isPlaying) {
+    return (
+      audio &&
+      audio.src &&
+      audio.readyState >= 1 && // HAVE_METADATA or higher
+      currentAudioUrl
+    )
+  }, [currentAudioUrl])
+
+  // Function to wait for audio to be ready and then play
+  const waitForAudioAndPlay = useCallback(
+    (audio) => {
+      if (isAudioReady()) {
         const playPromise = audio.play()
         if (playPromise !== undefined) {
           playPromise.catch((error) => {
             // Ignore AbortError as it's expected when navigating
             if (error.name !== 'AbortError') {
-              console.warn('Audio play failed:', error)
+              // If play fails due to source issues, try to recover
+              if (error.name === 'NotSupportedError' && currentAudioUrl) {
+                audio.load()
+              }
             }
           })
         }
+        return true
+      }
+      return false
+    },
+    [currentAudioUrl, isAudioReady]
+  )
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (audio) {
+      if (isPlaying) {
+        // Check if audio source is ready before attempting to play
+        if (!currentAudioUrl || audio.readyState === 0 || !audio.src) {
+          return
+        }
+
+        // Try to play immediately if ready
+        if (waitForAudioAndPlay(audio)) {
+          return
+        }
+
+        // If not ready, wait and try again
+        const timeoutId = setTimeout(() => {
+          if (isPlaying) {
+            waitForAudioAndPlay(audio)
+          }
+        }, 200)
+
+        return () => clearTimeout(timeoutId)
       } else {
         audio.pause()
       }
     }
-  }, [isPlaying])
+  }, [isPlaying, currentAudioUrl, waitForAudioAndPlay])
 
   // Handle autopilot navigation when enabled on home or /all page
   useEffect(() => {
@@ -215,21 +258,45 @@ export const FixedAudioPlayer = () => {
     // wait until metadata loads before attempting playback
     const tryPlay = () => {
       if (isPlaying) {
-        const promise = audio.play()
-        if (promise?.catch) {
-          promise.catch((err) => {
-            // Ignore AbortError as it's expected when navigating
-            if (err.name !== 'AbortError') {
-              console.warn('Autoplay failed:', err)
-            }
-          })
+        // Check if audio source is ready before attempting to play
+        if (!currentAudioUrl || audio.readyState === 0 || !audio.src) {
+          return
         }
+
+        // Try to play immediately if ready
+        if (waitForAudioAndPlay(audio)) {
+          return
+        }
+
+        // If not ready, wait and try again
+        setTimeout(() => {
+          if (isPlaying) {
+            waitForAudioAndPlay(audio)
+          }
+        }, 200)
       }
     }
 
     audio.addEventListener('loadedmetadata', tryPlay)
     return () => audio.removeEventListener('loadedmetadata', tryPlay)
   }, [currentTrack, isPlaying])
+
+  // Listen for audio metadata loading to know when it's ready to play
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const handleMetadataLoaded = () => {
+      // If user was waiting to play, try to play now
+      if (isPlaying && isAudioReady()) {
+        waitForAudioAndPlay(audio)
+      }
+    }
+
+    audio.addEventListener('loadedmetadata', handleMetadataLoaded)
+    return () =>
+      audio.removeEventListener('loadedmetadata', handleMetadataLoaded)
+  }, [isPlaying, isAudioReady, waitForAudioAndPlay])
 
   const togglePlay = () => {
     // If no track is selected but we have a playlist, start playing
@@ -238,6 +305,24 @@ export const FixedAudioPlayer = () => {
         ? Math.floor(Math.random() * playlist.length)
         : 0
       playTrack(trackIndex)
+      return
+    }
+
+    // Don't allow play if there's no audio source
+    if (!currentAudioUrl) {
+      return
+    }
+
+    // Check if audio is ready (both context and source metadata)
+    const audio = audioRef.current
+    if (audio && (audio.readyState === 0 || !audio.src)) {
+      // Wait a bit and try again
+      setTimeout(() => {
+        if (audio.readyState > 0 && audio.src) {
+          // Instead of calling togglePlay recursively, just set playing state
+          setIsPlaying(true)
+        }
+      }, 200) // Increased delay to give more time for setup
       return
     }
 
@@ -301,7 +386,7 @@ export const FixedAudioPlayer = () => {
         </button>
         <div className="track-info">
           <div className="track-title">{currentTrack?.title || '~~~'}</div>
-          <div className="track-artist">{currentTrack?.artist || '~~~'}</div>
+          {/* <div className="track-artist">{currentTrack?.artist || '~~~'}</div> */}
         </div>
         <div className="player-controls">
           {playlist.length > 1 && (
