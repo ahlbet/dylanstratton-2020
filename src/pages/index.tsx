@@ -414,9 +414,6 @@ const BlogIndex = ({
           })
         }
 
-        console.log('audioUrl', audioUrl)
-        console.log('trackToGetUrlFor', trackToGetUrlFor)
-
         if (audioUrl) {
           // Update the playlist with the URL and play the track
           const updatedPlaylist = [...playlist]
@@ -437,7 +434,6 @@ const BlogIndex = ({
           setError('Failed to get audio URL for track')
         }
       } catch (error) {
-        console.error('Error getting audio URL for track:', error)
         setError('Failed to get audio URL for track')
       }
     }
@@ -493,7 +489,6 @@ const BlogIndex = ({
             setError('Failed to get audio URL for track')
           }
         } catch (error) {
-          console.error('Error getting audio URL:', error)
           setError('Failed to get audio URL for track')
         }
       }
@@ -558,7 +553,6 @@ const BlogIndex = ({
           setError('Failed to get audio URL for next track')
         }
       } catch (error) {
-        console.error('Error getting audio URL for next track:', error)
         setError('Failed to get audio URL for next track')
       }
     }
@@ -605,7 +599,6 @@ const BlogIndex = ({
           setError('Failed to get audio URL for previous track')
         }
       } catch (error) {
-        console.error('Error getting audio URL for previous track:', error)
         setError('Failed to get audio URL for previous track')
       }
     }
@@ -813,7 +806,6 @@ const BlogIndex = ({
               }
             }}
             onError={(e) => {
-              console.error('Audio playback error:', e)
               setError('Audio playback error')
             }}
             onTimeUpdate={() => {
