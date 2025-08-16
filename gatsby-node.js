@@ -12,7 +12,7 @@ const supabase = createClient(
 exports.createPages = async ({ graphql, actions }) => {
   const { createPage } = actions
 
-  const blogPost = path.resolve(`./src/templates/blog-post/blog-post.js`)
+  const blogPost = path.resolve(`./src/templates/blog-post/blog-post.tsx`)
 
   // Query both markdown and Supabase data
   const result = await graphql(`
@@ -168,7 +168,7 @@ exports.createPages = async ({ graphql, actions }) => {
   // Create /all page with Supabase data
   createPage({
     path: '/all',
-    component: path.resolve(`./src/templates/all-songs/all-songs.js`),
+    component: path.resolve(`./src/templates/all-songs/all-songs.tsx`),
     context: {
       // Pass all Supabase data for the /all page
       supabaseData: {

@@ -39,6 +39,7 @@ import AudioFFT from '../../components/audio-fft/AudioFFT'
 interface AudioItem {
   url?: string | null
   storagePath?: string
+  storage_path?: string // Add the snake_case version that comes from the database
   duration?: number | null
   format?: string
   title?: string
@@ -116,10 +117,11 @@ const AutopilotAutoPlay: React.FC<AutopilotAutoPlayProps> = ({ audioData }) => {
 
         if (typeof audioItem === 'string') {
           url = audioItem
-          filename = url
-            .split('/')
-            .pop()
-            ?.replace(/\.[^/.]+$/, '') || 'Unknown Track'
+          filename =
+            url
+              .split('/')
+              .pop()
+              ?.replace(/\.[^/.]+$/, '') || 'Unknown Track'
         } else {
           // New format: use title if available, otherwise extract from storage path
           url = audioItem.url || ''
@@ -213,10 +215,10 @@ const AutopilotAutoPlay: React.FC<AutopilotAutoPlayProps> = ({ audioData }) => {
 }
 
 // Main component that wraps everything in AudioPlayerProvider
-const BlogPostTemplate: React.FC<PageProps<BlogPostData, PageContext>> = ({ 
-  data, 
-  pageContext, 
-  location 
+const BlogPostTemplate: React.FC<PageProps<BlogPostData, PageContext>> = ({
+  data,
+  pageContext,
+  location,
 }) => {
   const post = data.markdownRemark
   const siteTitle = data.site.siteMetadata.title
@@ -237,7 +239,21 @@ const BlogPostTemplate: React.FC<PageProps<BlogPostData, PageContext>> = ({
           // Use local audio files for development
           return supabaseData.audio.map((audio) => {
             // Extract clean filename from storage_path
-            const filename = extractFilenameFromStoragePath(audio.storagePath || '')
+            let filename = ''
+            if (audio.displayFilename) {
+              filename = audio.displayFilename
+            } else if (audio.storagePath) {
+              filename = extractFilenameFromStoragePath(audio.storagePath)
+            } else if (audio.storage_path) {
+              // Use the snake_case version that comes from the database
+              filename = extractFilenameFromStoragePath(audio.storage_path)
+            } else {
+              console.warn(
+                'No storagePath, displayFilename, or storage_path found for audio item:',
+                audio
+              )
+              filename = 'unknown'
+            }
 
             // Convert to local audio URL
             const localUrl = `/local-audio/${filename}.wav`
@@ -256,16 +272,24 @@ const BlogPostTemplate: React.FC<PageProps<BlogPostData, PageContext>> = ({
           // Production mode: store storage paths, generate presigned URLs on-demand when played
           return supabaseData.audio.map((audio) => {
             // Use the display filename that was already extracted
-            const filename =
-              audio.displayFilename ||
-              extractFilenameFromStoragePath(audio.storagePath || '')
+            let filename = ''
+            if (audio.displayFilename) {
+              filename = audio.displayFilename
+            } else if (audio.storagePath) {
+              filename = extractFilenameFromStoragePath(audio.storagePath)
+            } else if (audio.storage_path) {
+              // Use the snake_case version that comes from the database
+              filename = extractFilenameFromStoragePath(audio.storage_path)
+            } else {
+              filename = 'unknown'
+            }
 
             return {
               ...audio,
               // No initial URL - will be generated on-demand when track is played
               url: null,
               // Store storage path for on-demand presigned URL generation
-              storagePath: audio.storagePath,
+              storagePath: audio.storagePath || audio.storage_path,
               duration: audio.duration || null,
               format: audio.format || 'audio/wav',
               title: filename, // Clean title without extension
@@ -275,16 +299,24 @@ const BlogPostTemplate: React.FC<PageProps<BlogPostData, PageContext>> = ({
           })
         }
       } catch (error) {
-        console.error('Error generating audio URLs:', error)
         // Fall back to storage paths only on error
         return supabaseData.audio.map((audio) => {
           // Extract clean filename from storage_path
-          const filename = extractFilenameFromStoragePath(audio.storagePath || '')
+          let filename = ''
+          if (audio.displayFilename) {
+            filename = audio.displayFilename
+          } else if (audio.storagePath) {
+            filename = extractFilenameFromStoragePath(audio.storagePath)
+          } else if (audio.storage_path) {
+            filename = extractFilenameFromStoragePath(audio.storage_path)
+          } else {
+            filename = 'unknown'
+          }
 
           return {
             ...audio,
             url: null, // No URL - will be generated on-demand
-            storagePath: audio.storagePath, // Keep storage path for on-demand generation
+            storagePath: audio.storagePath || audio.storage_path, // Keep storage path for on-demand generation
             duration: audio.duration || null,
             format: audio.format || 'audio/wav',
             title: filename, // Clean title without extension
@@ -354,10 +386,7 @@ const BlogPostTemplate: React.FC<PageProps<BlogPostData, PageContext>> = ({
     <AudioPlayerProvider>
       <AutopilotAutoPlay audioData={audioData} />
       <Layout location={location} title={siteTitle}>
-        <SEO
-          title={post.frontmatter.title}
-          description={post.frontmatter.description || post.excerpt}
-        />
+        <SEO title={post.frontmatter.title} description={post.excerpt} />
 
         {/* 2-Column Layout Container */}
         <div className="blog-layout-container">

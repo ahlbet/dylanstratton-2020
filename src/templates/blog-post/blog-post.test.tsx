@@ -223,7 +223,7 @@ describe('BlogPostTemplate', () => {
     expect(screen.getByTestId('seo')).toHaveAttribute('title', 'Test Blog Post')
     expect(screen.getByTestId('seo')).toHaveAttribute(
       'description',
-      'Test description'
+      'Test excerpt'
     )
     expect(screen.getByTestId('bio')).toBeInTheDocument()
   })

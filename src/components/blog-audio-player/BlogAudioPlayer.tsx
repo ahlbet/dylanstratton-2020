@@ -287,8 +287,8 @@ const BlogAudioPlayer: React.FC<BlogAudioPlayerProps> = ({
       // Fetch all files and add to ZIP
       const fetchPromises = currentAudioData.map(async (audioItem) => {
         const url = typeof audioItem === 'string' ? audioItem : audioItem.url
-        if (!url)
-          return { success: false, filename: 'unknown', error: 'No URL' }
+        // if (!url)
+        //   return { success: false, filename: 'unknown', error: 'No URL' }
 
         const urlParts = url.split('/')
         const filename = urlParts[urlParts.length - 1]
@@ -361,6 +361,7 @@ const BlogAudioPlayer: React.FC<BlogAudioPlayerProps> = ({
     }
   }, [isDownloadingZip, audioData, postTitle, postDate]) // Dependencies for the download function
 
+  console.log('audioData', audioData)
   // Convert audio data to track format
   const tracks = useMemo(() => {
     // Ensure audioData is an array
@@ -372,6 +373,7 @@ const BlogAudioPlayer: React.FC<BlogAudioPlayerProps> = ({
       .map((audioItem, index) => {
         // Handle both string URLs and objects
         const url = typeof audioItem === 'string' ? audioItem : audioItem.url
+        console.log('url', url)
         const hasUrl = url && typeof url === 'string'
         const hasStoragePath =
           typeof audioItem === 'object' &&
@@ -451,7 +453,7 @@ const BlogAudioPlayer: React.FC<BlogAudioPlayerProps> = ({
 
     // Also set a global variable for the sketch to access
     if (typeof window !== 'undefined') {
-      ;(window as any).totalPlaylistDuration = totalSeconds
+      window.totalPlaylistDuration = totalSeconds
     }
   }, [audioData, updateTotalPlaylistDuration])
 
