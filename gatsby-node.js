@@ -180,7 +180,7 @@ exports.createPages = async ({ graphql, actions }) => {
   })
 
   // Note: Homepage uses src/pages/index.tsx which gets data via GraphQL
-  // No need to create a separate template for the homepage
+  // We'll need to fetch Supabase data directly in the component or use a different approach
 }
 
 exports.onCreateNode = ({ node, actions, getNode }) => {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { graphql, Link, PageProps } from 'gatsby'
 
 import Layout from '../components/layout/layout'
@@ -19,6 +19,7 @@ import { Card } from '../components/ui/card'
 import { Calendar } from '../components/ui/calendar'
 import { useAudioPlayer } from '../contexts/audio-player-context/audio-player-context'
 import { usePresignedUrl } from '../hooks/use-presigned-url'
+import { useSupabaseData } from '../hooks/use-supabase-data'
 import { PostCalendar } from '../components/post-calendar/PostCalendar'
 
 // Types
@@ -120,12 +121,25 @@ const BlogIndex = ({
   data,
   location,
   pageContext,
-}: PageProps<IndexPageData, PageContext>) => {
+}: {
+  data: IndexPageData
+  location: any
+  pageContext: PageContext
+}) => {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const [bottomView, setBottomView] = useState<'posts' | 'calendar'>('posts')
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [currentBlogPost, setCurrentBlogPost] = useState<string | null>(null)
+  const [currentBlogPostTracks, setCurrentBlogPostTracks] = useState<
+    ProcessedAudioTrack[]
+  >([])
 
   const {
     playlist,
+    setPlaylist,
     currentIndex,
     isPlaying,
     setIsPlaying,
@@ -147,10 +161,34 @@ const BlogIndex = ({
 
   const { getAudioUrl } = usePresignedUrl()
 
-  // Get data from pageContext (Supabase) and props (GraphQL)
-  const { supabaseData } = pageContext || {}
+  // Get data from Supabase hook and props (GraphQL)
+  const supabaseResult = useSupabaseData()
+  const supabaseData = supabaseResult.data
+  const supabaseLoading = supabaseResult.loading
+  const supabaseError = supabaseResult.error
   const siteTitle = data.site.siteMetadata.title
   const posts = data.allMarkdownRemark.edges
+
+  // Utility function to format duration
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Utility function to generate track title from available data
+  const generateTrackTitle = (track: AudioItem): string => {
+    // Extract from storage path (similar to BlogAudioPlayer logic)
+    if (track.storage_path) {
+      const pathParts = track.storage_path.split('/')
+      const filename = pathParts[pathParts.length - 1]
+      const trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
+      return trackName
+    }
+
+    // Fallback: use the daily_id and track number
+    return `${track.daily_id}-${track.id}`
+  }
 
   // Process audio tracks from Supabase data
   const processedTracks = useMemo(() => {
@@ -163,7 +201,7 @@ const BlogIndex = ({
       )
       .map((track) => ({
         id: track.id,
-        title: track.title || `Track ${track.id}`,
+        title: generateTrackTitle(track),
         date: new Date(track.created_at || '').toLocaleDateString(),
         duration: formatDuration(Number(track.duration) || 0),
         storage_path: track.storage_path,
@@ -171,6 +209,118 @@ const BlogIndex = ({
       }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [supabaseData?.audio])
+
+  // Set current blog post and tracks when data changes
+  useEffect(() => {
+    // Check if we have posts but no audio data yet
+    if (posts.length > 0) {
+      const mostRecentPost = posts[0]
+      const mostRecentDailyId = mostRecentPost.node.frontmatter.daily_id
+
+      if (mostRecentDailyId) {
+        setCurrentBlogPost(mostRecentDailyId)
+
+        // Only process tracks if we have audio data
+        if (supabaseData?.audio && supabaseData.audio.length > 0) {
+          // Filter tracks for the current blog post
+          const tracks = supabaseData.audio
+            .filter(
+              (track): track is AudioItem =>
+                Boolean(track.storage_path) &&
+                Boolean(track.daily_id) &&
+                track.daily_id === mostRecentDailyId
+            )
+            .map((track) => ({
+              id: track.id,
+              title: generateTrackTitle(track),
+              date: new Date(track.created_at || '').toLocaleDateString(),
+              duration: formatDuration(Number(track.duration) || 0),
+              storage_path: track.storage_path,
+              daily_id: track.daily_id,
+            }))
+            .sort(
+              (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+            )
+
+          setCurrentBlogPostTracks(tracks)
+        } else {
+          setCurrentBlogPostTracks([])
+        }
+      }
+    }
+  }, [posts, supabaseData?.audio])
+
+  // Function to change the current blog post
+  const changeBlogPost = (dailyId: string) => {
+    if (supabaseData?.audio) {
+      setCurrentBlogPost(dailyId)
+
+      // Filter tracks for the selected blog post
+      const tracks = supabaseData.audio
+        .filter(
+          (track): track is AudioItem =>
+            Boolean(track.storage_path) &&
+            Boolean(track.daily_id) &&
+            track.daily_id === dailyId
+        )
+        .map((track) => ({
+          id: track.id,
+          title: generateTrackTitle(track),
+          date: new Date(track.created_at || '').toLocaleDateString(),
+          duration: formatDuration(Number(track.duration) || 0),
+          storage_path: track.storage_path,
+          daily_id: track.daily_id,
+        }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+      setCurrentBlogPostTracks(tracks)
+    }
+  }
+
+  // Function to handle post click and change current blog post
+  const handlePostClick = (post: {
+    id: string
+    title: string
+    date: string
+    content: string
+  }) => {
+    // Find the daily_id for this post
+    const postData = posts.find((p) => p.node.fields.slug === post.id)
+    if (postData?.node.frontmatter.daily_id) {
+      changeBlogPost(postData.node.frontmatter.daily_id)
+    }
+  }
+
+  // Function to check if a post is the current blog post
+  const isCurrentBlogPost = (post: {
+    id: string
+    title: string
+    date: string
+    content: string
+  }) => {
+    const postData = posts.find((p) => p.node.fields.slug === post.id)
+    return postData?.node.frontmatter.daily_id === currentBlogPost
+  }
+
+  // Queue up the current blog post's tracks when they change
+  useEffect(() => {
+    if (currentBlogPostTracks.length > 0) {
+      // Convert processed tracks to AudioTrack format for the audio player
+      const audioTracks = currentBlogPostTracks.map((track) => ({
+        url: '', // Will be populated when track is played
+        title: track.title,
+        storagePath: track.storage_path,
+        daily_id: track.daily_id,
+        duration:
+          Number(track.duration.split(':')[0]) * 60 +
+            Number(track.duration.split(':')[1]) || 0,
+        id: track.id,
+      }))
+
+      // Always set the playlist to ensure it's populated on refresh/navigation
+      setPlaylist(audioTracks)
+    }
+  }, [currentBlogPostTracks, setPlaylist])
 
   // Process markov texts from Supabase data
   const processedTexts = useMemo(() => {
@@ -184,7 +334,7 @@ const BlogIndex = ({
       .map((text) => ({
         id: text.id,
         content: text.text_content,
-        coherencyLevel: text.coherency_level || 'medium',
+        coherencyLevel: text.coherency_level || '50',
       }))
       .slice(0, 5) // Show only first 5 texts
   }, [supabaseData?.markovTexts])
@@ -210,24 +360,127 @@ const BlogIndex = ({
     const track = playlist[currentIndex]
     return {
       title: track.title || 'Unknown Track',
-      date: new Date().toLocaleDateString(),
+      date:
+        currentBlogPostTracks.find((t) => t.id === track.id)?.date ||
+        new Date().toLocaleDateString(),
     }
-  }, [currentIndex, playlist])
+  }, [currentIndex, playlist, currentBlogPostTracks])
 
   // Handle track selection
-  const handleTrackSelect = (track: ProcessedAudioTrack) => {
-    if (getAudioUrl) {
-      getAudioUrl({
+  const handleTrackSelect = async (track: ProcessedAudioTrack) => {
+    // Find the track in the current playlist
+    const playlistIndex = playlist.findIndex((p) => p.id === track.id)
+    if (playlistIndex !== -1) {
+      // Get the presigned URL for the track
+      const audioUrl = await getAudioUrl({
         storagePath: track.storage_path,
       })
+
+      if (audioUrl) {
+        // Update the playlist with the URL and play the track
+        const updatedPlaylist = [...playlist]
+        updatedPlaylist[playlistIndex] = {
+          ...updatedPlaylist[playlistIndex],
+          url: audioUrl,
+        }
+
+        setPlaylist(updatedPlaylist)
+        playTrack(playlistIndex, updatedPlaylist)
+
+        // Set the audio source and play
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl
+          audioRef.current.play()
+        }
+      }
     }
   }
 
-  // Utility function to format duration
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
+  // Handle play/pause button click
+  const handlePlayPause = async () => {
+    setError(null)
+
+    // If no track is selected but we have a playlist, start playing the first one
+    if (currentIndex === null && playlist.length > 0) {
+      playTrack(0)
+      return
+    }
+
+    // Don't allow play if there's no audio source
+    if (!audioRef.current?.src) {
+      return
+    }
+
+    // Toggle play/pause for current track
+    const newPlayingState = !isPlaying
+    setIsPlaying(newPlayingState)
+
+    if (newPlayingState) {
+      audioRef.current?.play()
+    } else {
+      audioRef.current?.pause()
+    }
+  }
+
+  // Handle next/previous track
+  const handleNextTrack = async () => {
+    if (playlist.length === 0) return
+
+    const nextIndex = getNextTrackIndex()
+    const nextTrack = playlist[nextIndex]
+
+    if (nextTrack.storagePath) {
+      const audioUrl = await getAudioUrl({
+        storagePath: nextTrack.storagePath,
+      })
+
+      if (audioUrl) {
+        const updatedPlaylist = [...playlist]
+        updatedPlaylist[nextIndex] = {
+          ...updatedPlaylist[nextIndex],
+          url: audioUrl,
+        }
+
+        setPlaylist(updatedPlaylist)
+        playTrack(nextIndex, updatedPlaylist)
+
+        // Set the audio source and play
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl
+          audioRef.current.play()
+        }
+      }
+    }
+  }
+
+  const handlePreviousTrack = async () => {
+    if (playlist.length === 0) return
+
+    const prevIndex = getPreviousTrackIndex()
+    const prevTrack = playlist[prevIndex]
+
+    if (prevTrack.storagePath) {
+      const audioUrl = await getAudioUrl({
+        storagePath: prevTrack.storagePath,
+      })
+
+      if (audioUrl) {
+        const updatedPlaylist = [...playlist]
+        updatedPlaylist[prevIndex] = {
+          ...updatedPlaylist[prevIndex],
+          url: audioUrl,
+        }
+
+        setPlaylist(updatedPlaylist)
+        playTrack(prevIndex, updatedPlaylist)
+
+        // Set the audio source and play
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl
+          audioRef.current.play()
+        }
+      }
+    }
   }
 
   return (
@@ -242,6 +495,12 @@ const BlogIndex = ({
               {currentTrackInfo.title}
             </h2>
             <p className="text-gray-400 text-sm">{currentTrackInfo.date}</p>
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+            {supabaseError && (
+              <p className="text-red-500 text-sm mt-2">
+                Supabase: {supabaseError}
+              </p>
+            )}
           </div>
 
           {/* Audio Controls */}
@@ -251,7 +510,8 @@ const BlogIndex = ({
                 variant="ghost"
                 size="sm"
                 className="text-white hover:text-gray-300"
-                onClick={() => getPreviousTrackIndex && getPreviousTrackIndex()}
+                onClick={handlePreviousTrack}
+                aria-label="Previous track"
               >
                 <SkipBack className="h-5 w-5" />
               </Button>
@@ -259,9 +519,13 @@ const BlogIndex = ({
                 variant="ghost"
                 size="lg"
                 className="text-white hover:text-gray-300"
-                onClick={() => setIsPlaying(!isPlaying)}
+                onClick={handlePlayPause}
+                disabled={isLoading}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
               >
-                {isPlaying ? (
+                {isLoading ? (
+                  <div className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : isPlaying ? (
                   <Pause className="h-6 w-6" />
                 ) : (
                   <Play className="h-6 w-6" />
@@ -271,7 +535,8 @@ const BlogIndex = ({
                 variant="ghost"
                 size="sm"
                 className="text-white hover:text-gray-300"
-                onClick={() => getNextTrackIndex && getNextTrackIndex()}
+                onClick={handleNextTrack}
+                aria-label="Next track"
               >
                 <SkipForward className="h-5 w-5" />
               </Button>
@@ -279,22 +544,45 @@ const BlogIndex = ({
 
             {/* Progress Bar */}
             <div className="space-y-2">
-              <div className="w-full bg-gray-800 rounded-full h-1">
+              <div
+                className="w-full bg-gray-800 rounded-full h-1 cursor-pointer"
+                onClick={(e) => {
+                  if (audioRef.current && duration > 0) {
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    const clickX = e.clientX - rect.left
+                    const newTime = (clickX / rect.width) * duration
+                    audioRef.current.currentTime = newTime
+                  }
+                }}
+              >
                 <div
                   className="bg-red-400 h-1 rounded-full"
-                  style={{ width: '35%' }}
+                  style={{
+                    width:
+                      duration > 0
+                        ? `${(currentTime / duration) * 100}%`
+                        : '0%',
+                  }}
                 ></div>
               </div>
               <div className="flex justify-between text-xs text-gray-400">
-                <span>0:01</span>
-                <span>4:27</span>
+                <span>{formatDuration(currentTime)}</span>
+                <span>{formatDuration(duration)}</span>
               </div>
             </div>
 
             {/* Volume Control */}
             <div className="flex items-center space-x-2 mt-4">
               <Volume2 className="h-4 w-4 text-gray-400" />
-              <div className="flex-1 bg-gray-800 rounded-full h-1">
+              <div
+                className="flex-1 bg-gray-800 rounded-full h-1 cursor-pointer"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const clickX = e.clientX - rect.left
+                  const newVolume = clickX / rect.width
+                  updateVolume(Math.max(0, Math.min(1, newVolume)))
+                }}
+              >
                 <div
                   className="bg-white h-1 rounded-full"
                   style={{ width: `${volume * 100}%` }}
@@ -305,13 +593,24 @@ const BlogIndex = ({
             {/* Playlist View Toggle */}
             <div className="p-4 border-b border-gray-800">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Playlist</span>
+                <div className="flex flex-col">
+                  <span className="text-sm text-gray-400">Playlist</span>
+                  {currentBlogPost && (
+                    <span className="text-xs text-gray-500">
+                      Blog Post:{' '}
+                      {posts.find(
+                        (p) => p.node.frontmatter.daily_id === currentBlogPost
+                      )?.node.frontmatter.title || currentBlogPost}
+                    </span>
+                  )}
+                </div>
                 <div className="flex space-x-1">
                   <Button
                     variant="ghost"
                     size="sm"
                     className={`p-1 ${viewMode === 'list' ? 'text-red-400' : 'text-gray-400'}`}
                     onClick={() => setViewMode('list')}
+                    aria-label="List view"
                   >
                     <List className="h-4 w-4" />
                   </Button>
@@ -320,6 +619,7 @@ const BlogIndex = ({
                     size="sm"
                     className={`p-1 ${viewMode === 'grid' ? 'text-red-400' : 'text-gray-400'}`}
                     onClick={() => setViewMode('grid')}
+                    aria-label="Grid view"
                   >
                     <Grid className="h-4 w-4" />
                   </Button>
@@ -329,16 +629,25 @@ const BlogIndex = ({
 
             {/* Playlist */}
             <div className="flex-1 overflow-y-auto">
-              {processedTracks.length === 0 ? (
+              {supabaseLoading ? (
                 <div className="p-4 text-center text-gray-400">
-                  No tracks available
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-400 mx-auto mb-2"></div>
+                  Loading audio data...
+                </div>
+              ) : supabaseError ? (
+                <div className="p-4 text-center text-red-400">
+                  Error loading audio data: {supabaseError}
+                </div>
+              ) : currentBlogPostTracks.length === 0 ? (
+                <div className="p-4 text-center text-gray-400">
+                  No tracks available for this blog post
                 </div>
               ) : (
-                processedTracks.slice(0, 20).map((track, index) => (
+                currentBlogPostTracks.map((track, index) => (
                   <div
                     key={track.id}
                     className={`p-4 border-b border-gray-900 hover:bg-gray-900 cursor-pointer transition-colors ${
-                      track.id === currentTrackInfo.title
+                      currentIndex === index
                         ? 'bg-gray-900 border-l-2 border-l-red-400'
                         : ''
                     }`}
@@ -365,6 +674,38 @@ const BlogIndex = ({
               )}
             </div>
           </div>
+
+          {/* Hidden audio element for actual playback */}
+          <audio
+            ref={audioRef}
+            onEnded={() => {
+              // Auto-play next track when current track ends
+              if (playlist.length > 0) {
+                handleNextTrack()
+              }
+            }}
+            onError={(e) => {
+              console.error('Audio playback error:', e)
+              setError('Audio playback error')
+            }}
+            onTimeUpdate={() => {
+              if (audioRef.current) {
+                setCurrentTime(audioRef.current.currentTime)
+              }
+            }}
+            onLoadedMetadata={() => {
+              if (audioRef.current) {
+                setDuration(audioRef.current.duration)
+              }
+            }}
+            onLoadStart={() => {
+              setIsLoading(true)
+            }}
+            onCanPlay={() => {
+              setIsLoading(false)
+            }}
+          />
+
           {/* Generated Text Section */}
           <div className="mb-8">
             <h3 className="text-sm text-gray-400 mb-4 uppercase tracking-wide">
@@ -428,6 +769,7 @@ const BlogIndex = ({
                     size="sm"
                     className={`p-2 ${bottomView === 'posts' ? 'text-red-400' : 'text-gray-400'}`}
                     onClick={() => setBottomView('posts')}
+                    aria-label="Posts view"
                   >
                     <FileText className="h-4 w-4" />
                   </Button>
@@ -436,6 +778,7 @@ const BlogIndex = ({
                     size="sm"
                     className={`p-2 ${bottomView === 'calendar' ? 'text-red-400' : 'text-gray-400'}`}
                     onClick={() => setBottomView('calendar')}
+                    aria-label="Calendar view"
                   >
                     <CalendarIcon className="h-4 w-4" />
                   </Button>
@@ -448,7 +791,12 @@ const BlogIndex = ({
                   {recentPosts.map((post) => (
                     <Card
                       key={post.id}
-                      className="bg-black border-gray-800 hover:border-gray-700 transition-colors"
+                      className={`bg-black border transition-colors cursor-pointer ${
+                        isCurrentBlogPost(post)
+                          ? 'border-red-400 bg-gray-900'
+                          : 'border-gray-800 hover:border-gray-700'
+                      }`}
+                      onClick={() => handlePostClick(post)}
                     >
                       <div className="p-6">
                         <div className="flex items-baseline space-x-4 mb-3 group">
