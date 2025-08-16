@@ -551,7 +551,6 @@ const main = async () => {
   console.log('📥 Fetching markov texts from Supabase...')
   let markovGenerator = null
   try {
-    const { MarkovGenerator } = require('./src/utils/markov-generator')
     markovGenerator = new MarkovGenerator(7)
 
     const supabaseUrl = process.env.SUPABASE_URL
