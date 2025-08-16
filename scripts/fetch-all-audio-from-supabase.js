@@ -3,8 +3,32 @@ const path = require('path')
 const { createClient } = require('@supabase/supabase-js')
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
-async function fetchAllAudioFromSupabase() {
-  console.log('🎵 Fetching all audio files from Supabase...')
+// Check if --dry-run flag is passed
+const isDryRun = process.argv.includes('--dry-run')
+
+// Show usage information
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('🎵 Fetch Missing Audio from Supabase')
+  console.log('')
+  console.log('Usage:')
+  console.log(
+    '  node scripts/fetch-all-audio-from-supabase.js          # Download missing files'
+  )
+  console.log(
+    '  node scripts/fetch-all-audio-from-supabase.js --dry-run # Show what would be downloaded'
+  )
+  console.log(
+    '  node scripts/fetch-all-audio-from-supabase.js --help   # Show this help message'
+  )
+  console.log('')
+  process.exit(0)
+}
+
+async function fetchMissingAudioFromSupabase() {
+  if (isDryRun) {
+    console.log('🔍 DRY RUN MODE - No files will be downloaded')
+  }
+  console.log('🎵 Checking for missing audio files...')
 
   try {
     // Initialize Supabase client
@@ -27,78 +51,173 @@ async function fetchAllAudioFromSupabase() {
       fs.mkdirSync(localAudioDir, { recursive: true })
     }
 
-    // List all files in the audio bucket
-    console.log('📋 Listing audio files from Supabase...')
-    const { data: files, error: listError } = await supabase.storage
-      .from('audio')
-      .list('', {
-        limit: 1000, // Get up to 1000 files
-        sortBy: { column: 'name', order: 'asc' },
+    // Get list of existing local audio files
+    const existingFiles = new Set()
+    if (fs.existsSync(localAudioDir)) {
+      const files = fs.readdirSync(localAudioDir)
+      files.forEach((file) => {
+        if (
+          file.endsWith('.wav') ||
+          file.endsWith('.mp3') ||
+          file.endsWith('.ogg') ||
+          file.endsWith('.m4a') ||
+          file.endsWith('.flac')
+        ) {
+          // Strip query parameters and just use the filename
+          const cleanFilename = file.split('?')[0]
+          existingFiles.add(cleanFilename)
+        }
       })
+    }
 
-    if (listError) {
-      console.error('❌ Error listing files from Supabase:', listError.message)
+    console.log(`📁 Found ${existingFiles.size} existing local audio files`)
+    console.log(
+      '📋 Existing files:',
+      Array.from(existingFiles).slice(0, 10).join(', ')
+    )
+
+    // Scan all blog post markdown files for audio references
+    const blogDir = path.join(__dirname, '../content/blog')
+    const requiredAudioFiles = new Set()
+
+    if (fs.existsSync(blogDir)) {
+      const blogFolders = fs
+        .readdirSync(blogDir, { withFileTypes: true })
+        .filter((dirent) => dirent.isDirectory())
+        .map((dirent) => dirent.name)
+
+      console.log(
+        `📝 Scanning ${blogFolders.length} blog posts for audio references...`
+      )
+
+      for (const folder of blogFolders) {
+        const blogPath = path.join(blogDir, folder)
+        const files = fs.readdirSync(blogPath)
+
+        for (const file of files) {
+          if (file.endsWith('.md')) {
+            const markdownPath = path.join(blogPath, file)
+            const content = fs.readFileSync(markdownPath, 'utf8')
+
+            // Extract audio file references using regex
+            const audioRegex =
+              /`audio: https:\/\/[^\/]+\/storage\/v1\/object\/public\/audio\/([^`]+)`/g
+            let match
+
+            while ((match = audioRegex.exec(content)) !== null) {
+              const filename = match[1]
+              // Strip query parameters from the filename
+              const cleanFilename = filename.split('?')[0]
+              requiredAudioFiles.add(cleanFilename)
+            }
+          }
+        }
+      }
+    }
+
+    console.log(
+      `📋 Found ${requiredAudioFiles.size} audio files referenced in blog posts`
+    )
+    console.log(
+      '📋 Required files:',
+      Array.from(requiredAudioFiles).slice(0, 10).join(', ')
+    )
+
+    // Find missing files
+    const missingFiles = []
+    for (const requiredFile of requiredAudioFiles) {
+      // Strip any query parameters from the required file as well
+      const cleanRequiredFile = requiredFile.split('?')[0]
+      if (!existingFiles.has(cleanRequiredFile)) {
+        missingFiles.push(cleanRequiredFile)
+      }
+    }
+
+    if (missingFiles.length === 0) {
+      console.log('✅ All required audio files are already downloaded locally!')
       return
     }
 
-    // Filter for audio files
-    const audioFiles = files.filter((file) => {
-      const ext = path.extname(file.name).toLowerCase()
-      return ['.wav', '.mp3', '.ogg', '.m4a', '.flac'].includes(ext)
-    })
+    console.log(
+      `📥 Found ${missingFiles.length} missing audio files to download:`
+    )
+    if (missingFiles.length > 0) {
+      missingFiles.forEach((file) => console.log(`   - ${file}`))
+    } else {
+      console.log('   No missing files found!')
+    }
 
-    if (audioFiles.length === 0) {
-      console.log('⚠️ No audio files found in Supabase storage')
+    if (isDryRun) {
+      console.log('\n🔍 DRY RUN COMPLETE - No files were downloaded')
+      console.log('\n📊 DRY RUN SUMMARY:')
+      console.log(`   Files to download: ${missingFiles.length}`)
+      console.log(`   Total required files: ${requiredAudioFiles.size}`)
+      console.log(`   Existing local files: ${existingFiles.size}`)
+      console.log(
+        '\n📋 To actually download files, run without --dry-run flag:'
+      )
+      console.log('   node scripts/fetch-all-audio-from-supabase.js')
       return
     }
 
-    console.log(`📁 Found ${audioFiles.length} audio files to download`)
-
-    // Download each audio file
+    // Download missing audio files
     let successfulDownloads = 0
     let failedDownloads = 0
-    const downloadPromises = audioFiles.map(async (file, index) => {
+
+    for (let i = 0; i < missingFiles.length; i++) {
+      const filename = missingFiles[i]
+
       try {
         console.log(
-          `📥 Downloading ${index + 1}/${audioFiles.length}: ${file.name}`
+          `📥 Downloading ${i + 1}/${missingFiles.length}: ${filename}`
         )
 
         const { data, error } = await supabase.storage
           .from('audio')
-          .download(file.name)
+          .download(filename)
 
         if (error) {
-          console.error(`❌ Error downloading ${file.name}:`, error.message)
+          console.error(`❌ Error downloading ${filename}:`, error.message)
           failedDownloads++
-          return
+          continue
+        }
+
+        if (!data) {
+          console.error(`❌ No data received for ${filename}`)
+          failedDownloads++
+          continue
         }
 
         // Convert blob to buffer
         const arrayBuffer = await data.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
-        // Save to local directory
-        const localPath = path.join(localAudioDir, file.name)
-        fs.writeFileSync(localPath, buffer)
+        console.log(`📊 Buffer size: ${buffer.length} bytes`)
+
+        // Save to local directory as binary file
+        const localPath = path.join(localAudioDir, filename)
+        fs.writeFileSync(localPath, buffer, { encoding: null })
 
         const sizeKB = (buffer.length / 1024).toFixed(1)
-        console.log(`✅ Downloaded ${file.name} (${sizeKB}KB)`)
+        console.log(`✅ Downloaded ${filename} (${sizeKB}KB)`)
         successfulDownloads++
+
+        // Add a small delay to avoid overwhelming the server
+        await new Promise((resolve) => setTimeout(resolve, 100))
       } catch (error) {
-        console.error(`❌ Error processing ${file.name}:`, error.message)
+        console.error(`❌ Error processing ${filename}:`, error.message)
         failedDownloads++
       }
-    })
-
-    // Wait for all downloads to complete
-    await Promise.all(downloadPromises)
+    }
 
     // Summary
     console.log('\n' + '='.repeat(60))
     console.log('📊 Download Summary:')
     console.log(`✅ Successfully downloaded: ${successfulDownloads} files`)
     console.log(`❌ Failed downloads: ${failedDownloads} files`)
-    console.log(`📁 Total files processed: ${audioFiles.length} files`)
+    console.log(`📁 Total missing files: ${missingFiles.length} files`)
+    console.log(`📁 Total existing files: ${existingFiles.size} files`)
+    console.log(`📁 Total required files: ${requiredAudioFiles.size} files`)
 
     if (successfulDownloads > 0) {
       console.log(`\n💾 Files saved to: ${localAudioDir}`)
@@ -114,5 +233,10 @@ async function fetchAllAudioFromSupabase() {
   }
 }
 
-// Run the script
-fetchAllAudioFromSupabase().catch(console.error)
+// Export the function for testing
+module.exports = { fetchMissingAudioFromSupabase }
+
+// Run the script only when not in test mode
+if (require.main === module) {
+  fetchMissingAudioFromSupabase().catch(console.error)
+}
