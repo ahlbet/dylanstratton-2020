@@ -77,17 +77,12 @@ const Layout = ({ location, title, children }) => {
           </label>
         )}
       </ThemeToggler> */}
-      <header style={{ paddingRight: '72px' }}>
+      <header className="pr-18">
         {header}
-        <nav style={{ marginTop: rhythm(0.5) }}>
+        <nav className="mt-2">
           <Link
             to="/all"
-            style={{
-              color: '#DE3163',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-            }}
+            className="text-red-500 no-underline text-sm font-medium hover:text-red-600 transition-colors"
           >
             All
           </Link>

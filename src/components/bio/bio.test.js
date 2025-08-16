@@ -22,10 +22,6 @@ jest.mock('gatsby-plugin-image', () => ({
   getImage: jest.fn(),
 }))
 
-jest.mock('../../utils/typography', () => ({
-  rhythm: jest.fn((value) => `${value * 16}px`),
-}))
-
 describe('Bio', () => {
   const mockUseStaticQuery = require('gatsby').useStaticQuery
   const mockGetImage = require('gatsby-plugin-image').getImage
@@ -588,39 +584,5 @@ describe('Bio', () => {
     const avatar = screen.getByTestId('gatsby-image')
     expect(avatar).toBeInTheDocument()
     expect(avatar).toHaveAttribute('alt', 'Test Author')
-  })
-
-  test('renders bio with rhythm utility function', () => {
-    const mockData = {
-      avatar: {
-        childImageSharp: {
-          gatsbyImageData: {
-            width: 50,
-            height: 50,
-            layout: 'FIXED',
-            src: 'mock-avatar-src',
-          },
-        },
-      },
-      site: {
-        siteMetadata: {
-          author: 'Test Author',
-        },
-      },
-    }
-
-    mockUseStaticQuery.mockReturnValue(mockData)
-    mockGetImage.mockReturnValue({
-      src: 'mock-avatar-src',
-      width: 50,
-      height: 50,
-    })
-
-    render(<Bio />)
-
-    // Verify that rhythm function is called for styling
-    const rhythm = require('../../utils/typography').rhythm
-    expect(rhythm).toHaveBeenCalledWith(2.5) // marginBottom
-    expect(rhythm).toHaveBeenCalledWith(1 / 2) // marginRight
   })
 })

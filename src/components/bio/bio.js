@@ -34,22 +34,11 @@ const Bio = () => {
 
   const { author } = data.site.siteMetadata
   return (
-    <div
-      style={{
-        display: `flex`,
-        marginBottom: rhythm(2.5),
-      }}
-    >
+    <div className="flex mb-10">
       <GatsbyImage
         image={image}
         alt={author}
-        style={{
-          marginRight: rhythm(1 / 2),
-          marginBottom: 0,
-          width: 50,
-          height: 50,
-          borderRadius: `100%`,
-        }}
+        className="mr-2 mb-0 w-12 h-12 rounded-full"
       />
     </div>
   )
