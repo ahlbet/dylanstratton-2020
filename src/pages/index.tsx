@@ -190,6 +190,25 @@ const BlogIndex = ({
     return `${track.daily_id}-${track.id}`
   }
 
+  // Utility function to check if we're in local development mode
+  const isLocalDev = (): boolean => {
+    // In test environment, always use production mode (getAudioUrl)
+    if (process.env.NODE_ENV === 'test') {
+      return false
+    }
+    
+    return process.env.NODE_ENV === 'development' && 
+           typeof window !== 'undefined' && 
+           window.location.hostname === 'localhost'
+  }
+
+  // Utility function to extract filename from storage path
+  const extractFilenameFromStoragePath = (storagePath: string): string => {
+    const pathParts = storagePath.split('/')
+    const filename = pathParts[pathParts.length - 1]
+    return filename.replace(/\.[^/.]+$/, '') // Remove extension
+  }
+
   // Process audio tracks from Supabase data
   const processedTracks = useMemo(() => {
     if (!supabaseData?.audio) return []
@@ -302,10 +321,9 @@ const BlogIndex = ({
     return postData?.node.frontmatter.daily_id === currentBlogPost
   }
 
-  // Queue up the current blog post's tracks when they change
+  // Convert current blog post tracks to audio tracks for the player
   useEffect(() => {
     if (currentBlogPostTracks.length > 0) {
-      // Convert processed tracks to AudioTrack format for the audio player
       const audioTracks = currentBlogPostTracks.map((track) => ({
         url: '', // Will be populated when track is played
         title: track.title,
@@ -372,26 +390,48 @@ const BlogIndex = ({
     const playlistIndex = playlist.findIndex((p) => p.id === track.id)
     if (playlistIndex !== -1) {
       // Get the presigned URL for the track
-      const audioUrl = await getAudioUrl({
-        storagePath: track.storage_path,
-      })
-
-      if (audioUrl) {
-        // Update the playlist with the URL and play the track
-        const updatedPlaylist = [...playlist]
-        updatedPlaylist[playlistIndex] = {
-          ...updatedPlaylist[playlistIndex],
-          url: audioUrl,
+      const trackToGetUrlFor = playlist[playlistIndex]
+      
+      try {
+        // Check if we should use local audio files for development
+        const isLocalDevMode = isLocalDev()
+        
+        let audioUrl: string | null = null
+        
+        if (isLocalDevMode) {
+          // Use local audio files for development
+          const filename = extractFilenameFromStoragePath(trackToGetUrlFor.storagePath)
+          audioUrl = `/local-audio/${filename}.wav`
+        } else {
+          // Production mode: generate presigned URL on-demand
+          audioUrl = await getAudioUrl({ storagePath: trackToGetUrlFor.storagePath })
         }
 
-        setPlaylist(updatedPlaylist)
-        playTrack(playlistIndex, updatedPlaylist)
+        console.log('audioUrl', audioUrl)
+        console.log('trackToGetUrlFor', trackToGetUrlFor)
 
-        // Set the audio source and play
-        if (audioRef.current) {
-          audioRef.current.src = audioUrl
-          audioRef.current.play()
+        if (audioUrl) {
+          // Update the playlist with the URL and play the track
+          const updatedPlaylist = [...playlist]
+          updatedPlaylist[playlistIndex] = {
+            ...updatedPlaylist[playlistIndex],
+            url: audioUrl,
+          }
+
+          setPlaylist(updatedPlaylist)
+          playTrack(playlistIndex, updatedPlaylist)
+
+          // Set the audio source and play
+          if (audioRef.current) {
+            audioRef.current.src = audioUrl
+            audioRef.current.play()
+          }
+        } else {
+          setError('Failed to get audio URL for track')
         }
+      } catch (error) {
+        console.error('Error getting audio URL for track:', error)
+        setError('Failed to get audio URL for track')
       }
     }
   }
@@ -402,7 +442,50 @@ const BlogIndex = ({
 
     // If no track is selected but we have a playlist, start playing the first one
     if (currentIndex === null && playlist.length > 0) {
-      playTrack(0)
+      // Get the first track and set up audio
+      const firstTrack = playlist[0]
+      if (firstTrack.storagePath) {
+        try {
+          // Check if we should use local audio files for development
+          const isLocalDevMode = isLocalDev()
+          
+          let audioUrl: string | null = null
+          
+          if (isLocalDevMode) {
+            // Use local audio files for development
+            const filename = extractFilenameFromStoragePath(firstTrack.storagePath)
+            audioUrl = `/local-audio/${filename}.wav`
+          } else {
+            // Production mode: generate presigned URL on-demand
+            audioUrl = await getAudioUrl({ storagePath: firstTrack.storagePath })
+          }
+
+          if (audioUrl) {
+            // Update the playlist with the URL
+            const updatedPlaylist = [...playlist]
+            updatedPlaylist[0] = {
+              ...updatedPlaylist[0],
+              url: audioUrl,
+            }
+
+            setPlaylist(updatedPlaylist)
+            
+            // Set the audio source and play
+            if (audioRef.current) {
+              audioRef.current.src = audioUrl
+              audioRef.current.play()
+            }
+            
+            // Now call playTrack to update the player state
+            playTrack(0, updatedPlaylist)
+          } else {
+            setError('Failed to get audio URL for track')
+          }
+        } catch (error) {
+          console.error('Error getting audio URL:', error)
+          setError('Failed to get audio URL for track')
+        }
+      }
       return
     }
 
@@ -430,25 +513,42 @@ const BlogIndex = ({
     const nextTrack = playlist[nextIndex]
 
     if (nextTrack.storagePath) {
-      const audioUrl = await getAudioUrl({
-        storagePath: nextTrack.storagePath,
-      })
-
-      if (audioUrl) {
-        const updatedPlaylist = [...playlist]
-        updatedPlaylist[nextIndex] = {
-          ...updatedPlaylist[nextIndex],
-          url: audioUrl,
+      try {
+        // Check if we should use local audio files for development
+        const isLocalDevMode = isLocalDev()
+        
+        let audioUrl: string | null = null
+        
+        if (isLocalDevMode) {
+          // Use local audio files for development
+          const filename = extractFilenameFromStoragePath(nextTrack.storagePath)
+          audioUrl = `/local-audio/${filename}.wav`
+        } else {
+          // Production mode: generate presigned URL on-demand
+          audioUrl = await getAudioUrl({ storagePath: nextTrack.storagePath })
         }
 
-        setPlaylist(updatedPlaylist)
-        playTrack(nextIndex, updatedPlaylist)
+        if (audioUrl) {
+          const updatedPlaylist = [...playlist]
+          updatedPlaylist[nextIndex] = {
+            ...updatedPlaylist[nextIndex],
+            url: audioUrl,
+          }
 
-        // Set the audio source and play
-        if (audioRef.current) {
-          audioRef.current.src = audioUrl
-          audioRef.current.play()
+          setPlaylist(updatedPlaylist)
+          playTrack(nextIndex, updatedPlaylist)
+
+          // Set the audio source and play
+          if (audioRef.current) {
+            audioRef.current.src = audioUrl
+            audioRef.current.play()
+          }
+        } else {
+          setError('Failed to get audio URL for next track')
         }
+      } catch (error) {
+        console.error('Error getting audio URL for next track:', error)
+        setError('Failed to get audio URL for next track')
       }
     }
   }
@@ -460,25 +560,42 @@ const BlogIndex = ({
     const prevTrack = playlist[prevIndex]
 
     if (prevTrack.storagePath) {
-      const audioUrl = await getAudioUrl({
-        storagePath: prevTrack.storagePath,
-      })
-
-      if (audioUrl) {
-        const updatedPlaylist = [...playlist]
-        updatedPlaylist[prevIndex] = {
-          ...updatedPlaylist[prevIndex],
-          url: audioUrl,
+      try {
+        // Check if we should use local audio files for development
+        const isLocalDevMode = isLocalDev()
+        
+        let audioUrl: string | null = null
+        
+        if (isLocalDevMode) {
+          // Use local audio files for development
+          const filename = extractFilenameFromStoragePath(prevTrack.storagePath)
+          audioUrl = `/local-audio/${filename}.wav`
+        } else {
+          // Production mode: generate presigned URL on-demand
+          audioUrl = await getAudioUrl({ storagePath: prevTrack.storagePath })
         }
 
-        setPlaylist(updatedPlaylist)
-        playTrack(prevIndex, updatedPlaylist)
+        if (audioUrl) {
+          const updatedPlaylist = [...playlist]
+          updatedPlaylist[prevIndex] = {
+            ...updatedPlaylist[prevIndex],
+            url: audioUrl,
+          }
 
-        // Set the audio source and play
-        if (audioRef.current) {
-          audioRef.current.src = audioUrl
-          audioRef.current.play()
+          setPlaylist(updatedPlaylist)
+          playTrack(prevIndex, updatedPlaylist)
+
+          // Set the audio source and play
+          if (audioRef.current) {
+            audioRef.current.src = audioUrl
+            audioRef.current.play()
+          }
+        } else {
+          setError('Failed to get audio URL for previous track')
         }
+      } catch (error) {
+        console.error('Error getting audio URL for previous track:', error)
+        setError('Failed to get audio URL for previous track')
       }
     }
   }
