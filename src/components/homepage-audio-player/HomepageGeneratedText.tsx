@@ -10,15 +10,17 @@ interface MarkovText {
 
 interface HomepageGeneratedTextProps {
   processedTexts: MarkovText[]
+  currentBlogPostDate: string
 }
 
 export const HomepageGeneratedText: React.FC<HomepageGeneratedTextProps> = ({
   processedTexts,
+  currentBlogPostDate,
 }) => {
   return (
     <div className="my-8 px-6">
       <h3 className="text-sm text-gray-400 mb-4 uppercase tracking-wide">
-        Generated Text
+        {currentBlogPostDate}
       </h3>
       <div className="space-y-4">
         {processedTexts.length === 0 ? (

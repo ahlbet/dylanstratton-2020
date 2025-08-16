@@ -147,6 +147,14 @@ const BlogIndex = ({
   const siteTitle = data.site.siteMetadata.title
   const posts = data.allMarkdownRemark.edges
 
+  const currentBlogPostDate = useMemo(() => {
+    if (!currentBlogPost) return ''
+    const post = posts.find(
+      (p) => p.node.frontmatter.daily_id === currentBlogPost
+    )
+    return post?.node.frontmatter.date || ''
+  }, [currentBlogPost, posts])
+
   // Utility function to generate track title from available data
   const generateTrackTitle = (track: AudioItem): string => {
     // Extract from storage path (similar to BlogAudioPlayer logic)
@@ -443,7 +451,10 @@ const BlogIndex = ({
           />
 
           {/* Generated Text Section */}
-          <HomepageGeneratedText processedTexts={processedTexts} />
+          <HomepageGeneratedText
+            processedTexts={processedTexts}
+            currentBlogPostDate={currentBlogPostDate || ''}
+          />
         </div>
         {/* Main Content Area */}
         <HomepageMainContent

@@ -417,7 +417,10 @@ describe('BlogIndex Audio Functionality', () => {
     )
 
     // The new component structure should show the generated text
-    expect(screen.getByText('Generated Text')).toBeInTheDocument()
+    // Check that the date appears in the generated text section header
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'January 1, 2020' })
+    ).toBeInTheDocument()
   })
 
   it('displays recent blog posts correctly', () => {
