@@ -260,13 +260,27 @@ const updateLocalCoverArt = async (postName, coverArtBuffer) => {
 const { transformDate } = require('./src/utils/date-utils')
 
 // Import the Markov generator
-const { generateBlogPostText } = require('./src/utils/markov-generator')
+const { MarkovGenerator } = require('./src/utils/markov-generator')
 
 // Import the cover art generator
 const { generateCoverArt } = require('./src/utils/cover-art-generator')
 
 // Import coherency level utilities
 const { getCoherencyLevel } = require('./src/utils/coherency-level-utils')
+
+// Fallback text for when markov generation fails
+const FALLBACK_TEXT = [
+  'The quick brown fox jumps over the lazy dog.',
+  'A journey of a thousand miles begins with a single step.',
+  'All that glitters is not gold.',
+  'Actions speak louder than words.',
+  'Beauty is in the eye of the beholder.',
+  'Every cloud has a silver lining.',
+  'Time heals all wounds.',
+  'Actions speak louder than words.',
+  'The early bird catches the worm.',
+  "Don't judge a book by its cover.",
+]
 
 // Initialize Supabase client
 let supabase
@@ -546,20 +560,56 @@ const main = async () => {
 
   // Generate and edit Markov chain texts for the blog post
   console.log('📝 Generating 5 markov texts for interactive editing...')
+
+  // Fetch markov texts from Supabase ONCE at the beginning
+  console.log('📥 Fetching markov texts from Supabase...')
+  let markovGenerator = null
+  try {
+    markovGenerator = new MarkovGenerator(7)
+
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+
+    if (supabaseUrl && supabaseKey) {
+      const success = await markovGenerator.loadTextFromSupabaseWithCredentials(
+        supabaseUrl,
+        supabaseKey,
+        'markov-text'
+      )
+      if (success) {
+        console.log('✅ Successfully loaded markov texts from Supabase')
+      } else {
+        console.warn('⚠️ Failed to load from Supabase, using fallback text')
+        // Fallback to sample text if Supabase fails
+        markovGenerator.loadTextFromArray(FALLBACK_TEXT)
+      }
+    } else {
+      console.warn('⚠️ Missing Supabase credentials, using fallback text')
+      markovGenerator.loadTextFromArray(FALLBACK_TEXT)
+    }
+  } catch (error) {
+    console.error('❌ Failed to initialize markov generator:', error.message)
+    // Use fallback text as last resort
+    markovGenerator.loadTextFromArray(FALLBACK_TEXT)
+  }
+
   const markovTexts = []
   const editedTexts = []
   const coherencyLevels = []
 
-  // Generate 5 initial texts
+  // Generate 5 initial texts using the pre-loaded generator
   for (let i = 0; i < 5; i++) {
     let text = null
     let attemptCount = 0
 
     while (!text && attemptCount < 3) {
       try {
-        const generatedText = await generateBlogPostText(name, 1)
-        // Remove the "> " prefix since we're generating individual texts
-        text = generatedText.replace(/^> /, '').trim()
+        // Use the pre-loaded generator instead of calling generateBlogPostText
+        const generatedLines = markovGenerator.generateMultipleLines(1, 1000, 2)
+        if (generatedLines.length > 0) {
+          text = generatedLines[0]
+        }
 
         if (text && text.length > 10) {
           break
@@ -590,8 +640,17 @@ const main = async () => {
 
       if (editedText === 'REGENERATE') {
         try {
-          const newText = await generateBlogPostText(name, 1)
-          currentText = newText.replace(/^> /, '').trim()
+          // Use the pre-loaded generator instead of calling generateBlogPostText
+          const generatedLines = markovGenerator.generateMultipleLines(
+            1,
+            1000,
+            2
+          )
+          if (generatedLines.length > 0) {
+            currentText = generatedLines[0]
+          } else {
+            currentText = `Generated text ${i + 1} could not be created.`
+          }
           needsRegeneration = true
           console.log(`🔄 Regenerated text ${i + 1}`)
         } catch (error) {
