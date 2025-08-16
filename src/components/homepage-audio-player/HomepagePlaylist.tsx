@@ -56,7 +56,7 @@ export const HomepagePlaylist: React.FC<HomepagePlaylistProps> = ({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto max-h-[400px]">
       {tracks.map((track, index) => (
         <div
           key={track.id}

@@ -30,6 +30,8 @@ export const HomepagePlaylistToggle: React.FC<HomepagePlaylistToggleProps> = ({
           )}
         </div>
         <div className="flex space-x-1">
+          {/*
+          TODO: Add back in when we have a way to switch between list and grid views
           <Button
             variant="ghost"
             size="sm"
@@ -47,7 +49,7 @@ export const HomepagePlaylistToggle: React.FC<HomepagePlaylistToggleProps> = ({
             aria-label="Grid view"
           >
             <Grid className="h-4 w-4" />
-          </Button>
+          </Button> */}
         </div>
       </div>
     </div>
