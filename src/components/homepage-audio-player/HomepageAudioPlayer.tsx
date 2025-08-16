@@ -55,6 +55,7 @@ interface HomepageAudioPlayerProps {
   supabaseLoading: boolean
   supabaseError: string | null
   onTrackSelect: (track: ProcessedAudioTrack) => void
+  parentError?: string | null
 }
 
 export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
@@ -64,12 +65,12 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   supabaseLoading,
   supabaseError,
   onTrackSelect,
+  parentError,
 }) => {
   const {
     playlist,
     setPlaylist,
     currentIndex,
-    setCurrentIndex,
     isPlaying,
     setIsPlaying,
     playTrack,
@@ -124,7 +125,9 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
               audioRef.current.src = audioUrl
               audioRef.current.play()
               setIsPlaying(true)
-              setCurrentIndex(0)
+              setError(null) // Clear any previous errors
+              // Use playTrack to properly set the current index
+              await playTrack(0)
             }
           } else {
             setError('Failed to get audio URL')
@@ -172,8 +175,10 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
           if (audioRef.current) {
             audioRef.current.src = audioUrl
             audioRef.current.play()
-            setCurrentIndex(nextIndex)
             setIsPlaying(true)
+            setError(null) // Clear any previous errors
+            // Use playTrack to properly set the current index
+            await playTrack(nextIndex)
           }
         } else {
           setError('Failed to get audio URL for next track')
@@ -210,8 +215,10 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
           if (audioRef.current) {
             audioRef.current.src = audioUrl
             audioRef.current.play()
-            setCurrentIndex(prevIndex)
             setIsPlaying(true)
+            setError(null) // Clear any previous errors
+            // Use playTrack to properly set the current index
+            await playTrack(prevIndex)
           }
         } else {
           setError('Failed to get audio URL for previous track')
@@ -242,7 +249,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
       {/* Current Track Info */}
       <HomepageCurrentTrackInfo
         currentTrackInfo={currentTrackInfo}
-        error={error}
+        error={error || parentError}
         supabaseError={supabaseError}
       />
 
@@ -293,6 +300,10 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
         onError={(e) => {
           setError('Audio playback error')
         }}
+        onLoadStart={() => {
+          setIsLoading(true)
+          setError(null) // Clear errors when starting to load new audio
+        }}
         onTimeUpdate={() => {
           if (audioRef.current) {
             setCurrentTime(audioRef.current.currentTime)
@@ -303,11 +314,9 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
             setDuration(audioRef.current.duration)
           }
         }}
-        onLoadStart={() => {
-          setIsLoading(true)
-        }}
         onCanPlay={() => {
           setIsLoading(false)
+          setError(null) // Clear errors when audio can play
         }}
       />
     </div>

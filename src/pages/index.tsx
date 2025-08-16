@@ -417,6 +417,7 @@ const BlogIndex = ({
             supabaseLoading={supabaseLoading}
             supabaseError={supabaseError}
             onTrackSelect={handleTrackSelect}
+            parentError={error}
           />
 
           {/* Generated Text Section */}

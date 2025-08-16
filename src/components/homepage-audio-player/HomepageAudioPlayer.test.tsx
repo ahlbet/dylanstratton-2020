@@ -19,10 +19,12 @@ jest.mock('./HomepageAudioControls', () => ({
   ),
 }))
 jest.mock('./HomepageCurrentTrackInfo', () => ({
-  HomepageCurrentTrackInfo: ({ currentTrackInfo }: any) => (
+  HomepageCurrentTrackInfo: ({ currentTrackInfo, error, supabaseError }: any) => (
     <div data-testid="current-track-info">
       <h2>{currentTrackInfo.title}</h2>
       <p>{currentTrackInfo.date}</p>
+      {error && <p data-testid="error-message">{error}</p>}
+      {supabaseError && <p data-testid="supabase-error">Supabase: {supabaseError}</p>}
     </div>
   ),
 }))
@@ -45,7 +47,6 @@ const mockUseAudioPlayer = {
   playlist: [],
   setPlaylist: jest.fn(),
   currentIndex: null,
-  setCurrentIndex: jest.fn(),
   isPlaying: false,
   setIsPlaying: jest.fn(),
   playTrack: jest.fn(),
@@ -127,5 +128,24 @@ describe('HomepageAudioPlayer', () => {
     expect(screen.getByText('Play/Pause')).toBeInTheDocument()
     expect(screen.getByText('Next')).toBeInTheDocument()
     expect(screen.getByText('Previous')).toBeInTheDocument()
+  })
+
+  it('displays parent error when provided', () => {
+    const propsWithError = {
+      ...defaultProps,
+      parentError: 'Failed to get audio URL for track',
+    }
+    render(<HomepageAudioPlayer {...propsWithError} />)
+    expect(screen.getByTestId('error-message')).toBeInTheDocument()
+    expect(screen.getByText('Failed to get audio URL for track')).toBeInTheDocument()
+  })
+
+  it('does not display error when parentError is null', () => {
+    const propsWithoutError = {
+      ...defaultProps,
+      parentError: null,
+    }
+    render(<HomepageAudioPlayer {...propsWithoutError} />)
+    expect(screen.queryByText('Failed to get audio URL for track')).not.toBeInTheDocument()
   })
 })
