@@ -19,7 +19,13 @@ const fs = require('fs')
 const path = require('path')
 const readline = require('readline')
 const { spawn } = require('child_process')
-const { checkAudioTools, getAudioPlayer, DEFAULT_AUDIO_KILL_TIMEOUT_MS, COHERENCY_MIN_LEVEL, COHERENCY_MAX_LEVEL } = require('../src/utils/audio-tools')
+const {
+  checkAudioTools,
+  getAudioPlayer,
+  DEFAULT_AUDIO_KILL_TIMEOUT_MS,
+  COHERENCY_MIN_LEVEL,
+  COHERENCY_MAX_LEVEL,
+} = require('../src/utils/audio-tools')
 
 // Create readline interface for user input
 const rl = readline.createInterface({
