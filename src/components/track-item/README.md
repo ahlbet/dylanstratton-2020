@@ -47,7 +47,6 @@ The `track` prop should have the following structure:
 
 ```javascript
 import TrackItem from './components/track-item/TrackItem'
-
 ;<TrackItem
   track={track}
   index={0}

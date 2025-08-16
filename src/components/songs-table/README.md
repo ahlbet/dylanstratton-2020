@@ -107,6 +107,7 @@ The component uses CSS classes for styling:
 When a song object includes a `postSlug` field, the post title in the "Post" column becomes a clickable link that navigates to the corresponding blog post. If no `postSlug` is provided, the post title is displayed as plain text.
 
 The links are styled with:
+
 - **Brand color** (#DE3163) for consistency
 - **Hover effects** with white text and underline
 - **Focus indicators** for accessibility
