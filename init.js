@@ -766,7 +766,7 @@ const main = async () => {
     try {
       execSync(`git add .`, { stdio: 'inherit' })
       console.log(`Added changes to git.`)
-      execSync(`git commit -m "new-day: ${name}"`, { stdio: 'inherit' })
+      execSync(`git commit -m "feat: ${name}"`, { stdio: 'inherit' })
       console.log(`Committed changes to git.`)
       execSync(`git push origin ${name} --tags`, { stdio: 'inherit' })
       console.log(`Pushed tags to origin.`)
