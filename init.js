@@ -673,6 +673,7 @@ const main = async () => {
         {
           title: name,
           cover_art: coverArtPath,
+          date: date,
         },
       ])
       .select()
