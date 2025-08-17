@@ -50,7 +50,7 @@ export const useSupabaseData = () => {
         
         // Initialize Supabase client
         const supabaseUrl = process.env.GATSBY_SUPABASE_URL
-        const supabaseAnonKey = process.env.GATSBY_SUPABASE_SERVICE_ROLE_KEY
+        const supabaseAnonKey = process.env.GATSBY_SUPABASE_ANON_KEY
         
         if (!supabaseUrl || !supabaseAnonKey) {
           throw new Error('Supabase environment variables not configured')
