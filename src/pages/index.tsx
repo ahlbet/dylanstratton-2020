@@ -13,6 +13,7 @@ import { HomepageMainContent } from '../components/homepage-audio-player'
 import {
   formatDuration,
   extractFilenameFromStoragePath,
+  generateTrackTitle,
 } from '../utils/audio-utils'
 import { isLocalDev } from '../utils/local-dev-utils'
 
@@ -155,17 +156,6 @@ const BlogIndex = ({
     )
     return post?.node.frontmatter.date || ''
   }, [currentBlogPost, posts])
-
-  // Utility function to generate track title from available data
-  const generateTrackTitle = (track: AudioItem): string => {
-    // Extract from storage path (similar to BlogAudioPlayer logic)
-    if (track.storage_path) {
-      return extractFilenameFromStoragePath(track.storage_path)
-    }
-
-    // Fallback: use the daily_id and track number
-    return `${track.daily_id}-${track.id}`
-  }
 
   // Set current blog post and tracks when data changes
   useEffect(() => {
