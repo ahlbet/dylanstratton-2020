@@ -3,7 +3,6 @@ import { graphql } from 'gatsby'
 
 import Layout from '../components/layout/layout'
 import SEO from '../components/seo/seo'
-import { Loader } from 'lucide-react'
 import { useAudioPlayer } from '../contexts/audio-player-context/audio-player-context'
 import { usePresignedUrl } from '../hooks/use-presigned-url'
 import { useSupabaseData, FilterSortParams } from '../hooks/use-supabase-data'

@@ -9,23 +9,26 @@ This directory contains custom React hooks used throughout the application.
 A generic hook that debounces value changes. Useful for reducing API calls when users are typing in search inputs.
 
 **Parameters:**
+
 - `value`: The value to debounce (can be any type)
 - `delay`: The delay in milliseconds before updating the debounced value
 
 **Returns:**
+
 - The debounced value
 
 **Example:**
+
 ```tsx
 import { useDebounce } from '../hooks/use-debounce'
 
 function SearchComponent() {
   const [searchTerm, setSearchTerm] = useState('')
   const debouncedSearchTerm = useDebounce(searchTerm, 500) // 500ms delay
-  
+
   // searchTerm updates immediately for UI responsiveness
   // debouncedSearchTerm updates after 500ms of no typing
-  
+
   return (
     <input
       value={searchTerm}
@@ -37,6 +40,7 @@ function SearchComponent() {
 ```
 
 **Use Cases:**
+
 - Search inputs to reduce API calls
 - Form validation to avoid excessive validation on every keystroke
 - Any scenario where you want to delay an action until user input stops
