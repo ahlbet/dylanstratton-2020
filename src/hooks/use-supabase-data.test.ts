@@ -7,7 +7,7 @@ jest.mock('../contexts/supabase-context', () => ({
     supabase: {
       from: jest.fn(() => ({
         select: jest.fn(() => ({
-          or: jest.fn().mockReturnThis(),
+          ilike: jest.fn().mockReturnThis(),
           order: jest.fn().mockReturnThis(),
           range: jest.fn().mockResolvedValue({
             data: [],

@@ -90,7 +90,7 @@ export const useSupabaseData = (filterSortParams?: FilterSortParams) => {
         // Apply search filter if searchTerm is provided
         if (filterSortParams?.searchTerm && filterSortParams.searchTerm.trim()) {
           const searchTerm = filterSortParams.searchTerm.toLowerCase().trim()
-          dailyQuery = dailyQuery.or(`title.ilike.%${searchTerm}%`)
+          dailyQuery = dailyQuery.ilike('title', `%${searchTerm}%`)
         }
 
         // Apply sorting - use date field for proper chronological ordering
