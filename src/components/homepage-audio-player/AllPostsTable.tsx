@@ -118,8 +118,8 @@ export const AllPostsTable: React.FC<AllPostsTableProps> = ({
 
       {/* Results Info */}
       <div className="text-sm text-gray-400">
-        Showing {startIndex + 1}-{Math.min(endIndex, posts.length)} of{' '}
-        {totalCount} days
+        Showing {startIndex + 1}-
+        {Math.min(startIndex + postsPerPage, totalCount)} of {totalCount} days
         {searchTerm && ` matching "${searchTerm}"`}
       </div>
 
