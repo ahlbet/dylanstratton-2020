@@ -18,18 +18,6 @@ import {
 import { isLocalDev } from '../utils/local-dev-utils'
 
 // Types
-interface PageContext {
-  previous?: {
-    fields: { slug: string }
-    frontmatter: { title: string }
-  }
-  next?: {
-    fields: { slug: string }
-    frontmatter: { title: string }
-  }
-  markdownData?: any
-  supabaseData?: SupabaseData
-}
 
 interface AudioItem {
   id: string
@@ -51,18 +39,6 @@ interface MarkovText {
   coherency_level?: string
   daily_id: string
   created_at: string
-}
-
-interface SupabaseData {
-  audio?: AudioItem[]
-  markovTexts?: MarkovText[]
-  daily?: DailyData
-}
-
-interface DailyData {
-  title?: string
-  coherency_level?: string
-  cover_art?: string
 }
 
 interface ProcessedAudioTrack {
@@ -227,17 +203,6 @@ const BlogIndex = ({
     }
   }
 
-  // Function to check if a post is the current blog post
-  const isCurrentBlogPost = (post: {
-    id: string
-    title: string
-    date: string
-    content: string
-  }) => {
-    const postData = posts.find((p) => p.node.fields.slug === post.id)
-    return postData?.node.frontmatter.daily_id === currentBlogPost
-  }
-
   // Convert current blog post tracks to audio tracks for the player
   useEffect(() => {
     if (currentBlogPostTracks.length > 0) {
@@ -289,23 +254,6 @@ const BlogIndex = ({
       }))
       .slice(0, 5) // Show only first 5 texts for the current post
   }, [supabaseData?.markovTexts, currentBlogPost])
-
-  // Current track info
-  const currentTrackInfo = useMemo(() => {
-    if (currentIndex === null || !playlist[currentIndex]) {
-      return {
-        title: 'No Track Playing',
-        date: new Date().toLocaleDateString(),
-      }
-    }
-    const track = playlist[currentIndex]
-    return {
-      title: track.title || 'Unknown Track',
-      date:
-        currentBlogPostTracks.find((t) => t.id === track.id)?.date ||
-        new Date().toLocaleDateString(),
-    }
-  }, [currentIndex, playlist, currentBlogPostTracks])
 
   // Handle track selection
   const handleTrackSelect = async (track: ProcessedAudioTrack) => {
