@@ -115,7 +115,9 @@ const BlogIndex = ({
   // Build filter/sort parameters for Supabase
   const filterSortParams: FilterSortParams = useMemo(
     () => ({
-      searchTerm: debouncedSearchTerm || undefined,
+      searchTerm: debouncedSearchTerm.trim()
+        ? debouncedSearchTerm.trim()
+        : undefined,
       sortDirection,
       currentPage,
       postsPerPage,
