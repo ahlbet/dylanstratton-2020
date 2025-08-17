@@ -1,20 +1,20 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { graphql, Link, PageProps } from 'gatsby'
+import { graphql } from 'gatsby'
 
 import Layout from '../components/layout/layout'
 import SEO from '../components/seo/seo'
-import { Button } from '../components/ui/button'
-import { Calendar as CalendarIcon, FileText, Loader } from 'lucide-react'
-import { Card } from '../components/ui/card'
-import { Calendar } from '../components/ui/calendar'
+import { Loader } from 'lucide-react'
 import { useAudioPlayer } from '../contexts/audio-player-context/audio-player-context'
 import { usePresignedUrl } from '../hooks/use-presigned-url'
 import { useSupabaseData } from '../hooks/use-supabase-data'
-import { PostCalendar } from '../components/post-calendar/PostCalendar'
 import { HomepageAudioPlayer } from '../components/homepage-audio-player'
 import { HomepageGeneratedText } from '../components/homepage-audio-player'
 import { HomepageMainContent } from '../components/homepage-audio-player'
-import { formatDuration } from '../utils/audio-utils'
+import {
+  formatDuration,
+  extractFilenameFromStoragePath,
+} from '../utils/audio-utils'
+import { isLocalDev } from '../utils/local-dev-utils'
 
 // Types
 interface BlogPost {
@@ -160,35 +160,11 @@ const BlogIndex = ({
   const generateTrackTitle = (track: AudioItem): string => {
     // Extract from storage path (similar to BlogAudioPlayer logic)
     if (track.storage_path) {
-      const pathParts = track.storage_path.split('/')
-      const filename = pathParts[pathParts.length - 1]
-      const trackName = filename.replace(/\.[^/.]+$/, '') // Remove extension
-      return trackName
+      return extractFilenameFromStoragePath(track.storage_path)
     }
 
     // Fallback: use the daily_id and track number
     return `${track.daily_id}-${track.id}`
-  }
-
-  // Utility function to check if we're in local development mode
-  const isLocalDev = (): boolean => {
-    // In test environment, always use production mode (getAudioUrl)
-    if (process.env.NODE_ENV === 'test') {
-      return false
-    }
-
-    return (
-      process.env.NODE_ENV === 'development' &&
-      typeof window !== 'undefined' &&
-      window.location.hostname === 'localhost'
-    )
-  }
-
-  // Utility function to extract filename from storage path
-  const extractFilenameFromStoragePath = (storagePath: string): string => {
-    const pathParts = storagePath.split('/')
-    const filename = pathParts[pathParts.length - 1]
-    return filename.replace(/\.[^/.]+$/, '') // Remove extension
   }
 
   // Process audio tracks from Supabase data
@@ -400,11 +376,10 @@ const BlogIndex = ({
 
       try {
         // Check if we should use local audio files for development
-        const isLocalDevMode = isLocalDev()
 
         let audioUrl: string | null = null
 
-        if (isLocalDevMode) {
+        if (isLocalDev()) {
           // Use local audio files for development
           const filename = extractFilenameFromStoragePath(
             trackToGetUrlFor.storagePath
