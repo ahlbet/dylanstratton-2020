@@ -2,49 +2,61 @@
 
 This directory contains custom React hooks used throughout the application.
 
-## useIsMobile
+## Available Hooks
 
-A hook to detect if the user is on a mobile device. This hook replaces inline mobile detection logic and provides a centralized, reusable way to determine if the user is on a mobile device.
+### `useDebounce<T>(value: T, delay: number): T`
 
-### Usage
+A generic hook that debounces value changes. Useful for reducing API calls when users are typing in search inputs.
 
-```javascript
-import useIsMobile from '../hooks/use-is-mobile'
+**Parameters:**
+- `value`: The value to debounce (can be any type)
+- `delay`: The delay in milliseconds before updating the debounced value
 
-function MyComponent() {
-  const isMobile = useIsMobile()
+**Returns:**
+- The debounced value
 
-  return <div>{isMobile ? 'Mobile View' : 'Desktop View'}</div>
+**Example:**
+```tsx
+import { useDebounce } from '../hooks/use-debounce'
+
+function SearchComponent() {
+  const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearchTerm = useDebounce(searchTerm, 500) // 500ms delay
+  
+  // searchTerm updates immediately for UI responsiveness
+  // debouncedSearchTerm updates after 500ms of no typing
+  
+  return (
+    <input
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      placeholder="Search..."
+    />
+  )
 }
 ```
 
-### Features
+**Use Cases:**
+- Search inputs to reduce API calls
+- Form validation to avoid excessive validation on every keystroke
+- Any scenario where you want to delay an action until user input stops
 
-- **User Agent Detection**: Detects iPhone, iPad, iPod, and Android devices
-- **Responsive Updates**: Listens for orientation changes and window resize events
-- **SSR Safe**: Handles server-side rendering gracefully
-- **Performance Optimized**: Only sets up event listeners when needed
-- **Automatic Cleanup**: Properly removes event listeners on unmount
+### `usePresignedUrl`
 
-### Implementation Details
+Hook for generating presigned URLs for audio files stored in Supabase storage.
 
-The hook uses a regex pattern to match common mobile user agent strings and sets up event listeners for:
+### `useSupabaseData`
 
-- `orientationchange` - Useful for tablets that can rotate
-- `resize` - Handles responsive design changes
+Hook for fetching data from Supabase with filtering, sorting, and pagination support.
 
-### Return Value
+### `useAudioPlayer`
 
-- `boolean` - `true` if the user is on a mobile device, `false` otherwise
+Hook for managing audio playback state and controls.
 
-## usePresignedUrl
+### `useIsMobile`
 
-A hook for generating and caching presigned URLs for audio files.
+Hook for detecting mobile device viewport.
 
-## useScrollToTrack
+### `useScrollToTrack`
 
-A hook for managing scroll behavior in audio playlists.
-
----
-
-For more details on each hook, see their individual files and test files.
+Hook for scrolling to specific tracks in the audio player.

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { useSupabase } from '../contexts/supabase-context'
 
 // Types
 export interface AudioItem {
@@ -38,42 +38,102 @@ export interface SupabaseData {
   daily: DailyData[]
 }
 
-export const useSupabaseData = () => {
-  const [data, setData] = useState<SupabaseData | null>(null)
+export interface FilterSortParams {
+  searchTerm?: string
+  sortDirection?: 'asc' | 'desc'
+  currentPage?: number
+  postsPerPage?: number
+}
+
+export const useSupabaseData = (filterSortParams?: FilterSortParams) => {
+  const { supabase, loading: contextLoading, error: contextError } = useSupabase()
+
+  const [data, setData] = useState<SupabaseData>({
+    daily: [],
+    audio: [],
+    markovTexts: [],
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
+    // Don't proceed if context is still loading or has errors
+    if (contextLoading) {
+      setLoading(true)
+      return
+    }
+    
+    if (contextError) {
+      setError(contextError)
+      setLoading(false)
+      return
+    }
+    
+    if (!supabase) {
+      setError('Supabase client not initialized')
+      setLoading(false)
+      return
+    }
+
     const fetchData = async () => {
+      
       try {
         setLoading(true)
         
-        // Initialize Supabase client
-        const supabaseUrl = process.env.GATSBY_SUPABASE_URL
-        const supabaseAnonKey = process.env.GATSBY_SUPABASE_ANON_KEY
+        // Build query for daily table with filtering and sorting
         
-        if (!supabaseUrl || !supabaseAnonKey) {
-          throw new Error('Supabase environment variables not configured')
+        let dailyQuery = supabase
+          .from('daily')
+          .select('id, title, created_at, coherency_level, cover_art, date', { count: 'exact' })
+
+        // Apply search filter if searchTerm is provided
+        if (filterSortParams?.searchTerm && filterSortParams.searchTerm.trim()) {
+          const searchTerm = filterSortParams.searchTerm.toLowerCase().trim()
+          dailyQuery = dailyQuery.or(`title.ilike.%${searchTerm}%`)
         }
 
-        const supabase = createClient(supabaseUrl, supabaseAnonKey)
+        // Apply sorting - use date field for proper chronological ordering
+        const sortDirection = filterSortParams?.sortDirection || 'desc'
+        dailyQuery = dailyQuery.order('date', { ascending: sortDirection === 'asc' })
 
-        // Fetch data in parallel
-        const [dailyResult, audioResult, markovResult] = await Promise.all([
-          supabase
-            .from('daily')
-            .select('id, title, created_at, coherency_level, cover_art, date')
-            .order('date', { ascending: true }),
-          supabase
-            .from('daily_audio')
-            .select('id, daily_id, storage_path, duration, format, created_at, coherency_level'),
-          supabase
-            .from('markov_texts')
-            .select('id, daily_id, text_content, created_at, coherency_level')
+        // Apply pagination
+        if (filterSortParams?.currentPage && filterSortParams?.postsPerPage) {
+          const from = (filterSortParams.currentPage - 1) * filterSortParams.postsPerPage
+          const to = from + filterSortParams.postsPerPage - 1
+          dailyQuery = dailyQuery.range(from, to)
+        }
+
+        // Execute daily query
+        const dailyResult = await dailyQuery
+
+        if (dailyResult.error) {
+          throw dailyResult.error
+        }
+
+        // Get total count for pagination
+        setTotalCount(dailyResult.count || 0)
+
+        // Get the daily IDs from the filtered results
+        const dailyIds = dailyResult.data?.map(d => d.id) || []
+
+        // Fetch related audio and markov data only for the filtered daily entries
+        const [audioResult, markovResult] = await Promise.all([
+          dailyIds.length > 0 
+            ? supabase
+                .from('daily_audio')
+                .select('id, daily_id, storage_path, duration, format, created_at, coherency_level')
+                .in('daily_id', dailyIds)
+            : Promise.resolve({ data: [], error: null }),
+          dailyIds.length > 0
+            ? supabase
+                .from('markov_texts')
+                .select('id, daily_id, text_content, created_at, coherency_level')
+                .in('daily_id', dailyIds)
+            : Promise.resolve({ data: [], error: null })
         ])
 
         // Check for errors
-        if (dailyResult.error) throw dailyResult.error
         if (audioResult.error) throw audioResult.error
         if (markovResult.error) throw markovResult.error
 
@@ -85,21 +145,25 @@ export const useSupabaseData = () => {
           return dailyA.date.localeCompare(dailyB.date)
         })
 
-        setData({
+        const finalData = {
           daily: dailyResult.data || [],
           audio: sortedAudioData || [],
           markovTexts: markovResult.data || [],
-        })
+        }
+
+        setData(finalData)
       } catch (err) {
-        console.error('Error fetching Supabase data:', err)
         setError(err instanceof Error ? err.message : 'Unknown error')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchData()
-  }, [])
+    // Only fetch data if we have a Supabase client and context is not loading
+    if (supabase && !contextLoading && !contextError) {
+      fetchData()
+    }
+  }, [filterSortParams, supabase, contextLoading, contextError])
 
-  return { data, loading, error }
+  return { data, loading, error, totalCount }
 }

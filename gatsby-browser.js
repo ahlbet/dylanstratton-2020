@@ -10,12 +10,15 @@ import './src/utils/global.css'
 import React from 'react'
 import { UserPreferencesProvider } from './src/components/calendar/user-preferences-context'
 import { AudioPlayerProvider } from './src/contexts/audio-player-context/audio-player-context'
+import { SupabaseProvider } from './src/contexts/supabase-context'
 
 export const wrapRootElement = ({ element }) => {
   return (
-    <AudioPlayerProvider>
-      <UserPreferencesProvider>{element}</UserPreferencesProvider>
-    </AudioPlayerProvider>
+    <SupabaseProvider>
+      <AudioPlayerProvider>
+        <UserPreferencesProvider>{element}</UserPreferencesProvider>
+      </AudioPlayerProvider>
+    </SupabaseProvider>
   )
 }
 

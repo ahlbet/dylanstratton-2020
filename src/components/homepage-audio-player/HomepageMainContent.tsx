@@ -21,6 +21,16 @@ interface HomepageMainContentProps {
   currentBlogPost: string | null
   onPostClick: (post: BlogPost) => void
   markovTexts: MarkovText[]
+  searchTerm: string
+  onSearchChange: (value: string) => void
+  sortDirection: 'asc' | 'desc'
+  onSortChange: () => void
+  currentPage: number
+  onPageChange: (page: number) => void
+  totalPages: number
+  totalCount: number
+  postsPerPage: number
+  searchLoading?: boolean
 }
 
 export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
@@ -28,6 +38,16 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
   currentBlogPost,
   onPostClick,
   markovTexts,
+  searchTerm,
+  onSearchChange,
+  sortDirection,
+  onSortChange,
+  currentPage,
+  onPageChange,
+  totalPages,
+  totalCount,
+  postsPerPage,
+  searchLoading = false,
 }) => {
   return (
     <div className="flex-1 flex flex-col">
@@ -52,15 +72,19 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
           </div>
 
           <AllPostsTable
-            posts={posts.map((post) => ({
-              id: post.node.fields.slug,
-              title: post.node.frontmatter.title,
-              date: post.node.frontmatter.date,
-              content: post.node.excerpt,
-              daily_id: post.node.frontmatter.daily_id,
-            }))}
+            posts={posts}
             currentBlogPost={currentBlogPost}
             onPostClick={onPostClick}
+            searchTerm={searchTerm}
+            onSearchChange={onSearchChange}
+            sortDirection={sortDirection}
+            onSortChange={onSortChange}
+            currentPage={currentPage}
+            onPageChange={onPageChange}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            postsPerPage={postsPerPage}
+            searchLoading={searchLoading}
           />
         </div>
       </div>
