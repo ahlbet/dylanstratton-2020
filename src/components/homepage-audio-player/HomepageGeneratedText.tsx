@@ -25,10 +25,8 @@ export const HomepageGeneratedText: React.FC<HomepageGeneratedTextProps> = ({
         const generator = new MarkovGeneratorAPIClient()
         const isAvailable = await generator.isAvailable()
 
-        console.log('isAvailable', isAvailable)
         if (isAvailable) {
           const texts = await generator.loadTextBatch(20)
-          console.log('texts', texts)
           setTexts(texts as string[])
         } else {
           console.error('❌ Markov generator API is not available')
@@ -51,7 +49,7 @@ export const HomepageGeneratedText: React.FC<HomepageGeneratedTextProps> = ({
       </h3>
       <div className="space-y-4">
         {processedTexts.length === 0 ? (
-          <p className="text-gray-400">No generated text available</p>
+          <p className="text-gray-400">No thoughts for this day</p>
         ) : (
           processedTexts.map((text) => (
             <div key={text.id} className="text-gray-300 leading-relaxed">
