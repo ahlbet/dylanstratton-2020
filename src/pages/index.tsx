@@ -167,27 +167,6 @@ const BlogIndex = ({
     return `${track.daily_id}-${track.id}`
   }
 
-  // Process audio tracks from Supabase data
-  const processedTracks = useMemo(() => {
-    if (!supabaseData?.audio) return []
-
-    return supabaseData.audio
-      .filter(
-        (track): track is AudioItem =>
-          Boolean(track.storage_path) && Boolean(track.daily_id)
-      )
-      .map((track) => ({
-        id: track.id,
-        title: generateTrackTitle(track),
-        date: new Date(track.created_at || '').toLocaleDateString(),
-        duration: formatDuration(track.duration || 0),
-        durationSeconds: track.duration || 0,
-        storage_path: track.storage_path,
-        daily_id: track.daily_id,
-      }))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [supabaseData?.audio])
-
   // Set current blog post and tracks when data changes
   useEffect(() => {
     // Check if we have posts but no audio data yet
