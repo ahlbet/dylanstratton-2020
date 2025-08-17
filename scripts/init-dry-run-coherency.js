@@ -196,8 +196,14 @@ const getAudioCoherencyLevel = async (
 
     const coherencyLevel = parseInt(coherencyInput)
 
-    if (isNaN(coherencyLevel) || coherencyLevel < COHERENCY_MIN_LEVEL || coherencyLevel > COHERENCY_MAX_LEVEL) {
-      console.log(`❌ Please enter a number between ${COHERENCY_MIN_LEVEL} and ${COHERENCY_MAX_LEVEL}`)
+    if (
+      isNaN(coherencyLevel) ||
+      coherencyLevel < COHERENCY_MIN_LEVEL ||
+      coherencyLevel > COHERENCY_MAX_LEVEL
+    ) {
+      console.log(
+        `❌ Please enter a number between ${COHERENCY_MIN_LEVEL} and ${COHERENCY_MAX_LEVEL}`
+      )
       continue
     }
 
@@ -220,7 +226,7 @@ const extractAudioDuration = async (filePath, mockDurationArg) => {
         mockDuration = envVal
       }
     }
-    
+
     console.log(`   ✅ Duration: ${mockDuration} seconds (mock)`)
     return mockDuration
   } catch (error) {

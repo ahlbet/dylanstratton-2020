@@ -20,9 +20,11 @@ The original `init.js` was a monolithic script that handled many different respo
 ### Core Modules
 
 #### `init-orchestrator.js`
+
 The main orchestrator that coordinates all operations. This is the entry point for the refactored system.
 
 **Key methods:**
+
 - `run()` - Executes the complete initialization process
 - `processAudioFiles()` - Handles audio file processing
 - `processMarkovTexts()` - Manages Markov text generation
@@ -30,59 +32,73 @@ The main orchestrator that coordinates all operations. This is the entry point f
 - `createBlogPost()` - Generates the final blog post
 
 #### `git-operations.js`
+
 Handles all Git-related operations including branch management and commits.
 
 **Key methods:**
+
 - `checkoutOrCreateBranch(branchName, isTest)` - Creates or checks out branches
 - `commitAndPush(branchName, commitMessage, isTest)` - Commits and pushes changes
 
 #### `user-interaction.js`
+
 Manages all user input and interaction including text editing and coherency level input.
 
 **Key methods:**
+
 - `askQuestion(question)` - Prompts user for input
 - `editText(originalText, textNumber)` - Interactive text editing
 - `getTextCoherencyLevel(textNumber)` - Gets text coherency level
 - `getAudioCoherencyLevel(trackNumber, totalTracks, audioPath, audioPlayer)` - Gets audio coherency level
 
 #### `audio-processor.js`
+
 Handles audio file operations including duration extraction and file discovery.
 
 **Key methods:**
+
 - `extractAudioDuration(filePath)` - Extracts duration from WAV files
 - `findAudioFiles(name)` - Discovers audio files in Downloads directory
 - `sanitizeFilename(filename)` - Cleans filenames for safe use
 
 #### `supabase-manager.js`
+
 Manages all Supabase operations including storage uploads and database operations.
 
 **Key methods:**
+
 - `uploadToStorage(filePathOrBuffer, fileName, bucketName, contentType)` - Uploads files to storage
 - `createDailyEntry(title, coverArtPath, date)` - Creates daily database entries
 - `createDailyAudioEntries(dailyId, audioFiles, getCoherencyLevel)` - Creates audio database entries
 - `uploadMarkovTexts(texts)` - Uploads Markov texts to database
 
 #### `markov-manager.js`
+
 Handles Markov text generation, editing, and processing.
 
 **Key methods:**
+
 - `initialize()` - Initializes the Markov generator with Supabase data
 - `generateInitialTexts(count)` - Generates initial text samples
 - `processTexts(texts, editText, getCoherencyLevel)` - Processes and edits texts
 - `formatForMarkdown(texts)` - Formats texts for markdown output
 
 #### `local-data-manager.js`
+
 Manages local development data including audio files, Markov texts, and cover art.
 
 **Key methods:**
+
 - `updateLocalAudioFiles(movedFiles, supabase)` - Downloads audio files locally
 - `updateLocalMarkovTexts(newTexts, postName)` - Updates local Markov text data
 - `updateLocalCoverArt(postName, coverArtBuffer)` - Saves cover art locally
 
 #### `template-processor.js`
+
 Handles blog post template processing and file operations.
 
 **Key methods:**
+
 - `readTemplate(templatePath, isTest)` - Reads template from file
 - `processTemplate(template, replacements)` - Processes template with replacements
 - `createBlogPost(name, content)` - Creates the final blog post file
@@ -103,7 +119,9 @@ node init.js <post-name> [description]
 You can also use the orchestrator programmatically:
 
 ```javascript
-const { InitOrchestrator } = require('./src/utils/init-script/init-orchestrator')
+const {
+  InitOrchestrator,
+} = require('./src/utils/init-script/init-orchestrator')
 
 const orchestrator = new InitOrchestrator('my-post', 'My post description')
 await orchestrator.run()
@@ -120,21 +138,27 @@ yarn test src/utils/init-script/
 ## Benefits of Refactoring
 
 ### 1. **Testability**
+
 Each module can be tested independently with proper mocking of dependencies.
 
 ### 2. **Maintainability**
+
 Code is organized by responsibility, making it easier to understand and modify.
 
 ### 3. **Reusability**
+
 Modules can be reused in other parts of the system or in different scripts.
 
 ### 4. **Readability**
+
 Each module has a clear, focused purpose that's easy to understand.
 
 ### 5. **Error Handling**
+
 Better error handling and recovery with proper error boundaries.
 
 ### 6. **Dependency Management**
+
 Clear dependencies between modules with proper separation of concerns.
 
 ## Migration Notes

@@ -115,6 +115,7 @@ yarn play-audio "~/Music/song.mp3"
 ### Installation Requirements
 
 #### macOS
+
 ```bash
 # Install mpv (recommended)
 brew install mpv
@@ -123,6 +124,7 @@ brew install mpv
 ```
 
 #### Ubuntu/Debian
+
 ```bash
 # Install mpv
 sudo apt install mpv
@@ -132,6 +134,7 @@ sudo apt install ffmpeg
 ```
 
 #### Windows
+
 ```bash
 # Install mpv via chocolatey
 choco install mpv
@@ -174,10 +177,12 @@ You can now filter and sort audio tracks by coherency level:
 
 ```javascript
 // Sort by coherency level (most coherent first)
-const sortedAudio = audioData.sort((a, b) => b.coherency_level - a.coherency_level)
+const sortedAudio = audioData.sort(
+  (a, b) => b.coherency_level - a.coherency_level
+)
 
 // Filter for highly coherent tracks
-const coherentTracks = audioData.filter(track => track.coherency_level >= 75)
+const coherentTracks = audioData.filter((track) => track.coherency_level >= 75)
 ```
 
 ## Testing
