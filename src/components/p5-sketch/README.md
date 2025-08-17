@@ -24,7 +24,7 @@ const mySketch = (p) => {
   p.setup = () => {
     p.createCanvas(400, 300)
   }
-  
+
   p.draw = () => {
     p.background(220)
     p.fill(255, 0, 0)
@@ -33,19 +33,19 @@ const mySketch = (p) => {
 }
 
 // In your component:
-<P5Sketch sketch={mySketch} />
+;<P5Sketch sketch={mySketch} />
 ```
 
 ### With Custom Styling
 
 ```jsx
-<P5Sketch 
+<P5Sketch
   sketch={mySketch}
   className="my-sketch"
-  style={{ 
+  style={{
     border: '2px solid #ddd',
     borderRadius: '8px',
-    margin: '20px 0'
+    margin: '20px 0',
   }}
 />
 ```
@@ -69,16 +69,16 @@ const mySketch = (p) => {
   // Variables
   let x = 0
   let y = 0
-  
+
   p.setup = () => {
     p.createCanvas(400, 300)
     // Initialization code
   }
-  
+
   p.draw = () => {
     // Animation/drawing code that runs every frame
   }
-  
+
   // Optional: other p5.js functions like mousePressed, keyPressed, etc.
   p.mousePressed = () => {
     // Handle mouse press
@@ -89,6 +89,7 @@ const mySketch = (p) => {
 ## Examples
 
 See `src/pages/p5-demo.js` for working examples including:
+
 - Interactive circle following mouse
 - Particle system
 - Animated wave
@@ -106,4 +107,4 @@ yarn test src/components/p5-sketch/p5-sketch.test.js
 - The component automatically handles cleanup when unmounting
 - Each sketch runs in its own p5 instance
 - The canvas is created inside a div container that you can style
-- Make sure your sketch function is defined outside your React component to avoid recreation on every render 
+- Make sure your sketch function is defined outside your React component to avoid recreation on every render

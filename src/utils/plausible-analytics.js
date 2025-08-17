@@ -1,13 +1,13 @@
 /**
  * Plausible Analytics utility functions for audio tracking
- * 
+ *
  * Tracking Strategy:
  * - songPlay: Triggered when any track starts playing (from context playTrack)
  * - songPause: Triggered when tracks are paused
  * - trackNavigate: Triggered when using next/previous buttons
  * - audioDownload: Triggered when individual files are downloaded
  * - audioZipDownload: Triggered when ZIP files are downloaded
- * 
+ *
  * Note: We avoid duplicate tracking by not having separate "track selection" events
  * since songPlay already captures when users select and play tracks.
  */

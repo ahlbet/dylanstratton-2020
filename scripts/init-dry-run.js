@@ -3,7 +3,7 @@ const path = require('path')
 const readline = require('readline')
 const { execSync } = require('child_process')
 const { createClient } = require('@supabase/supabase-js')
-const { generateBlogPostText } = require('../src/utils/markov-generator')
+const { MarkovGenerator } = require('../src/utils/markov-generator')
 const { cleanText } = require('../src/utils/text-cleaner')
 const { getCoherencyLevel } = require('../src/utils/coherency-level-utils')
 require('dotenv').config()
@@ -93,7 +93,76 @@ const main = async () => {
   console.log('This will generate 5 markov texts for interactive editing')
   console.log('No files will be created or uploaded to Supabase\n')
 
-  // Generate 5 markov texts
+  // Fetch markov texts from Supabase ONCE at the beginning
+  console.log('📥 Fetching markov texts from Supabase...')
+  let markovGenerator = null
+  try {
+    markovGenerator = new MarkovGenerator(7)
+
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+
+    if (supabaseUrl && supabaseKey) {
+      const success = await markovGenerator.loadTextFromSupabaseWithCredentials(
+        supabaseUrl,
+        supabaseKey,
+        'markov-text'
+      )
+      if (success) {
+        console.log('✅ Successfully loaded markov texts from Supabase')
+      } else {
+        console.warn('⚠️ Failed to load from Supabase, using fallback text')
+        // Fallback to sample text if Supabase fails
+        const fallbackText = [
+          'The quick brown fox jumps over the lazy dog.',
+          'A journey of a thousand miles begins with a single step.',
+          'All that glitters is not gold.',
+          'Actions speak louder than words.',
+          'Beauty is in the eye of the beholder.',
+          'Every cloud has a silver lining.',
+          'Time heals all wounds.',
+          'Actions speak louder than words.',
+          'The early bird catches the worm.',
+          "Don't judge a book by its cover.",
+        ]
+        markovGenerator.loadTextFromArray(fallbackText)
+      }
+    } else {
+      console.warn('⚠️ Missing Supabase credentials, using fallback text')
+      const fallbackText = [
+        'The quick brown fox jumps over the lazy dog.',
+        'A journey of a thousand miles begins with a single step.',
+        'All that glitters is not gold.',
+        'Actions speak louder than words.',
+        'Beauty is in the eye of the beholder.',
+        'Every cloud has a silver lining.',
+        'Time heals all wounds.',
+        'Actions speak louder than words.',
+        'The early bird catches the worm.',
+        "Don't judge a book by its cover.",
+      ]
+      markovGenerator.loadTextFromArray(fallbackText)
+    }
+  } catch (error) {
+    console.error('❌ Failed to initialize markov generator:', error.message)
+    // Use fallback text as last resort
+    const fallbackText = [
+      'The quick brown fox jumps over the lazy dog.',
+      'A journey of a thousand miles begins with a single step.',
+      'All that glitters is not gold.',
+      'Actions speak louder than words.',
+      'Beauty is in the eye of the beholder.',
+      'Every cloud has a silver lining.',
+      'Time heals all wounds.',
+      'Actions speak louder than words.',
+      'The early bird catches the worm.',
+      "Don't judge a book by its cover.",
+    ]
+    markovGenerator.loadTextFromArray(fallbackText)
+  }
+
+  // Generate 5 markov texts using the pre-loaded generator
   console.log('📝 Generating 5 markov texts...')
   const markovTexts = []
   let attempts = 0
@@ -105,9 +174,11 @@ const main = async () => {
 
     while (!text && attemptCount < 3) {
       try {
-        const generatedText = await generateBlogPostText(name, 1)
-        // Remove the "> " prefix since we're generating individual texts
-        text = generatedText.replace(/^> /, '').trim()
+        // Use the pre-loaded generator instead of calling generateBlogPostText
+        const generatedLines = markovGenerator.generateMultipleLines(1, 1000, 2)
+        if (generatedLines.length > 0) {
+          text = generatedLines[0]
+        }
 
         if (text && text.length > 10) {
           break
@@ -140,8 +211,17 @@ const main = async () => {
 
       if (editedText === 'REGENERATE') {
         try {
-          const newText = await generateBlogPostText(name, 1)
-          currentText = newText.replace(/^> /, '').trim()
+          // Use the pre-loaded generator instead of calling generateBlogPostText
+          const generatedLines = markovGenerator.generateMultipleLines(
+            1,
+            1000,
+            2
+          )
+          if (generatedLines.length > 0) {
+            currentText = generatedLines[0]
+          } else {
+            currentText = `Generated text ${i + 1} could not be created.`
+          }
           needsRegeneration = true
           console.log(`🔄 Regenerated text ${i + 1}`)
         } catch (error) {

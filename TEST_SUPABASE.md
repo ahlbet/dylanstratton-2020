@@ -13,12 +13,14 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 ## 2. Test with a Small File
 
 1. **Create a test WAV file** in your Downloads folder:
+
    ```bash
    # Create a small test file (if you don't have one)
    ffmpeg -f lavfi -i "sine=frequency=1000:duration=5" ~/Downloads/test-audio.wav
    ```
 
 2. **Run the init script**:
+
    ```bash
    node init.js test-supabase "Testing Supabase upload"
    ```
@@ -31,6 +33,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 ## 3. Expected Output
 
 You should see:
+
 ```
 Checked out to branch 'test-supabase'.
 Found single WAV file 'test-supabase.wav'.
@@ -42,6 +45,7 @@ Created folder 'test-supabase' and file 'test-supabase/test-supabase.md' with te
 ## 4. Verify the Generated Markdown
 
 The generated file should contain:
+
 ```markdown
 ---
 title: test-supabase
@@ -64,22 +68,26 @@ description: Testing Supabase upload
 ### Common Issues:
 
 **"Missing Supabase credentials"**
+
 - Check your `.env` file exists and has correct values
 - Ensure no spaces around the `=` sign
 
 **"Failed to upload to Supabase"**
+
 - Check bucket permissions in Supabase dashboard
 - Verify CORS settings include your domain
 - Check file size limits (default is 50MB)
 
 **"Bucket not found"**
+
 - Ensure your bucket is named exactly `audio`
 - Check bucket is public and has proper policies
 
 ## 7. Next Steps After Testing
 
 Once testing is successful:
+
 1. **Update Gatsby config** to remove local assets source
 2. **Test with your actual blog** to ensure audio plays correctly
 3. **Migrate existing audio files** if needed
-4. **Monitor upload performance** and adjust as needed 
+4. **Monitor upload performance** and adjust as needed

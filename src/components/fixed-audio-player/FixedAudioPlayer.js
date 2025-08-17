@@ -313,18 +313,18 @@ export const FixedAudioPlayer = () => {
       return
     }
 
-    // Check if audio is ready (both context and source metadata)
-    const audio = audioRef.current
-    if (audio && (audio.readyState === 0 || !audio.src)) {
-      // Wait a bit and try again
-      setTimeout(() => {
-        if (audio.readyState > 0 && audio.src) {
-          // Instead of calling togglePlay recursively, just set playing state
-          setIsPlaying(true)
-        }
-      }, 200) // Increased delay to give more time for setup
-      return
-    }
+    // // Check if audio is ready (both context and source metadata)
+    // const audio = audioRef.current
+    // if (audio && (audio.readyState === 0 || !audio.src)) {
+    //   // Wait a bit and try again
+    //   setTimeout(() => {
+    //     if (audio.readyState > 0 && audio.src) {
+    //       // Instead of calling togglePlay recursively, just set playing state
+    //       setIsPlaying(true)
+    //     }
+    //   }, 200) // Increased delay to give more time for setup
+    //   return
+    // }
 
     const newPlayingState = !isPlaying
     setIsPlaying(newPlayingState)

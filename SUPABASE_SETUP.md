@@ -32,6 +32,7 @@ CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = '
 ## 3. CORS Configuration
 
 In your Supabase dashboard:
+
 1. **Settings → API → CORS**
 2. **Add your domain** (e.g., `https://yourdomain.com`)
-3. **For development**: Add `http://localhost:8000` and `http://localhost:9000` 
+3. **For development**: Add `http://localhost:8000` and `http://localhost:9000`

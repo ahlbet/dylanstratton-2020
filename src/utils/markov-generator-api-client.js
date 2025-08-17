@@ -3,14 +3,14 @@ class MarkovGeneratorAPIClient {
     // Always use local data in development mode
     const isLocalDev = process.env.NODE_ENV === 'development'
     this.apiUrl = isLocalDev ? '/api/local-markov-text' : '/api/markov-text'
-    this.textQueue = []
+    this.texts = []
     this.isLoading = false
     this.isLocalMode = isLocalDev
   }
 
   async loadTextBatch(count = 20) {
     if (this.isLoading) {
-      return this.textQueue.length
+      return this.texts.length
     }
 
     try {
@@ -29,7 +29,7 @@ class MarkovGeneratorAPIClient {
           // Get random texts from the local data
           const shuffled = [...data.texts].sort(() => 0.5 - Math.random())
           const selectedTexts = shuffled.slice(0, count)
-          this.textQueue = selectedTexts.map((item) => item.text_content)
+          this.texts = selectedTexts.map((item) => item.text_content)
         }
       } else {
         // Production mode - use API
@@ -46,28 +46,17 @@ class MarkovGeneratorAPIClient {
         }
 
         if (data.texts && data.texts.length > 0) {
-          this.textQueue = data.texts.map((item) => item.text)
+          this.texts = data.texts.map((item) => item.text)
         }
       }
 
-      return this.textQueue.length
+      return this.texts
     } catch (error) {
       console.error('❌ Error loading text batch:', error)
       return 0
     } finally {
       this.isLoading = false
     }
-  }
-
-  getNextText() {
-    if (this.textQueue.length === 0) {
-      return null
-    }
-    return this.textQueue.shift()
-  }
-
-  getQueueLength() {
-    return this.textQueue.length
   }
 
   async isAvailable() {

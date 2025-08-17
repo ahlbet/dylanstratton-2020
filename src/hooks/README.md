@@ -13,12 +13,8 @@ import useIsMobile from '../hooks/use-is-mobile'
 
 function MyComponent() {
   const isMobile = useIsMobile()
-  
-  return (
-    <div>
-      {isMobile ? 'Mobile View' : 'Desktop View'}
-    </div>
-  )
+
+  return <div>{isMobile ? 'Mobile View' : 'Desktop View'}</div>
 }
 ```
 
@@ -33,6 +29,7 @@ function MyComponent() {
 ### Implementation Details
 
 The hook uses a regex pattern to match common mobile user agent strings and sets up event listeners for:
+
 - `orientationchange` - Useful for tablets that can rotate
 - `resize` - Handles responsive design changes
 
