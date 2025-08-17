@@ -135,6 +135,7 @@ const BlogIndex = ({
     isPlaying,
     setIsPlaying,
     playTrack,
+    audioRef,
   } = useAudioPlayer()
 
   const { getAudioUrl } = usePresignedUrl()
@@ -384,6 +385,16 @@ const BlogIndex = ({
     // Find the track in the current playlist
     const playlistIndex = playlist.findIndex((p) => p.id === track.id)
     if (playlistIndex !== -1) {
+      // Check if this track is already playing
+      if (currentIndex === playlistIndex && isPlaying) {
+        // Track is already playing, pause it
+        if (audioRef.current) {
+          audioRef.current.pause()
+          setIsPlaying(false)
+        }
+        return
+      }
+
       // Get the presigned URL for the track
       const trackToGetUrlFor = playlist[playlistIndex]
 

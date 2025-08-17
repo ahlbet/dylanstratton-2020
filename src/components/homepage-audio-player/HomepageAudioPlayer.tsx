@@ -479,12 +479,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
       />
 
       {/* Playlist View Toggle */}
-      <HomepagePlaylistToggle
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        currentBlogPost={currentBlogPost}
-        posts={posts}
-      />
+      <HomepagePlaylistToggle currentBlogPost={currentBlogPost} posts={posts} />
 
       {/* Playlist */}
       <HomepagePlaylist

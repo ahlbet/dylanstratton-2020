@@ -33,22 +33,14 @@ const mockPosts = [
 
 describe('HomepagePlaylistToggle', () => {
   it('renders the playlist label', () => {
-    render(
-      <HomepagePlaylistToggle
-        currentBlogPost={null}
-        posts={mockPosts}
-      />
-    )
+    render(<HomepagePlaylistToggle currentBlogPost={null} posts={mockPosts} />)
 
     expect(screen.getByText('Playlist')).toBeInTheDocument()
   })
 
   it('displays the current blog post title when a post is selected', () => {
     render(
-      <HomepagePlaylistToggle
-        currentBlogPost="2024-01-02"
-        posts={mockPosts}
-      />
+      <HomepagePlaylistToggle currentBlogPost="2024-01-02" posts={mockPosts} />
     )
 
     expect(screen.getByText('Second Blog Post')).toBeInTheDocument()
@@ -56,26 +48,18 @@ describe('HomepagePlaylistToggle', () => {
 
   it('displays the daily_id when post title is not found', () => {
     render(
-      <HomepagePlaylistToggle
-        currentBlogPost="2024-01-04"
-        posts={mockPosts}
-      />
+      <HomepagePlaylistToggle currentBlogPost="2024-01-04" posts={mockPosts} />
     )
 
     expect(screen.getByText('2024-01-04')).toBeInTheDocument()
   })
 
   it('does not display current blog post info when no post is selected', () => {
-    render(
-      <HomepagePlaylistToggle
-        currentBlogPost={null}
-        posts={mockPosts}
-      />
-    )
+    render(<HomepagePlaylistToggle currentBlogPost={null} posts={mockPosts} />)
 
     // Should only show the playlist label
     expect(screen.getByText('Playlist')).toBeInTheDocument()
-    
+
     // Should not show any post titles
     expect(screen.queryByText('First Blog Post')).not.toBeInTheDocument()
     expect(screen.queryByText('Second Blog Post')).not.toBeInTheDocument()
@@ -83,12 +67,7 @@ describe('HomepagePlaylistToggle', () => {
   })
 
   it('handles empty posts array', () => {
-    render(
-      <HomepagePlaylistToggle
-        currentBlogPost="2024-01-01"
-        posts={[]}
-      />
-    )
+    render(<HomepagePlaylistToggle currentBlogPost="2024-01-01" posts={[]} />)
 
     expect(screen.getByText('Playlist')).toBeInTheDocument()
     expect(screen.getByText('2024-01-01')).toBeInTheDocument()
@@ -123,14 +102,12 @@ describe('HomepagePlaylistToggle', () => {
 
   it('renders with correct CSS classes', () => {
     render(
-      <HomepagePlaylistToggle
-        currentBlogPost="2024-01-01"
-        posts={mockPosts}
-      />
+      <HomepagePlaylistToggle currentBlogPost="2024-01-01" posts={mockPosts} />
     )
 
     // Test the outer container div
-    const outerContainer = screen.getByText('Playlist').closest('div')?.parentElement?.parentElement
+    const outerContainer = screen.getByText('Playlist').closest('div')
+      ?.parentElement?.parentElement
     expect(outerContainer).toHaveClass('p-4', 'border-b', 'border-gray-800')
 
     // Test the playlist label

@@ -45,7 +45,7 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
   return (
     <div className="flex-1 flex flex-col">
       {/* P5 Sketch Visualization */}
-      <div className="flex-1 relative bg-black p-6">
+      <div className="flex relative bg-black p-6">
         <div className="w-full h-full rounded-lg overflow-hidden relative">
           {/* Placeholder for P5 sketch - replace with your actual sketch */}
           <div className="w-full h-64 bg-gradient-to-br from-purple-900/20 to-blue-900/20 relative">
