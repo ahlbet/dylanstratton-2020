@@ -117,20 +117,27 @@ export const useSupabaseData = (filterSortParams?: FilterSortParams) => {
         // Get the daily IDs from the filtered results
         const dailyIds = dailyResult.data?.map(d => d.id) || []
 
+        // If no daily entries, return early with empty data
+        if (dailyIds.length === 0) {
+          const finalData = {
+            daily: dailyResult.data || [],
+            audio: [],
+            markovTexts: [],
+          }
+          setData(finalData)
+          return
+        }
+
         // Fetch related audio and markov data only for the filtered daily entries
         const [audioResult, markovResult] = await Promise.all([
-          dailyIds.length > 0 
-            ? supabase
-                .from('daily_audio')
-                .select('id, daily_id, storage_path, duration, format, created_at, coherency_level')
-                .in('daily_id', dailyIds)
-            : Promise.resolve({ data: [], error: null }),
-          dailyIds.length > 0
-            ? supabase
-                .from('markov_texts')
-                .select('id, daily_id, text_content, created_at, coherency_level')
-                .in('daily_id', dailyIds)
-            : Promise.resolve({ data: [], error: null })
+          supabase
+            .from('daily_audio')
+            .select('id, daily_id, storage_path, duration, format, created_at, coherency_level')
+            .in('daily_id', dailyIds),
+          supabase
+            .from('markov_texts')
+            .select('id, daily_id, text_content, created_at, coherency_level')
+            .in('daily_id', dailyIds)
         ])
 
         // Check for errors
