@@ -18,21 +18,6 @@ import {
 import { isLocalDev } from '../utils/local-dev-utils'
 
 // Types
-interface BlogPost {
-  node: {
-    excerpt: string
-    fields: {
-      slug: string
-    }
-    frontmatter: {
-      date: string
-      title: string
-      description?: string
-      daily_id?: string
-    }
-  }
-}
-
 interface PageContext {
   previous?: {
     fields: { slug: string }
@@ -116,13 +101,10 @@ interface IndexPageData {
 const BlogIndex = ({
   data,
   location,
-  pageContext,
 }: {
   data: IndexPageData
   location: any
-  pageContext: PageContext
 }) => {
-  const [bottomView, setBottomView] = useState<'posts' | 'calendar'>('posts')
   const [error, setError] = useState<string | null>(null)
   const [currentBlogPost, setCurrentBlogPost] = useState<string | null>(null)
   const [currentBlogPostTracks, setCurrentBlogPostTracks] = useState<
@@ -414,8 +396,6 @@ const BlogIndex = ({
         {/* Main Content Area */}
         <HomepageMainContent
           markovTexts={processedTexts}
-          bottomView={bottomView}
-          onBottomViewChange={setBottomView}
           posts={posts}
           currentBlogPost={currentBlogPost}
           onPostClick={handlePostClick}

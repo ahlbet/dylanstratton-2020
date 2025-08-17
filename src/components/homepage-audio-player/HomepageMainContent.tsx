@@ -1,10 +1,5 @@
 import React from 'react'
-import { Button } from '../ui/button'
-import { Card } from '../ui/card'
-import { FileText, CalendarIcon } from 'lucide-react'
-import { PostCalendar } from '../post-calendar/PostCalendar'
 import { AllPostsTable } from './AllPostsTable'
-import { Link } from 'gatsby'
 import AudioFFT from '../audio-fft/AudioFFT'
 
 interface BlogPost {
@@ -22,8 +17,6 @@ interface MarkovText {
 }
 
 interface HomepageMainContentProps {
-  bottomView: 'posts' | 'calendar'
-  onBottomViewChange: (view: 'posts' | 'calendar') => void
   posts: any[]
   currentBlogPost: string | null
   onPostClick: (post: BlogPost) => void
@@ -31,17 +24,11 @@ interface HomepageMainContentProps {
 }
 
 export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
-  bottomView,
-  onBottomViewChange,
   posts,
   currentBlogPost,
   onPostClick,
   markovTexts,
 }) => {
-  const isCurrentBlogPost = (post: BlogPost) => {
-    return post.daily_id === currentBlogPost
-  }
-
   return (
     <div className="flex-1 flex flex-col">
       {/* P5 Sketch Visualization */}
@@ -64,29 +51,17 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
             <h2 className="text-lg text-white">All Days</h2>
           </div>
 
-          {/* Conditional Content */}
-          {bottomView === 'posts' ? (
-            <AllPostsTable
-              posts={posts.map((post) => ({
-                id: post.node.fields.slug,
-                title: post.node.frontmatter.title,
-                date: post.node.frontmatter.date,
-                content: post.node.excerpt,
-                daily_id: post.node.frontmatter.daily_id,
-              }))}
-              currentBlogPost={currentBlogPost}
-              onPostClick={onPostClick}
-            />
-          ) : (
-            <PostCalendar
-              posts={posts.map((post) => ({
-                id: post.node.fields.slug,
-                title: post.node.frontmatter.title,
-                date: post.node.frontmatter.date,
-                content: post.node.excerpt,
-              }))}
-            />
-          )}
+          <AllPostsTable
+            posts={posts.map((post) => ({
+              id: post.node.fields.slug,
+              title: post.node.frontmatter.title,
+              date: post.node.frontmatter.date,
+              content: post.node.excerpt,
+              daily_id: post.node.frontmatter.daily_id,
+            }))}
+            currentBlogPost={currentBlogPost}
+            onPostClick={onPostClick}
+          />
         </div>
       </div>
     </div>
