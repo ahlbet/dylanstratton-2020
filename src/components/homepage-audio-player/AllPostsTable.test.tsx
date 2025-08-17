@@ -79,7 +79,9 @@ describe('AllPostsTable', () => {
   test('highlights current blog post', () => {
     render(<AllPostsTable {...defaultProps} />)
 
-    const firstPostCard = screen.getByText('First Post').closest('.bg-gray-900')
+    const firstPostCard = screen
+      .getByText('First Post')
+      .closest('.bg-black-900')
     expect(firstPostCard).toBeInTheDocument()
   })
 

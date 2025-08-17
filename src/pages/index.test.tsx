@@ -432,44 +432,17 @@ describe('BlogIndex Audio Functionality', () => {
       />
     )
 
-    expect(screen.getByText('Test Post Title')).toBeInTheDocument()
-    expect(screen.getByText('Another Post Title')).toBeInTheDocument()
+    // Test that posts are displayed in the AllPostsTable component
+    // Use getAllByText to handle multiple elements with the same text
+    const postTitles = screen.getAllByText('Test Post Title')
+    expect(postTitles.length).toBeGreaterThan(0)
+
+    const anotherPostTitles = screen.getAllByText('Another Post Title')
+    expect(anotherPostTitles.length).toBeGreaterThan(0)
+
+    // Test that excerpts are displayed
     expect(screen.getByText('Test excerpt')).toBeInTheDocument()
     expect(screen.getByText('Another excerpt')).toBeInTheDocument()
-  })
-
-  it.skip('handles view mode toggle between list and grid', () => {
-    render(
-      <BlogIndex
-        data={mockData}
-        location={mockLocation}
-        pageContext={mockPageContext}
-      />
-    )
-
-    const listButton = screen.getByRole('button', { name: /list/i })
-    const gridButton = screen.getByRole('button', { name: /grid/i })
-
-    expect(listButton).toBeInTheDocument()
-    expect(gridButton).toBeInTheDocument()
-  })
-
-  it('handles bottom view toggle between posts and calendar', () => {
-    render(
-      <BlogIndex
-        data={mockData}
-        location={mockLocation}
-        pageContext={mockPageContext}
-      />
-    )
-
-    const postsButton = screen.getByRole('button', { name: /posts view/i })
-    const calendarButton = screen.getByRole('button', {
-      name: /calendar view/i,
-    })
-
-    expect(postsButton).toBeInTheDocument()
-    expect(calendarButton).toBeInTheDocument()
   })
 
   it('stops audio playback when changing posts', () => {

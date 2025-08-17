@@ -48,7 +48,7 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
       <div className="flex-1 relative bg-black p-6">
         <div className="w-full h-full rounded-lg overflow-hidden relative">
           {/* Placeholder for P5 sketch - replace with your actual sketch */}
-          <div className="w-full h-full bg-gradient-to-br from-purple-900/20 to-blue-900/20 relative">
+          <div className="w-full h-64 bg-gradient-to-br from-purple-900/20 to-blue-900/20 relative">
             <AudioFFT
               markovText={markovTexts.map((text) => text.content).join(' ')}
             />
@@ -61,29 +61,7 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
         <div className="p-6">
           {/* Section Header with Toggle */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg text-white">
-              {bottomView === 'posts' ? 'All Days' : 'Calendar'}
-            </h2>
-            <div className="flex space-x-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`p-2 ${bottomView === 'posts' ? 'text-red-400' : 'text-gray-400'}`}
-                onClick={() => onBottomViewChange('posts')}
-                aria-label="Posts view"
-              >
-                <FileText className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`p-2 ${bottomView === 'calendar' ? 'text-red-400' : 'text-gray-400'}`}
-                onClick={() => onBottomViewChange('calendar')}
-                aria-label="Calendar view"
-              >
-                <CalendarIcon className="h-4 w-4" />
-              </Button>
-            </div>
+            <h2 className="text-lg text-white">All Days</h2>
           </div>
 
           {/* Conditional Content */}

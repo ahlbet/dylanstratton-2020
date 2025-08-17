@@ -132,7 +132,7 @@ export const AllPostsTable: React.FC<AllPostsTableProps> = ({
             key={post.id}
             className={`bg-black border transition-colors cursor-pointer ${
               isCurrentBlogPost(post)
-                ? 'border-red-400 bg-gray-900'
+                ? 'border-red-400 bg-black-900'
                 : 'border-gray-800 hover:border-gray-700'
             }`}
             onClick={() => onPostClick(post)}

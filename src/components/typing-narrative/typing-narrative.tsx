@@ -6,6 +6,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react'
+import { cn } from '../ui/utils'
 
 /**
  * TypingNarrative
@@ -189,9 +190,9 @@ export const TypingNarrative = forwardRef<
   // Render
   if (paragraphMode) {
     return (
-      <div className={className}>
+      <div className={cn('text-gray-300 leading-relaxed', className)}>
         {sentences.map((_, i) => (
-          <p key={i} className="text-gray-300 leading-relaxed">
+          <p key={i} className="text-gray-300 leading-relaxed mb-4">
             {typedWordsPerSentence[i]?.join(' ')}
           </p>
         ))}
@@ -202,8 +203,8 @@ export const TypingNarrative = forwardRef<
   // Single paragraph mode (all sentences in one block)
   const flatText = typedWordsPerSentence.map((w) => w.join(' ')).join(' ')
   return (
-    <div className={className}>
-      <p className="text-gray-300 leading-relaxed">{flatText}</p>
+    <div className={cn('text-gray-300 leading-relaxed', className)}>
+      <p className="text-gray-300 leading-relaxed mb-4">{flatText}</p>
     </div>
   )
 })
