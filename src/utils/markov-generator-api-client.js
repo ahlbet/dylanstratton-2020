@@ -50,7 +50,7 @@ class MarkovGeneratorAPIClient {
         }
       }
 
-      return this.textQueue.length
+      return this.textQueue
     } catch (error) {
       console.error('❌ Error loading text batch:', error)
       return 0

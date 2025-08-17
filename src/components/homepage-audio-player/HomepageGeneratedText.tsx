@@ -1,6 +1,6 @@
-import React from 'react'
-import { Button } from '../ui/button'
-import { FileText, CalendarIcon } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import TypingNarrative from '../typing-narrative/typing-narrative'
+import MarkovGeneratorAPIClient from '../../utils/markov-generator-api-client'
 
 interface MarkovText {
   id: string
@@ -17,6 +17,33 @@ export const HomepageGeneratedText: React.FC<HomepageGeneratedTextProps> = ({
   processedTexts,
   currentBlogPostDate,
 }) => {
+  const [texts, setTexts] = useState<string[]>([])
+  // Initialize the markov generator API client
+  useEffect(() => {
+    const fetchTextsFromGenerator = async () => {
+      try {
+        const generator = new MarkovGeneratorAPIClient()
+        const isAvailable = await generator.isAvailable()
+
+        console.log('isAvailable', isAvailable)
+        if (isAvailable) {
+          const texts = await generator.loadTextBatch(20)
+          console.log('texts', texts)
+          setTexts(texts as string[])
+        } else {
+          console.error('❌ Markov generator API is not available')
+        }
+      } catch (error) {
+        console.error(
+          '❌ Error initializing markov generator API client:',
+          error
+        )
+      }
+    }
+
+    fetchTextsFromGenerator()
+  }, [currentBlogPostDate])
+
   return (
     <div className="my-8 px-6">
       <h3 className="text-sm text-gray-400 mb-4 uppercase tracking-wide">
@@ -32,6 +59,7 @@ export const HomepageGeneratedText: React.FC<HomepageGeneratedTextProps> = ({
             </div>
           ))
         )}
+        <TypingNarrative sentences={texts} />
       </div>
     </div>
   )
