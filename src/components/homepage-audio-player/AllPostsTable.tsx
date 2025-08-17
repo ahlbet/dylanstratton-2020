@@ -139,11 +139,7 @@ export const AllPostsTable: React.FC<AllPostsTableProps> = ({
           >
             <div className="p-6">
               <div className="flex items-baseline space-x-4 mb-3 group">
-                <h3 className="text-red-400 font-medium group-hover:text-red-300 transition-colors duration-200">
-                  <Link to={post.id} className="">
-                    {post.title}
-                  </Link>
-                </h3>
+                <h3 className="text-red-400 font-medium">{post.title}</h3>
                 <span className="text-xs text-gray-500">{post.date}</span>
               </div>
               <p className="text-gray-300 leading-relaxed">{post.content}</p>
