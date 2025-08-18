@@ -3,8 +3,8 @@ import * as fs from 'fs'
 import * as path from 'path'
 
 interface DailyEntry {
-  name: string
-  cover_art_path?: string | null
+  title: string
+  cover_art?: string | null
   date: string
 }
 
@@ -20,7 +20,6 @@ interface MarkovText {
   text_content: string
   coherency_level: number
   daily_id: string
-  name: string
 }
 
 interface StorageUploadResult {
@@ -104,8 +103,8 @@ class SupabaseManager {
   async createDailyEntry(name: string, coverArtPath: string | null, date: string): Promise<string> {
     try {
       const dailyEntry: DailyEntry = {
-        name,
-        cover_art_path: coverArtPath,
+        title: name,
+        cover_art: coverArtPath,
         date
       }
 
