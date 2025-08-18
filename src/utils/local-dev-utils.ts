@@ -4,7 +4,7 @@
  * Check if local development mode is enabled
  * @returns {boolean} True if running in local development mode
  */
-export function isLocalDev() {
+export function isLocalDev(): boolean {
   return (
     process.env.NODE_ENV === 'development' &&
     process.env.GATSBY_USE_LOCAL_DATA === 'true'
@@ -21,7 +21,10 @@ export const isLocalAudioDev = isLocalDev
  * Get local development configuration
  * @returns {Object} Configuration object for local development
  */
-export function getLocalDevConfig() {
+export function getLocalDevConfig(): {
+  enabled: boolean
+  fallbackToSupabase: boolean
+} {
   return {
     enabled: isLocalDev(),
     fallbackToSupabase:
