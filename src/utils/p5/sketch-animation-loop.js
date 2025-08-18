@@ -19,6 +19,7 @@
  * @param {Function} calculateParticleCount - Function to calculate particle count
  * @param {Function} calculateSpawnPosition - Function to calculate spawn position
  * @param {Function} ParticleClass - Particle class constructor
+ * @param {Object} visualStyle - Visual style parameters
  * @returns {Function} Animation loop function
  */
 export const createAudioReactiveAnimationLoop = (
@@ -36,7 +37,8 @@ export const createAudioReactiveAnimationLoop = (
   calculateParticleCount,
   calculateSpawnPosition,
   calculateStaggeredSpawn,
-  ParticleClass
+  ParticleClass,
+  visualStyle = null
 ) => {
   return () => {
     // Verify FFT is properly initialized
@@ -61,8 +63,13 @@ export const createAudioReactiveAnimationLoop = (
     // Create particles for each frequency band with more dramatic mapping
     const frequencyBands = getFrequencyBands(frequencyData)
 
-    // Calculate particle limits and scaling using utilities
-    const maxTotalParticles = calculateMaxParticles(p.width, p.height, 3000)
+    // Calculate particle limits and scaling using utilities with visual style
+    const maxTotalParticles = calculateMaxParticles(
+      p.width,
+      p.height,
+      3000,
+      visualStyle
+    )
     const currentParticleCount = particles.length
     const canvasScale = calculateCanvasScale(p.width, p.height, 400)
 
@@ -71,11 +78,12 @@ export const createAudioReactiveAnimationLoop = (
       const normalizedAmp = band.amp / 255
       const exponentialAmp = Math.pow(normalizedAmp, 0.4) // More sensitive to low values
 
-      // Calculate particle count using utility
+      // Calculate particle count using utility with visual style
       const maxParticles = calculateParticleCount(
         band.band,
         exponentialAmp,
-        canvasScale
+        canvasScale,
+        visualStyle
       )
       const count = p.floor(maxParticles)
 
@@ -107,7 +115,8 @@ export const createAudioReactiveAnimationLoop = (
             spawnPosition.y,
             band.amp,
             band.band,
-            markovSeed
+            markovSeed,
+            visualStyle
           )
         )
       }
@@ -153,6 +162,7 @@ export const createSimpleParticleLoop = (particles) => {
  * @param {Function} calculateParticleCount - Function to calculate particle count
  * @param {Function} calculateSpawnPosition - Function to calculate spawn position
  * @param {Function} ParticleClass - Particle class constructor
+ * @param {Object} visualStyle - Visual style parameters
  * @returns {Function} Particle spawning loop function
  */
 export const createParticleSpawningLoop = (
@@ -165,11 +175,17 @@ export const createParticleSpawningLoop = (
   calculateCanvasScale,
   calculateParticleCount,
   calculateSpawnPosition,
-  ParticleClass
+  ParticleClass,
+  visualStyle = null
 ) => {
   return () => {
-    // Calculate particle limits and scaling using utilities
-    const maxTotalParticles = calculateMaxParticles(p.width, p.height, 3000)
+    // Calculate particle limits and scaling using utilities with visual style
+    const maxTotalParticles = calculateMaxParticles(
+      p.width,
+      p.height,
+      3000,
+      visualStyle
+    )
     const currentParticleCount = particles.length
     const canvasScale = calculateCanvasScale(p.width, p.height, 400)
 
@@ -178,11 +194,12 @@ export const createParticleSpawningLoop = (
       const normalizedAmp = band.amp / 255
       const exponentialAmp = Math.pow(normalizedAmp, 0.4) // More sensitive to low values
 
-      // Calculate particle count using utility
+      // Calculate particle count using utility with visual style
       const maxParticles = calculateParticleCount(
         band.band,
         exponentialAmp,
-        canvasScale
+        canvasScale,
+        visualStyle
       )
       const count = p.floor(maxParticles)
 
@@ -208,7 +225,8 @@ export const createParticleSpawningLoop = (
               spawnPosition.y,
               band.amp,
               band.band,
-              markovSeed
+              markovSeed,
+              visualStyle
             )
           )
         }

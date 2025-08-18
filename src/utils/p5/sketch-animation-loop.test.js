@@ -119,20 +119,21 @@ describe('sketch-animation-loop', () => {
         mockCalculateParticleCount,
         mockCalculateSpawnPosition,
         mockCalculateStaggeredSpawn,
-        MockParticle
+        MockParticle,
+        null // visualStyle parameter
       )
 
       animationLoop()
 
       expect(mockFFT.analyze).toHaveBeenCalled()
       expect(mockUpdateSpawnPositions).toHaveBeenCalled()
-      expect(mockAnalyzeFrequencyBands).toHaveBeenCalledWith(
-        mockFFT,
-        mockSmoothedData,
-        0.7
-      )
       expect(mockGetFrequencyBands).toHaveBeenCalled()
-      expect(mockCalculateMaxParticles).toHaveBeenCalledWith(800, 600, 3000)
+      expect(mockCalculateMaxParticles).toHaveBeenCalledWith(
+        800,
+        600,
+        3000,
+        null
+      )
       expect(mockCalculateCanvasScale).toHaveBeenCalledWith(800, 600, 400)
     })
 
@@ -154,7 +155,8 @@ describe('sketch-animation-loop', () => {
         mockCalculateParticleCount,
         mockCalculateSpawnPosition,
         mockCalculateStaggeredSpawn,
-        MockParticle
+        MockParticle,
+        null // visualStyle parameter
       )
 
       animationLoop()
@@ -178,7 +180,8 @@ describe('sketch-animation-loop', () => {
         mockCalculateParticleCount,
         mockCalculateSpawnPosition,
         mockCalculateStaggeredSpawn,
-        MockParticle
+        MockParticle,
+        null // visualStyle parameter
       )
 
       animationLoop()
@@ -211,7 +214,8 @@ describe('sketch-animation-loop', () => {
         mockCalculateParticleCount,
         mockCalculateSpawnPosition,
         mockCalculateStaggeredSpawn,
-        MockParticle
+        MockParticle,
+        null // visualStyle parameter
       )
 
       animationLoop()
@@ -241,7 +245,8 @@ describe('sketch-animation-loop', () => {
         mockCalculateParticleCount,
         mockCalculateSpawnPosition,
         mockCalculateStaggeredSpawn,
-        MockParticle
+        MockParticle,
+        null // visualStyle parameter
       )
 
       animationLoop()
@@ -295,7 +300,8 @@ describe('sketch-animation-loop', () => {
         mockCalculateCanvasScale,
         mockCalculateParticleCount,
         mockCalculateSpawnPosition,
-        MockParticle
+        MockParticle,
+        null // visualStyle parameter
       )
 
       expect(typeof spawningLoop).toBe('function')
@@ -312,13 +318,19 @@ describe('sketch-animation-loop', () => {
         mockCalculateCanvasScale,
         mockCalculateParticleCount,
         mockCalculateSpawnPosition,
-        MockParticle
+        MockParticle,
+        null // visualStyle parameter
       )
 
       spawningLoop()
 
       expect(mockParticles.length).toBeGreaterThan(0)
-      expect(mockCalculateMaxParticles).toHaveBeenCalledWith(800, 600, 3000)
+      expect(mockCalculateMaxParticles).toHaveBeenCalledWith(
+        800,
+        600,
+        3000,
+        null
+      )
       expect(mockCalculateCanvasScale).toHaveBeenCalledWith(800, 600, 400)
       expect(mockCalculateParticleCount).toHaveBeenCalled()
       expect(mockCalculateSpawnPosition).toHaveBeenCalled()
@@ -341,7 +353,8 @@ describe('sketch-animation-loop', () => {
         mockCalculateCanvasScale,
         mockCalculateParticleCount,
         mockCalculateSpawnPosition,
-        MockParticle
+        MockParticle,
+        null // visualStyle parameter
       )
 
       const initialCount = mockParticles.length

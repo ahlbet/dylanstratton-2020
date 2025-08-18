@@ -87,33 +87,41 @@ const generateVisualStyle = (seed: number) => {
   const p5 = window.p5
 
   return {
-    // Color palette variations
+    // Color palette variations - more dramatic ranges
     primaryHue: seed % 360,
     secondaryHue: (seed * 137) % 360,
     accentHue: (seed * 73) % 360,
 
-    // Shape and pattern variations
-    shapeDensity: 0.5 + ((seed % 100) / 100) * 1.5, // 0.5 to 2.0
-    particleCount: 100 + (seed % 200), // 100 to 300
-    maxParticleSize: 3 + (seed % 8), // 3 to 10
+    // Shape and pattern variations - more dramatic ranges
+    shapeDensity: 0.3 + ((seed % 100) / 100) * 2.7, // 0.3 to 3.0 (more dramatic)
+    particleCount: 50 + (seed % 350), // 50 to 400 (wider range)
+    maxParticleSize: 2 + (seed % 15), // 2 to 17 (more size variation)
 
-    // Movement and animation variations
-    movementSpeed: 0.5 + ((seed % 100) / 100) * 2.0, // 0.5 to 2.5
-    oscillationStrength: 5 + (seed % 20), // 5 to 25
-    rotationSpeed: -0.2 + ((seed % 100) / 100) * 0.4, // -0.2 to 0.2
+    // Movement and animation variations - more dramatic ranges
+    movementSpeed: 0.2 + ((seed % 100) / 100) * 3.8, // 0.2 to 4.0 (much more dramatic)
+    oscillationStrength: 3 + (seed % 35), // 3 to 38 (more oscillation variation)
+    rotationSpeed: -0.5 + ((seed % 100) / 100) * 1.0, // -0.5 to 0.5 (more rotation variation)
 
-    // Audio reactivity variations
-    frequencySensitivity: 0.5 + ((seed % 100) / 100) * 1.5, // 0.5 to 2.0
-    amplitudeScaling: 0.1 + ((seed % 100) / 100) * 0.3, // 0.1 to 0.4
+    // Audio reactivity variations - more dramatic ranges
+    frequencySensitivity: 0.3 + ((seed % 100) / 100) * 2.7, // 0.3 to 3.0 (more dramatic)
+    amplitudeScaling: 0.05 + ((seed % 100) / 100) * 0.45, // 0.05 to 0.5 (more dramatic)
 
-    // Layout variations
-    spawnPattern: seed % 4, // 0: random, 1: grid, 2: spiral, 3: wave
-    symmetryLevel: seed % 3, // 0: none, 1: horizontal, 2: both axes
+    // Layout variations - more diverse patterns
+    spawnPattern: seed % 6, // 0: random, 1: grid, 2: spiral, 3: wave, 4: radial, 5: chaotic
+    symmetryLevel: seed % 4, // 0: none, 1: horizontal, 2: vertical, 3: both axes
 
-    // Special effects
-    enableTrails: seed % 3 === 0, // 33% chance
-    enablePulse: seed % 2 === 0, // 50% chance
-    enableRipple: seed % 4 === 0, // 25% chance
+    // Special effects - more varied combinations
+    enableTrails: seed % 4 === 0, // 25% chance (reduced from 33%)
+    enablePulse: seed % 3 === 0, // 33% chance (reduced from 50%)
+    enableRipple: seed % 5 === 0, // 20% chance (reduced from 25%)
+    enableGlow: seed % 6 === 0, // 16.7% chance (new effect)
+    enableSparkle: seed % 7 === 0, // 14.3% chance (new effect)
+
+    // Advanced visual parameters
+    colorShiftIntensity: 0.5 + ((seed % 100) / 100) * 2.5, // 0.5 to 3.0
+    trailLength: 1 + (seed % 4), // 1 to 4 trail layers
+    glowRadius: 1.2 + ((seed % 100) / 100) * 1.8, // 1.2 to 3.0
+    sparkleFrequency: 0.1 + ((seed % 100) / 100) * 0.9, // 0.1 to 1.0
   }
 }
 
@@ -280,7 +288,8 @@ export default function AudioFFT({
             calculateParticleCount,
             calculateSpawnPosition,
             calculateStaggeredSpawn,
-            Particle
+            Particle,
+            visualStyle
           )
 
           isInitialized = true
