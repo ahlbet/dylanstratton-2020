@@ -91,9 +91,12 @@ class UserInteraction {
     console.log(text)
     console.log(`============================================================\n`)
 
-    const wantToEdit = await this.askYesNo('Do you want to edit this text? (y/n, or \'r\' to regenerate):')
+    const response = await this.askQuestion('Do you want to edit this text? (y/n, or \'r\' to regenerate): ')
+    const choice = response.toLowerCase().trim()
     
-    if (wantToEdit) {
+    if (choice === 'r') {
+      return 'REGENERATE'
+    } else if (choice === 'y' || choice === 'yes') {
       const newText = await this.askQuestion('Enter your edited text: ')
       return newText || text
     } else {

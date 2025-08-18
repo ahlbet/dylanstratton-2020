@@ -143,14 +143,38 @@ class MarkovManager {
     const coherencyLevels: number[] = []
     
     for (let i = 0; i < texts.length; i++) {
-      const text = texts[i]
+      let currentText = texts[i]
+      let needsRegeneration = false
       
-      // Edit text
-      const editedText = await editTextFn(text, i)
-      editedTexts.push(editedText)
+      do {
+        needsRegeneration = false
+        const editedText = await editTextFn(currentText, i)
+        
+        if (editedText === 'REGENERATE') {
+          try {
+            // Generate new text using the Markov generator
+            const generatedLines = this.generator.generateMultipleLines(1, 1000, 2)
+            if (generatedLines.length > 0) {
+              currentText = generatedLines[0]
+            } else {
+              currentText = `Generated text ${i + 1} could not be created.`
+            }
+            needsRegeneration = true
+            console.log(`🔄 Regenerated text ${i + 1}`)
+          } catch (error) {
+            console.error(`Error regenerating text ${i + 1}:`, error instanceof Error ? error.message : 'Unknown error')
+            currentText = `Generated text ${i + 1} could not be created.`
+          }
+        } else {
+          currentText = editedText
+        }
+      } while (needsRegeneration)
+      
+      // Store the final text
+      editedTexts.push(currentText)
       
       // Get coherency level
-      const coherencyLevel = await getCoherencyFn(editedText, i)
+      const coherencyLevel = await getCoherencyFn(currentText, i)
       coherencyLevels.push(coherencyLevel)
     }
     
