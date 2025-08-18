@@ -174,13 +174,11 @@ const BlogIndex = ({
     return processed
   }, [supabaseData?.daily, posts])
 
-  console.log('processedPosts', processedPosts)
-
   useEffect(() => {
     if (processedPosts.length > 0 && !currentBlogPost) {
       const post = processedPosts[0]
       const postMarkovTexts = supabaseData?.markovTexts.filter(
-        (text) => text.daily_id === post.id
+        (text) => text.daily_id === post.daily_id
       )
       // Filter tracks for the selected blog post
       const tracks = supabaseData.audio
@@ -188,7 +186,7 @@ const BlogIndex = ({
           (track): track is AudioItem =>
             Boolean(track.storage_path) &&
             Boolean(track.daily_id) &&
-            track.daily_id === post.id
+            track.daily_id === post.daily_id
         )
         .map((track) => ({
           id: track.id,
@@ -217,7 +215,7 @@ const BlogIndex = ({
       }
 
       const postMarkovTexts = supabaseData?.markovTexts.filter(
-        (text) => text.daily_id === blogPost.id
+        (text) => text.daily_id === blogPost.daily_id
       )
 
       // Filter tracks for the selected blog post
@@ -226,7 +224,7 @@ const BlogIndex = ({
           (track): track is AudioItem =>
             Boolean(track.storage_path) &&
             Boolean(track.daily_id) &&
-            track.daily_id === blogPost.id
+            track.daily_id === blogPost.daily_id
         )
         .map((track) => ({
           id: track.id,
@@ -278,7 +276,7 @@ const BlogIndex = ({
         (text): text is MarkovText =>
           text.text_content !== undefined &&
           text.text_content !== null &&
-          text.daily_id === currentBlogPost.id
+          text.daily_id === currentBlogPost.daily_id
       )
       .map((text) => ({
         id: text.id,

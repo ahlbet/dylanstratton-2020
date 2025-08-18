@@ -4,7 +4,7 @@ import MarkovGeneratorAPIClient from '../../utils/markov-generator-api-client'
 import { BlogPost } from '../../pages'
 
 interface HomepageGeneratedTextProps {
-  currentBlogPost: BlogPost
+  currentBlogPost: BlogPost | null
 }
 
 export const HomepageGeneratedText: React.FC<HomepageGeneratedTextProps> = ({
@@ -34,8 +34,6 @@ export const HomepageGeneratedText: React.FC<HomepageGeneratedTextProps> = ({
 
     fetchTextsFromGenerator()
   }, [currentBlogPost])
-
-  console.log('currentBlogPost', currentBlogPost)
 
   return (
     <div className="my-8 px-6">
