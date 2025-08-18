@@ -16,12 +16,14 @@ beforeEach(() => {
 
 // Mock the Layout component
 jest.mock('../components/layout/layout', () => {
-  return ({ children }) => <div data-testid="layout">{children}</div>
+  return ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="layout">{children}</div>
+  )
 })
 
 // Mock the SEO component
 jest.mock('../components/seo/seo', () => {
-  return ({ title }) => <div data-testid="seo">{title}</div>
+  return ({ title }: { title: string }) => <div data-testid="seo">{title}</div>
 })
 
 describe('NotFoundPage', () => {
