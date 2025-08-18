@@ -1,3 +1,4 @@
+import * as fs from 'fs'
 import * as path from 'path'
 import { transformDate } from '../date-utils'
 import { getAudioPlayer } from '../audio-tools'
@@ -149,7 +150,6 @@ class InitOrchestrator {
 
     // Ensure assets directory exists
     const destDir = TemplateProcessor.getAssetsDir()
-    const fs = await import('fs')
     fs.mkdirSync(destDir, { recursive: true })
 
     // Process each audio file

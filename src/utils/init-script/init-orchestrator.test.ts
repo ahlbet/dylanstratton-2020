@@ -10,6 +10,7 @@ jest.mock('./local-data-manager')
 jest.mock('./template-processor')
 jest.mock('../date-utils')
 jest.mock('../audio-tools')
+jest.mock('fs')
 
 describe('InitOrchestrator', () => {
   let orchestrator: InitOrchestrator
@@ -72,6 +73,10 @@ describe('InitOrchestrator', () => {
       description: 'macOS audio player',
     })
 
+    // Mock fs module
+    const fs = require('fs')
+    fs.mkdirSync = jest.fn()
+
     orchestrator = new InitOrchestrator('test-post', 'Test description')
   })
 
@@ -131,10 +136,6 @@ describe('InitOrchestrator', () => {
       const { TemplateProcessor } = require('./template-processor')
       TemplateProcessor.getAssetsDir.mockReturnValue('/content/assets/music')
 
-      // Mock fs.mkdirSync
-      const fs = require('fs')
-      fs.mkdirSync = jest.fn()
-
       // Mock Markov manager methods for the run
       mockMarkovManager.initialize.mockResolvedValue(true)
       mockMarkovManager.generateInitialTexts.mockReturnValue([
@@ -180,9 +181,6 @@ describe('InitOrchestrator', () => {
       const { TemplateProcessor } = require('./template-processor')
       TemplateProcessor.getAssetsDir.mockReturnValue('/content/assets/music')
 
-      const fs = require('fs')
-      fs.mkdirSync = jest.fn()
-
       mockMarkovManager.initialize.mockResolvedValue(true)
       mockMarkovManager.generateInitialTexts.mockReturnValue(['Text 1'])
       mockMarkovManager.processTexts.mockResolvedValue({
@@ -225,10 +223,6 @@ describe('InitOrchestrator', () => {
       // Mock TemplateProcessor.getAssetsDir
       const { TemplateProcessor } = require('./template-processor')
       TemplateProcessor.getAssetsDir.mockReturnValue('/content/assets/music')
-
-      // Mock fs.mkdirSync
-      const fs = require('fs')
-      fs.mkdirSync = jest.fn()
 
       // Mock AudioProcessor.extractAudioDuration
       AudioProcessor.extractAudioDuration.mockResolvedValue(120)
