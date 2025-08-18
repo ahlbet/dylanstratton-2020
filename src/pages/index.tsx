@@ -3,10 +3,10 @@ import { graphql } from 'gatsby'
 
 import Layout from '../components/layout/layout'
 import SEO from '../components/seo/seo'
-import { Loader } from 'lucide-react'
 import { useAudioPlayer } from '../contexts/audio-player-context/audio-player-context'
 import { usePresignedUrl } from '../hooks/use-presigned-url'
-import { useSupabaseData } from '../hooks/use-supabase-data'
+import { useSupabaseData, FilterSortParams } from '../hooks/use-supabase-data'
+import { useDebounce } from '../hooks/use-debounce'
 import { HomepageAudioPlayer } from '../components/homepage-audio-player'
 import { HomepageGeneratedText } from '../components/homepage-audio-player'
 import { HomepageMainContent } from '../components/homepage-audio-player'
@@ -87,6 +87,18 @@ const BlogIndex = ({
     ProcessedAudioTrack[]
   >([])
 
+  // Filter and sort state
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [postsPerPage] = useState(10)
+
+  // Debounce the search term to reduce API calls
+  const debouncedSearchTerm = useDebounce(searchTerm, 500) // 500ms delay
+
+  // Track when search is loading (when searchTerm differs from debouncedSearchTerm)
+  const searchLoading = searchTerm !== debouncedSearchTerm
+
   const {
     playlist,
     setPlaylist,
@@ -99,28 +111,73 @@ const BlogIndex = ({
 
   const { getAudioUrl } = usePresignedUrl()
 
-  // Get data from Supabase hook and props (GraphQL)
-  const supabaseResult = useSupabaseData()
+  // Build filter/sort parameters for Supabase
+  const filterSortParams: FilterSortParams = useMemo(
+    () => ({
+      searchTerm: debouncedSearchTerm.trim()
+        ? debouncedSearchTerm.trim()
+        : undefined,
+      sortDirection,
+      currentPage,
+      postsPerPage,
+    }),
+    [debouncedSearchTerm, sortDirection, currentPage, postsPerPage]
+  )
+
+  // Get data from Supabase hook with filter/sort parameters
+  const supabaseResult = useSupabaseData(filterSortParams)
   const supabaseData = supabaseResult.data
   const supabaseLoading = supabaseResult.loading
   const supabaseError = supabaseResult.error
+  const totalCount = supabaseResult.totalCount || 0
+
   const siteTitle = data.site.siteMetadata.title
   const posts = data.allMarkdownRemark.edges
 
+  // Calculate total pages for pagination
+  const totalPages = Math.ceil(totalCount / postsPerPage)
+
+  // Process daily data from Supabase into the format expected by components
+  const processedPosts = useMemo(() => {
+    if (!supabaseData?.daily) {
+      return []
+    }
+
+    const processed = supabaseData.daily.map((daily) => {
+      // Find corresponding markdown post for excerpt content
+      const markdownPost = posts.find(
+        (p) => p.node.frontmatter.daily_id === daily.id
+      )
+
+      // If we have a markdown post, use its excerpt, otherwise create a fallback
+      const content =
+        markdownPost?.node.excerpt ||
+        (daily.title ? `Content for ${daily.title}` : 'No content available')
+
+      return {
+        id: daily.id,
+        title: daily.title || 'Untitled',
+        date: daily.date,
+        content,
+        daily_id: daily.id,
+      }
+    })
+
+    return processed
+  }, [supabaseData?.daily, posts])
+
   const currentBlogPostDate = useMemo(() => {
     if (!currentBlogPost) return ''
-    const post = posts.find(
-      (p) => p.node.frontmatter.daily_id === currentBlogPost
-    )
-    return post?.node.frontmatter.date || ''
-  }, [currentBlogPost, posts])
+    const post = processedPosts.find((p) => p.daily_id === currentBlogPost)
+    return post?.date || ''
+  }, [currentBlogPost, processedPosts])
 
   // Set current blog post and tracks when data changes
   useEffect(() => {
     // Check if we have posts but no audio data yet
-    if (posts.length > 0) {
-      const mostRecentPost = posts[0]
-      const mostRecentDailyId = mostRecentPost.node.frontmatter.daily_id
+    if (processedPosts.length > 0) {
+      const mostRecentPost = processedPosts[0]
+      const mostRecentDailyId = mostRecentPost.daily_id
 
       if (mostRecentDailyId) {
         setCurrentBlogPost(mostRecentDailyId)
@@ -154,7 +211,7 @@ const BlogIndex = ({
         }
       }
     }
-  }, [posts, supabaseData?.audio])
+  }, [processedPosts, supabaseData?.audio])
 
   // Function to change the current blog post
   const changeBlogPost = (dailyId: string) => {
@@ -195,11 +252,10 @@ const BlogIndex = ({
     title: string
     date: string
     content: string
+    daily_id: string
   }) => {
-    // Find the daily_id for this post
-    const postData = posts.find((p) => p.node.fields.slug === post.id)
-    if (postData?.node.frontmatter.daily_id) {
-      changeBlogPost(postData.node.frontmatter.daily_id)
+    if (post.daily_id) {
+      changeBlogPost(post.daily_id)
     }
   }
 
@@ -310,12 +366,21 @@ const BlogIndex = ({
     }
   }
 
-  if (supabaseLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader className="animate-spin" />
-      </div>
-    )
+  // Handle search change
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    setCurrentPage(1) // Reset to first page when searching
+  }
+
+  // Handle sort change
+  const handleSortChange = () => {
+    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    setCurrentPage(1) // Reset to first page when sorting
+  }
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
   }
 
   return (
@@ -344,9 +409,19 @@ const BlogIndex = ({
         {/* Main Content Area */}
         <HomepageMainContent
           markovTexts={processedTexts}
-          posts={posts}
+          posts={processedPosts}
           currentBlogPost={currentBlogPost}
           onPostClick={handlePostClick}
+          searchTerm={searchTerm}
+          onSearchChange={handleSearchChange}
+          sortDirection={sortDirection}
+          onSortChange={handleSortChange}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          postsPerPage={postsPerPage}
+          searchLoading={searchLoading}
         />
       </div>
     </Layout>
