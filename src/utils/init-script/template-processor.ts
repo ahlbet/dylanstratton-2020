@@ -12,7 +12,7 @@ interface AudioFile {
 }
 
 interface SupabaseManager {
-  uploadToStorage: (localPath: string, fileName: string) => Promise<string>
+  uploadToStorage: (localPath: string | Buffer, fileName: string, bucketName?: string, contentType?: string) => Promise<string>
   client: any
 }
 
@@ -120,7 +120,8 @@ class TemplateProcessor {
       // Upload to Supabase storage
       const coverArtUrl = await supabaseManager.uploadToStorage(
         coverArtBuffer,
-        coverArtFileName
+        coverArtFileName,
+        'cover-art'
       )
 
       // Create cover art data

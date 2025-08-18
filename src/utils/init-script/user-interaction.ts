@@ -79,29 +79,68 @@ class UserInteraction {
   }
 
   /**
+   * Display text in a formatted way
+   * @param text - Text to display
+   * @param title - Title for the text block
+   */
+  displayText(text: string, title: string): void {
+    console.log(`\n${'='.repeat(60)}`)
+    console.log(`${title}`)
+    console.log(`${'='.repeat(60)}`)
+    console.log(text)
+    console.log(`${'='.repeat(60)}\n`)
+  }
+
+  /**
    * Edit Markov text interactively
    * @param text - Text to edit
    * @param index - Index of the text
-   * @returns Promise<string> Edited text
+   * @returns Promise<string> Edited text or 'REGENERATE' to regenerate
    */
   async editText(text: string, index: number): Promise<string> {
-    console.log(`\n============================================================`)
-    console.log(`Original Markov Text #${index + 1}`)
-    console.log(`============================================================`)
-    console.log(text)
-    console.log(`============================================================\n`)
+    this.displayText(text, `Original Markov Text #${index + 1}`)
 
-    const response = await this.askQuestion('Do you want to edit this text? (y/n, or \'r\' to regenerate): ')
-    const choice = response.toLowerCase().trim()
-    
-    if (choice === 'r') {
+    const editChoice = await this.askQuestion(
+      `Do you want to edit this text? (y/n, or 'r' to regenerate): `
+    )
+
+    if (editChoice.toLowerCase() === 'r') {
       return 'REGENERATE'
-    } else if (choice === 'y' || choice === 'yes') {
-      const newText = await this.askQuestion('Enter your edited text: ')
-      return newText || text
-    } else {
+    }
+
+    if (editChoice.toLowerCase() !== 'y') {
       return text
     }
+
+    console.log('\nEnter your edited text (press Enter twice to finish):')
+    console.log(
+      '(Type "skip" to keep original, "regenerate" to generate new text)'
+    )
+
+    const lines: string[] = []
+    let lineNumber = 1
+
+    while (true) {
+      const line = await this.askQuestion(`Line ${lineNumber}: `)
+
+      if (line === '') {
+        if (lines.length > 0) break
+        continue
+      }
+
+      if (line.toLowerCase() === 'skip') {
+        return text
+      }
+
+      if (line.toLowerCase() === 'regenerate') {
+        return 'REGENERATE'
+      }
+
+      lines.push(line)
+      lineNumber++
+    }
+
+    return lines.join('\n')
   }
 
   /**
@@ -141,31 +180,176 @@ class UserInteraction {
     filePath: string,
     audioPlayer: AudioPlayer | null
   ): Promise<number> {
-    console.log(`\n🎵 Audio Track ${trackNumber}/${totalTracks}: ${filePath}`)
+    console.log(`\n🎵 Audio Track #${trackNumber} Coherency Level`)
+    console.log('1 = Least coherent (random/jumbled)')
+    console.log('100 = Fully coherent (clear, logical flow)')
+    console.log(`Track ${trackNumber} of ${totalTracks}`)
 
-    if (audioPlayer) {
-      const wantToPlay = await this.askYesNo(
-        `Would you like to preview this audio using ${audioPlayer.tool}?`
+    // Offer to play the audio first if available
+    if (filePath && audioPlayer) {
+      const listenChoice = await this.askQuestion(
+        `Would you like to listen to this track before rating? (y/n): `
       )
-      
-      if (wantToPlay) {
+
+      if (
+        listenChoice.toLowerCase() === 'y' ||
+        listenChoice.toLowerCase() === 'yes'
+      ) {
+        console.log(`\n🎧 Playing audio track...`)
         try {
-          const { execSync } = await import('child_process')
-          execSync(`${audioPlayer.tool} "${filePath}"`, { stdio: 'inherit' })
+          await this.playAudioWithStop(filePath, audioPlayer)
+          console.log('\n🎵 Playback finished. Now rate the coherency level.')
         } catch (error) {
           console.log('Audio playback failed, continuing without preview...')
         }
+      } else {
+        console.log('⏭️  Skipping audio playback for this track.')
       }
+    } else if (filePath && !audioPlayer) {
+      console.log('⚠️ Audio playback not available, skipping preview')
     }
 
-    const coherencyLevel = await this.askNumber(
-      'Rate the audio coherency level (1-100, where 1 is completely random and 100 is perfectly coherent): ',
-      1,
-      100
-    )
+    while (true) {
+      const coherencyInput = await this.askQuestion(
+        `Enter coherency level (1-100, or press Enter for default 50): `
+      )
 
-    console.log(`✅ Audio coherency level set to ${coherencyLevel}`)
-    return coherencyLevel
+      if (coherencyInput === '') {
+        return 50 // Default value for audio tracks
+      }
+
+      const coherencyLevel = parseInt(coherencyInput)
+
+      if (
+        isNaN(coherencyLevel) ||
+        coherencyLevel < 1 ||
+        coherencyLevel > 100
+      ) {
+        console.log(
+          `❌ Please enter a number between 1 and 100`
+        )
+        continue
+      }
+
+      return coherencyLevel
+    }
+  }
+
+  /**
+   * Play audio with ability to stop early by pressing Enter
+   * @param filePath - Path to audio file
+   * @param audioPlayer - Audio player to use
+   */
+  private async playAudioWithStop(filePath: string, audioPlayer: AudioPlayer): Promise<void> {
+    const { spawn } = await import('child_process')
+    
+    console.log(`🎵 Playing audio with ${audioPlayer.tool}`)
+    console.log(`📁 File: ${filePath}`)
+
+    let command: string
+    let args: string[] = []
+
+    switch (audioPlayer.tool) {
+      case 'afplay':
+        // macOS built-in player
+        command = 'afplay'
+        args = [filePath]
+        break
+      case 'aplay':
+        // Linux ALSA player
+        command = 'aplay'
+        args = [filePath]
+        break
+      case 'mpv':
+        // Cross-platform player with quiet output
+        command = 'mpv'
+        args = ['--no-video', '--quiet', filePath]
+        break
+      case 'ffplay':
+        // FFmpeg player with quiet output
+        command = 'ffplay'
+        args = ['-nodisp', '-autoexit', '-loglevel', 'error', filePath]
+        break
+      case 'vlc':
+        // VLC player with quiet output
+        command = 'vlc'
+        args = ['--intf', 'dummy', '--play-and-exit', filePath]
+        break
+      default:
+        command = audioPlayer.tool
+        args = [filePath]
+    }
+
+    console.log(`▶️  Playing audio... (Press Enter to stop early)`)
+
+    return new Promise((resolve, reject) => {
+      const audioProcess = spawn(command, args, {
+        stdio: 'pipe',
+        detached: false,
+      })
+
+      let isStopped = false
+
+      const stopPlayback = () => {
+        if (isStopped) return
+        isStopped = true
+
+        console.log('\n⏹️  Stopping audio playback...')
+        audioProcess.kill('SIGTERM')
+
+        // Give it a moment to clean up, then force kill if needed
+        setTimeout(() => {
+          if (!audioProcess.killed) {
+            audioProcess.kill('SIGKILL')
+          }
+        }, 1000)
+
+        resolve()
+      }
+
+      // Handle process exit
+      audioProcess.on('close', (code) => {
+        if (isStopped) return // Already handled by stopPlayback
+
+        if (code === 0) {
+          console.log('\n🎵 Playback finished normally')
+          resolve()
+        } else if (code === null) {
+          console.log('\n⏹️  Playback stopped')
+          resolve()
+        } else {
+          console.log(`\n⚠️  Playback ended with code ${code}`)
+          resolve()
+        }
+      })
+
+      // Handle process errors
+      audioProcess.on('error', (error) => {
+        if (isStopped) return
+        console.error(`❌ Error playing audio: ${error.message}`)
+        reject(error)
+      })
+
+      // Set up a prompt to stop playback
+      const checkForStop = async () => {
+        try {
+          console.log('\n💡 Press Enter to stop audio, or wait for it to finish...')
+          const answer = await this.askQuestion('')
+          if (answer === '') {
+            stopPlayback()
+          }
+        } catch (error) {
+          // User interrupted, continue with playback
+        }
+      }
+
+      // Start checking for stop command after a short delay
+      setTimeout(() => {
+        if (!isStopped) {
+          checkForStop()
+        }
+      }, 500)
+    })
   }
 
   /**

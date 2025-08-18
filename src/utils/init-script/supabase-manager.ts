@@ -46,50 +46,48 @@ class SupabaseManager {
 
   /**
    * Upload file to Supabase storage
-   * @param localPath - Local path to file
-   * @param fileName - Name for the file in storage
-   * @returns Promise<string> URL of uploaded file
+   * @param filePathOrBuffer - File path or buffer
+   * @param fileName - Name for the file
+   * @param bucketName - Storage bucket name
+   * @param contentType - MIME type
+   * @returns Promise<string> Public URL of uploaded file
    */
-  async uploadToStorage(localPath: string | Buffer, fileName: string): Promise<string> {
+  async uploadToStorage(
+    filePathOrBuffer: string | Buffer,
+    fileName: string,
+    bucketName: string = 'audio',
+    contentType: string = 'audio/wav'
+  ): Promise<string> {
     try {
+      // Read the file or use provided buffer
       let fileBuffer: Buffer
-      let contentType: string
-
-      if (typeof localPath === 'string') {
-        // Local file path
-        fileBuffer = fs.readFileSync(localPath)
-        contentType = this.getContentTypeFromPath(localPath)
+      if (Buffer.isBuffer(filePathOrBuffer)) {
+        fileBuffer = filePathOrBuffer
       } else {
-        // Buffer (e.g., cover art)
-        fileBuffer = localPath
-        contentType = this.getContentTypeFromPath(fileName)
+        fileBuffer = fs.readFileSync(filePathOrBuffer)
       }
 
-      const storagePath = this.getStoragePath(fileName)
-      
-      const { data, error }: StorageUploadResult = await this.client.storage
-        .from('audio')
-        .upload(storagePath, fileBuffer, {
+      // Upload to Supabase
+      const { data, error } = await this.client.storage
+        .from(bucketName)
+        .upload(fileName, fileBuffer, {
           contentType,
-          upsert: true
+          upsert: false, // Don't overwrite existing files
         })
 
       if (error) {
-        throw new Error(`Storage upload failed: ${error.message}`)
+        throw new Error(`Failed to upload to Supabase: ${error.message}`)
       }
 
-      if (!data) {
-        throw new Error('Storage upload returned no data')
-      }
-
-      // Get public URL
+      // Get the public URL
       const { data: urlData } = this.client.storage
-        .from('audio')
-        .getPublicUrl(storagePath)
+        .from(bucketName)
+        .getPublicUrl(fileName)
 
       return urlData.publicUrl
     } catch (error) {
-      throw new Error(`Failed to upload to storage: ${error instanceof Error ? error.message : String(error)}`)
+      console.error(`Upload error for ${fileName}:`, error instanceof Error ? error.message : 'Unknown error')
+      throw error
     }
   }
 
@@ -181,6 +179,22 @@ class SupabaseManager {
       '.jpeg': 'image/jpeg'
     }
     return contentTypeMap[ext] || 'application/octet-stream'
+  }
+
+  /**
+   * Get bucket name based on file type
+   * @param fileName - Name of the file
+   * @returns Bucket name
+   */
+  private getBucketName(fileName: string): string {
+    const ext = path.extname(fileName).toLowerCase()
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']
+    
+    if (imageExtensions.includes(ext)) {
+      return 'cover-art'
+    } else {
+      return 'audio'
+    }
   }
 
   /**

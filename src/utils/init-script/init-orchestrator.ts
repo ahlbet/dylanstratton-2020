@@ -163,7 +163,8 @@ class InitOrchestrator {
         // Upload to Supabase
         const supabaseUrl = await this.supabaseManager.uploadToStorage(
           localFile.localPath,
-          localFile.fileName
+          localFile.fileName,
+          'audio'
         )
 
         // Track uploaded file
