@@ -16,11 +16,7 @@ interface MockP5Constructor {
   (sketch: any, element: HTMLElement): MockP5Instance
 }
 
-declare global {
-  interface Window {
-    p5?: MockP5Constructor
-  }
-}
+// Use type assertion for testing instead of global declaration
 
 describe('P5Sketch', () => {
   const mockSketch = jest.fn()
@@ -80,7 +76,7 @@ describe('P5Sketch', () => {
   })
 
   it('handles undefined sketch gracefully', () => {
-    render(<P5Sketch />)
+    render(<P5Sketch sketch={undefined as any} />)
     expect(document.querySelector('div')).toBeInTheDocument()
   })
 

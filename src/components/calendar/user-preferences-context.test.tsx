@@ -223,7 +223,10 @@ describe('UserPreferencesContext', () => {
           setCalendarVisible: (visible: boolean) => {
             // No-op during SSR
             if (typeof window !== 'undefined') {
-              console.warn('setCalendarVisible called outside provider with:', visible)
+              console.warn(
+                'setCalendarVisible called outside provider with:',
+                visible
+              )
             }
           },
         }
