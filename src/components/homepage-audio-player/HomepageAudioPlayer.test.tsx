@@ -61,6 +61,7 @@ const mockUseAudioPlayer = {
   isPlaying: false,
   setIsPlaying: jest.fn(),
   playTrack: jest.fn(),
+  resetCurrentIndex: jest.fn(),
   audioRef: { current: null },
   volume: 1,
   updateVolume: jest.fn(),
