@@ -32,6 +32,7 @@ export interface AudioPlayerContextType {
   shuffledPlaylist: AudioTrack[]
   audioRef: React.RefObject<HTMLAudioElement>
   playTrack: (index: number, newPlaylist?: AudioTrack[]) => Promise<void>
+  resetCurrentIndex: () => void
   updateTotalPlaylistDuration: (duration: number) => void
   updateVolume: (newVolume: number) => void
   toggleShuffle: () => void
@@ -149,6 +150,11 @@ export const AudioPlayerProvider: React.FC<AudioPlayerProviderProps> = ({
     [playlist]
   )
 
+  const resetCurrentIndex = useCallback((): void => {
+    setCurrentIndex(null)
+    setIsPlaying(false)
+  }, [])
+
   const updateVolume = (newVolume: number): void => {
     setVolume(newVolume)
     localStorage.setItem('audioPlayerVolume', newVolume.toString())
@@ -232,6 +238,7 @@ export const AudioPlayerProvider: React.FC<AudioPlayerProviderProps> = ({
     isPlaying,
     setIsPlaying,
     playTrack,
+    resetCurrentIndex,
     audioRef,
     totalPlaylistDuration,
     updateTotalPlaylistDuration,

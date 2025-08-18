@@ -51,6 +51,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
     isPlaying,
     setIsPlaying,
     playTrack,
+    resetCurrentIndex,
     audioRef,
     volume,
     updateVolume,
@@ -65,6 +66,32 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const [currentAudioUrl, setCurrentAudioUrl] = useState('')
   const [isMuted, setIsMuted] = useState<boolean>(false)
+
+  // Reset audio player state when switching blog posts
+  useEffect(() => {
+    // When currentBlogPostTracks changes (switching blog posts), reset the currentIndex
+    // to prevent accessing invalid playlist indices
+    if (currentBlogPostTracks.length === 0) {
+      // No tracks available, reset to no selection
+      if (currentIndex !== null) {
+        // Reset the currentIndex in the audio player context
+        resetCurrentIndex()
+        setCurrentAudioUrl('')
+        setError(null)
+      }
+    } else if (
+      currentIndex !== null &&
+      currentIndex >= currentBlogPostTracks.length
+    ) {
+      // Current index is out of bounds for the new blog post, reset it
+      console.warn(
+        `Current index ${currentIndex} is out of bounds for blog post with ${currentBlogPostTracks.length} tracks. Resetting.`
+      )
+      resetCurrentIndex()
+      setCurrentAudioUrl('')
+      setError(null)
+    }
+  }, [currentBlogPostTracks, currentIndex, resetCurrentIndex])
 
   // Generate presigned URL when current track changes
   useEffect(() => {
