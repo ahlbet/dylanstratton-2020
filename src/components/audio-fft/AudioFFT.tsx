@@ -44,42 +44,57 @@ declare global {
 const generateBlogPostSeed = (metadata: BlogPostMetadata): number => {
   let seed = 0
 
-  // Use title (most important for visual identity)
+  // Use title (most important for visual identity) - enhanced weighting
   if (metadata.title) {
     for (let i = 0; i < metadata.title.length; i++) {
-      seed += metadata.title.charCodeAt(i) * (i + 1) * 3
+      seed += metadata.title.charCodeAt(i) * (i + 1) * 7 // Increased from 3 to 7
     }
+    // Add title length as a significant factor
+    seed += metadata.title.length * 1000
   }
 
-  // Use daily_id if available
+  // Use daily_id if available - enhanced weighting
   if (metadata.daily_id) {
-    seed += Number(metadata.daily_id) * 1000
+    seed += Number(metadata.daily_id) * 5000 // Increased from 1000 to 5000
   }
 
-  // Use date components
+  // Use date components - enhanced weighting
   if (metadata.date) {
     const date = new Date(metadata.date)
-    seed += date.getFullYear() * 10000
-    seed += (date.getMonth() + 1) * 100
-    seed += date.getDate()
+    seed += date.getFullYear() * 50000 // Increased from 10000 to 50000
+    seed += (date.getMonth() + 1) * 1000 // Increased from 100 to 1000
+    seed += date.getDate() * 100 // Increased from 1 to 100
+    // Add day of week for more variation
+    seed += date.getDay() * 10000
   }
 
-  // Use markov text length and content
+  // Use markov text length and content - enhanced weighting
   if (metadata.markovText) {
-    seed += metadata.markovText.length * 7
-    for (let i = 0; i < Math.min(metadata.markovText.length, 50); i++) {
-      seed += metadata.markovText.charCodeAt(i) * (i + 1)
+    seed += metadata.markovText.length * 25 // Increased from 7 to 25
+    for (let i = 0; i < Math.min(metadata.markovText.length, 100); i++) {
+      // Increased from 50 to 100
+      seed += metadata.markovText.charCodeAt(i) * (i + 1) * 3 // Increased from 1 to 3
     }
+    // Add word count variation
+    const wordCount = metadata.markovText.split(' ').length
+    seed += wordCount * 500
   }
 
-  // Use cover art URL if available
+  // Use cover art URL if available - enhanced weighting
   if (metadata.cover_art) {
-    for (let i = 0; i < Math.min(metadata.cover_art.length, 30); i++) {
-      seed += metadata.cover_art.charCodeAt(i) * (i + 1)
+    for (let i = 0; i < Math.min(metadata.cover_art.length, 50); i++) {
+      // Increased from 30 to 50
+      seed += metadata.cover_art.charCodeAt(i) * (i + 1) * 5 // Increased from 1 to 5
     }
+    // Add file extension as a factor
+    const extension = metadata.cover_art.split('.').pop() || ''
+    seed += extension.length * 2000
   }
 
-  return Math.abs(seed) % 1000000
+  // Add timestamp-based variation for posts created at different times
+  seed += Date.now() % 1000000
+
+  return Math.abs(seed) % 10000000 // Increased range from 1000000 to 10000000
 }
 
 // Generate visual style parameters based on blog post metadata
@@ -94,8 +109,8 @@ const generateVisualStyle = (seed: number) => {
   const triadicHue1 = (baseHue + 120) % 360
   const triadicHue2 = (baseHue + 240) % 360
 
-  // Create color scheme variations based on seed
-  const colorScheme = seed % 8 // 8 different color schemes
+  // Create color scheme variations based on seed - expanded to 16 schemes
+  const colorScheme = seed % 16 // 16 different color schemes (increased from 8)
   let primaryHue, secondaryHue, accentHue, tertiaryHue
 
   switch (colorScheme) {
@@ -147,6 +162,54 @@ const generateVisualStyle = (seed: number) => {
       accentHue = (baseHue + 240) % 360
       tertiaryHue = (baseHue + 60) % 360
       break
+    case 8: // Pastel variations
+      primaryHue = baseHue
+      secondaryHue = (baseHue + 45) % 360
+      accentHue = (baseHue + 90) % 360
+      tertiaryHue = (baseHue + 135) % 360
+      break
+    case 9: // Neon/bright
+      primaryHue = baseHue
+      secondaryHue = (baseHue + 72) % 360
+      accentHue = (baseHue + 144) % 360
+      tertiaryHue = (baseHue + 216) % 360
+      break
+    case 10: // Earth tones
+      primaryHue = (baseHue + 30) % 360 // Shift toward warmer colors
+      secondaryHue = (baseHue + 60) % 360
+      accentHue = (baseHue + 120) % 360
+      tertiaryHue = (baseHue + 180) % 360
+      break
+    case 11: // Ocean tones
+      primaryHue = (baseHue + 180) % 360 // Shift toward cooler colors
+      secondaryHue = (baseHue + 210) % 360
+      accentHue = (baseHue + 240) % 360
+      tertiaryHue = (baseHue + 270) % 360
+      break
+    case 12: // Sunset/sunrise
+      primaryHue = baseHue < 60 ? baseHue : (baseHue + 300) % 360
+      secondaryHue = (primaryHue + 30) % 360
+      accentHue = (primaryHue + 60) % 360
+      tertiaryHue = (primaryHue + 90) % 360
+      break
+    case 13: // Forest/nature
+      primaryHue = (baseHue + 120) % 360 // Shift toward green
+      secondaryHue = (primaryHue + 30) % 360
+      accentHue = (primaryHue + 60) % 360
+      tertiaryHue = (primaryHue + 90) % 360
+      break
+    case 14: // Urban/metallic
+      primaryHue = (baseHue + 240) % 360 // Shift toward blue-gray
+      secondaryHue = (primaryHue + 30) % 360
+      accentHue = (primaryHue + 60) % 360
+      tertiaryHue = (primaryHue + 90) % 360
+      break
+    case 15: // Psychedelic
+      primaryHue = baseHue
+      secondaryHue = (baseHue + 72) % 360
+      accentHue = (baseHue + 144) % 360
+      tertiaryHue = (baseHue + 216) % 360
+      break
     default:
       primaryHue = baseHue
       secondaryHue = (baseHue + 137) % 360
@@ -154,8 +217,8 @@ const generateVisualStyle = (seed: number) => {
       tertiaryHue = (baseHue + 200) % 360
   }
 
-  // Add subtle variations to prevent identical colors
-  const hueVariation = (seed % 20) - 10 // ±10 degree variation
+  // Add subtle variations to prevent identical colors - increased variation
+  const hueVariation = (seed % 40) - 20 // ±20 degree variation (increased from ±10)
 
   return {
     // Enhanced color palette with more sophisticated relationships
@@ -167,47 +230,58 @@ const generateVisualStyle = (seed: number) => {
     // Color scheme identifier for debugging
     colorScheme,
 
-    // Enhanced saturation and brightness variations
-    primarySaturation: 70 + (seed % 30), // 70-100%
-    secondarySaturation: 65 + (seed % 35), // 65-100%
-    accentSaturation: 75 + (seed % 25), // 75-100%
-    tertiarySaturation: 60 + (seed % 40), // 60-100%
+    // Enhanced saturation and brightness variations - more dramatic ranges
+    primarySaturation: 50 + (seed % 50), // 50-100% (increased from 70-100%)
+    secondarySaturation: 45 + (seed % 55), // 45-100% (increased from 65-100%)
+    accentSaturation: 55 + (seed % 45), // 55-100% (increased from 75-100%)
+    tertiarySaturation: 40 + (seed % 60), // 40-100% (increased from 60-100%)
 
-    primaryBrightness: 75 + (seed % 25), // 75-100%
-    secondaryBrightness: 70 + (seed % 30), // 70-100%
-    accentBrightness: 80 + (seed % 20), // 80-100%
-    tertiaryBrightness: 65 + (seed % 35), // 65-100%,
+    primaryBrightness: 55 + (seed % 45), // 55-100% (increased from 75-100%)
+    secondaryBrightness: 50 + (seed % 50), // 50-100% (increased from 70-100%)
+    accentBrightness: 60 + (seed % 40), // 60-100% (increased from 80-100%)
+    tertiaryBrightness: 45 + (seed % 55), // 45-100% (increased from 65-100%),
 
-    // Shape and pattern variations - more dramatic ranges
-    shapeDensity: 0.3 + ((seed % 100) / 100) * 2.7, // 0.3 to 3.0 (more dramatic)
-    particleCount: 50 + (seed % 350), // 50 to 400 (wider range)
-    maxParticleSize: 2 + (seed % 15), // 2 to 17 (more size variation)
+    // Shape and pattern variations - much more dramatic ranges
+    shapeDensity: 0.1 + ((seed % 100) / 100) * 4.9, // 0.1 to 5.0 (increased from 0.3 to 3.0)
+    particleCount: 25 + (seed % 575), // 25 to 600 (increased from 50 to 400)
+    maxParticleSize: 1 + (seed % 24), // 1 to 25 (increased from 2 to 17)
 
-    // Movement and animation variations - more dramatic ranges
-    movementSpeed: 0.2 + ((seed % 100) / 100) * 3.8, // 0.2 to 4.0 (much more dramatic)
-    oscillationStrength: 3 + (seed % 35), // 3 to 38 (more oscillation variation)
-    rotationSpeed: -0.5 + ((seed % 100) / 100) * 1.0, // -0.5 to 0.5 (more rotation variation)
+    // Movement and animation variations - much more dramatic ranges
+    movementSpeed: 0.1 + ((seed % 100) / 100) * 5.9, // 0.1 to 6.0 (increased from 0.2 to 4.0)
+    oscillationStrength: 1 + (seed % 49), // 1 to 50 (increased from 3 to 38)
+    rotationSpeed: -1.0 + ((seed % 100) / 100) * 2.0, // -1.0 to 1.0 (increased from -0.5 to 0.5)
 
-    // Audio reactivity variations - more dramatic ranges
-    frequencySensitivity: 0.3 + ((seed % 100) / 100) * 2.7, // 0.3 to 3.0 (more dramatic)
-    amplitudeScaling: 0.05 + ((seed % 100) / 100) * 0.45, // 0.05 to 0.5 (more dramatic)
+    // Audio reactivity variations - much more dramatic ranges
+    frequencySensitivity: 0.1 + ((seed % 100) / 100) * 4.9, // 0.1 to 5.0 (increased from 0.3 to 3.0)
+    amplitudeScaling: 0.02 + ((seed % 100) / 100) * 0.78, // 0.02 to 0.8 (increased from 0.05 to 0.5)
 
     // Layout variations - more diverse patterns
-    spawnPattern: seed % 6, // 0: random, 1: grid, 2: spiral, 3: wave, 4: radial, 5: chaotic
-    symmetryLevel: seed % 4, // 0: none, 1: horizontal, 2: vertical, 3: both axes
+    spawnPattern: seed % 8, // 0: random, 1: grid, 2: spiral, 3: wave, 4: radial, 5: chaotic, 6: vortex, 7: fractal
+    symmetryLevel: seed % 5, // 0: none, 1: horizontal, 2: vertical, 3: both axes, 4: rotational
 
-    // Special effects - more varied combinations
-    enableTrails: seed % 4 === 0, // 25% chance (reduced from 33%)
-    enablePulse: seed % 3 === 0, // 33% chance (reduced from 50%)
-    enableRipple: seed % 5 === 0, // 20% chance (reduced from 25%)
-    enableGlow: seed % 6 === 0, // 16.7% chance (new effect)
-    enableSparkle: seed % 7 === 0, // 14.3% chance (new effect)
+    // Special effects - more varied combinations and new effects
+    enableTrails: seed % 5 === 0, // 20% chance (reduced from 25%)
+    enablePulse: seed % 4 === 0, // 25% chance (reduced from 33%)
+    enableRipple: seed % 6 === 0, // 16.7% chance (reduced from 20%)
+    enableGlow: seed % 7 === 0, // 14.3% chance (reduced from 16.7%)
+    enableSparkle: seed % 8 === 0, // 12.5% chance (reduced from 14.3%)
+    enableBlur: seed % 9 === 0, // 11.1% chance (new effect)
+    enableDistortion: seed % 10 === 0, // 10% chance (new effect)
+    enablePolarDistortion: seed % 11 === 0, // 9.1% chance (new effect)
 
-    // Advanced visual parameters
-    colorShiftIntensity: 0.5 + ((seed % 100) / 100) * 2.5, // 0.5 to 3.0
-    trailLength: 1 + (seed % 4), // 1 to 4 trail layers
-    glowRadius: 1.2 + ((seed % 100) / 100) * 1.8, // 1.2 to 3.0
-    sparkleFrequency: 0.1 + ((seed % 100) / 100) * 0.9, // 0.1 to 1.0
+    // Advanced visual parameters - more dramatic ranges
+    colorShiftIntensity: 0.2 + ((seed % 100) / 100) * 4.8, // 0.2 to 5.0 (increased from 0.5 to 3.0)
+    trailLength: 1 + (seed % 6), // 1 to 6 trail layers (increased from 1 to 4)
+    glowRadius: 1.0 + ((seed % 100) / 100) * 3.0, // 1.0 to 4.0 (increased from 1.2 to 3.0)
+    sparkleFrequency: 0.05 + ((seed % 100) / 100) * 1.95, // 0.05 to 2.0 (increased from 0.1 to 1.0)
+
+    // New advanced parameters for more variation
+    blurIntensity: 0.1 + ((seed % 100) / 100) * 2.9, // 0.1 to 3.0
+    distortionStrength: 0.1 + ((seed % 100) / 100) * 3.9, // 0.1 to 4.0
+    polarDistortionRadius: 0.5 + ((seed % 100) / 100) * 2.5, // 0.5 to 3.0
+    chromaticAberration: seed % 3 === 0, // 33% chance
+    motionBlur: seed % 4 === 0, // 25% chance
+    depthOfField: seed % 5 === 0, // 20% chance
   }
 }
 

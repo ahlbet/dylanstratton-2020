@@ -105,7 +105,8 @@ export const createAudioReactiveAnimationLoop = (
           p.frameCount,
           band.band,
           spawnInfo.spawnIndex,
-          p
+          p,
+          visualStyle // Pass visual style for enhanced spawn patterns
         )
 
         particles.push(

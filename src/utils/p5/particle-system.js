@@ -920,31 +920,112 @@ export class Particle {
     // 1. Glow effect (drawn first, behind everything)
     if (enableGlow) {
       let glowHue = this.colorHue
-      let glowSaturation = adjustedColors.saturation * 0.7
-      let glowBrightness = adjustedColors.brightness * 1.2
+      let glowSaturation = this.colorSaturation
+      let glowBrightness = this.colorBrightness
 
-      // Use visual style colors for glow if available
       if (this.visualStyle) {
-        // Alternate between primary and secondary colors for glow
-        if (this.frequencyBand % 2 === 0) {
-          glowHue = this.visualStyle.primaryHue
-          glowSaturation = (this.visualStyle.primarySaturation || 85) * 0.8
-          glowBrightness = (this.visualStyle.primaryBrightness || 85) * 1.3
-        } else {
-          glowHue = this.visualStyle.secondaryHue
-          glowSaturation = (this.visualStyle.secondarySaturation || 80) * 0.8
-          glowBrightness = (this.visualStyle.secondaryBrightness || 80) * 1.3
+        // Alternate between different visual style colors for glow
+        const glowColorIndex = Math.floor(p.random(0, 4))
+        switch (glowColorIndex) {
+          case 0: // Primary color
+            glowHue = this.visualStyle.primaryHue
+            glowSaturation = (this.visualStyle.primarySaturation || 85) * 0.8
+            glowBrightness = (this.visualStyle.primaryBrightness || 85) * 1.3
+            break
+          case 1: // Secondary color
+            glowHue = this.visualStyle.secondaryHue
+            glowSaturation = (this.visualStyle.secondarySaturation || 80) * 0.8
+            glowBrightness = (this.visualStyle.secondaryBrightness || 80) * 1.3
+            break
+          case 2: // Accent color
+            glowHue = this.visualStyle.accentHue
+            glowSaturation = (this.visualStyle.accentSaturation || 75) * 0.8
+            glowBrightness = (this.visualStyle.accentBrightness || 75) * 1.3
+            break
+          case 3: // Tertiary color
+            glowHue = this.visualStyle.tertiaryHue
+            glowSaturation = (this.visualStyle.tertiarySaturation || 70) * 0.8
+            glowBrightness = (this.visualStyle.tertiaryBrightness || 70) * 1.3
+            break
         }
       }
 
-      const glowColor = p.color(
-        glowHue,
-        glowSaturation,
-        glowBrightness,
-        (this.alpha / 255) * 0.15
-      )
-      p.fill(glowColor)
-      p.ellipse(this.pos.x, this.pos.y, pulseSize * glowRadius)
+      // Apply blur effect if enabled
+      if (this.visualStyle?.enableBlur) {
+        p.drawingContext.filter = `blur(${this.visualStyle.blurIntensity || 1}px)`
+      }
+
+      // Apply distortion effect if enabled
+      if (this.visualStyle?.enableDistortion) {
+        const distortionX =
+          Math.sin(p.frameCount * 0.1 + this.individualSeed) *
+          (this.visualStyle.distortionStrength || 2)
+        const distortionY =
+          Math.cos(p.frameCount * 0.1 + this.individualSeed) *
+          (this.visualStyle.distortionStrength || 2)
+        p.push()
+        p.translate(distortionX, distortionY)
+      }
+
+      // Apply polar distortion if enabled
+      if (this.visualStyle?.enablePolarDistortion) {
+        const polarRadius = this.visualStyle.polarDistortionRadius || 1.5
+        const polarAngle = Math.atan2(
+          this.pos.y - p.height / 2,
+          this.pos.x - p.width / 2
+        )
+        const polarDistortion =
+          Math.sin(polarAngle * 3 + p.frameCount * 0.05) * polarRadius
+        p.push()
+        p.translate(
+          Math.cos(polarAngle) * polarDistortion,
+          Math.sin(polarAngle) * polarDistortion
+        )
+      }
+
+      // Apply chromatic aberration if enabled
+      if (this.visualStyle?.chromaticAberration) {
+        // Draw multiple colored versions with slight offsets
+        const aberrationOffset = 2
+        for (let i = 0; i < 3; i++) {
+          const offsetX = (i - 1) * aberrationOffset
+          const offsetY = (i - 1) * aberrationOffset
+          const aberrationHue = (glowHue + i * 30) % 360
+          p.fill(
+            aberrationHue,
+            glowSaturation,
+            glowBrightness,
+            (this.alpha / 255) * 0.3
+          )
+          p.ellipse(
+            this.pos.x + offsetX,
+            this.pos.y + offsetY,
+            pulseSize * glowRadius
+          )
+        }
+      } else {
+        // Standard glow without aberration
+        p.fill(
+          glowHue,
+          glowSaturation,
+          glowBrightness,
+          (this.alpha / 255) * 0.3
+        )
+        p.ellipse(this.pos.x, this.pos.y, pulseSize * glowRadius)
+      }
+
+      // Reset distortion effects
+      if (
+        this.visualStyle?.enableDistortion ||
+        this.visualStyle?.enablePolarDistortion
+      ) {
+        p.pop()
+      }
+
+      // Reset blur effect
+      if (this.visualStyle?.enableBlur) {
+        p.drawingContext.filter = 'none'
+      }
     }
 
     // 2. Trail effects (drawn next, behind main particle)
@@ -1010,9 +1091,60 @@ export class Particle {
       p.ellipse(this.pos.x, this.pos.y, rippleSize * 1.8)
     }
 
-    // 4. Main particle
-    p.fill(currentColor)
+    // 2. Main particle (drawn on top of glow)
+    // Apply motion blur if enabled
+    if (this.visualStyle?.motionBlur) {
+      const motionBlurLength = 3
+      const motionBlurAlpha = this.alpha / 255 / motionBlurLength
+
+      for (let i = 0; i < motionBlurLength; i++) {
+        const blurOffset = i * 0.5
+        const blurAlpha =
+          (motionBlurAlpha * (motionBlurLength - i)) / motionBlurLength
+
+        p.fill(
+          this.colorHue,
+          adjustedColors.saturation,
+          adjustedColors.brightness,
+          blurAlpha
+        )
+        p.ellipse(
+          this.pos.x - this.vel.x * blurOffset,
+          this.pos.y - this.vel.y * blurOffset,
+          pulseSize * (1 - blurOffset * 0.1)
+        )
+      }
+    }
+
+    // Apply depth of field effect if enabled
+    if (this.visualStyle?.depthOfField) {
+      const centerX = p.width / 2
+      const centerY = p.height / 2
+      const distanceFromCenter = Math.sqrt(
+        Math.pow(this.pos.x - centerX, 2) + Math.pow(this.pos.y - centerY, 2)
+      )
+      const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY)
+      const focusDistance = maxDistance * 0.3 // Focus on center 30% of canvas
+
+      if (Math.abs(distanceFromCenter - focusDistance) > maxDistance * 0.2) {
+        // Apply blur to out-of-focus particles
+        p.drawingContext.filter = `blur(${(Math.abs(distanceFromCenter - focusDistance) / maxDistance) * 3}px)`
+      }
+    }
+
+    // Draw main particle
+    p.fill(
+      this.colorHue,
+      adjustedColors.saturation,
+      adjustedColors.brightness,
+      this.alpha / 255
+    )
     p.ellipse(this.pos.x, this.pos.y, pulseSize)
+
+    // Reset depth of field blur
+    if (this.visualStyle?.depthOfField) {
+      p.drawingContext.filter = 'none'
+    }
 
     // 5. Sparkle effect (drawn last, on top)
     if (enableSparkle && p.random() < sparkleFrequency) {
