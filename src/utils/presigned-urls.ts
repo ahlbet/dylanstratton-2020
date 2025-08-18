@@ -1,17 +1,41 @@
 import { createClient } from '@supabase/supabase-js'
 import { SUPABASE_PUBLIC_URL_DOMAIN } from './supabase-config'
 
+// Define types for the cache entries
+interface CacheEntry {
+  url: string
+  expiresAt: number
+}
+
+// Define types for audio objects
+interface AudioFile {
+  storage_path: string
+  [key: string]: any
+}
+
+interface AudioWithUrl extends AudioFile {
+  url: string
+  displayFilename: string
+}
+
+// Define types for cache configuration
+interface CacheConfig {
+  maxSize: number
+  cleanupInterval: number
+  bufferTime: number
+}
+
 // Cache configuration
-const CACHE_CONFIG = {
-  maxSize: parseInt(process.env.SUPABASE_CACHE_MAX_SIZE, 10) || 1000, // Maximum number of cached URLs
+const CACHE_CONFIG: CacheConfig = {
+  maxSize: parseInt(process.env.SUPABASE_CACHE_MAX_SIZE || '1000', 10) || 1000, // Maximum number of cached URLs
   cleanupInterval:
-    parseInt(process.env.SUPABASE_CACHE_CLEANUP_INTERVAL, 10) || 5 * 60 * 1000, // Clean up expired entries every 5 minutes
+    parseInt(process.env.SUPABASE_CACHE_CLEANUP_INTERVAL || '300000', 10) || 5 * 60 * 1000, // Clean up expired entries every 5 minutes
   bufferTime:
-    parseInt(process.env.SUPABASE_CACHE_BUFFER_TIME, 10) || 5 * 60 * 1000, // 5 minute buffer before considering URLs expired
+    parseInt(process.env.SUPABASE_CACHE_BUFFER_TIME || '300000', 10) || 5 * 60 * 1000, // 5 minute buffer before considering URLs expired
 }
 
 // Cache for pre-signed URLs to avoid regenerating them unnecessarily
-const urlCache = new Map()
+const urlCache = new Map<string, CacheEntry>()
 
 // Track last cleanup time
 let lastCleanupTime = Date.now()
@@ -19,7 +43,7 @@ let lastCleanupTime = Date.now()
 /**
  * Clean up expired cache entries and enforce size limits
  */
-function cleanupCache() {
+function cleanupCache(): void {
   const now = Date.now()
 
   // Remove expired entries
@@ -52,11 +76,11 @@ function cleanupCache() {
 
 /**
  * Remove bucket prefix from storage path
- * @param {string} storagePath - The storage path (e.g., 'audio/24mar10.wav')
- * @param {string} bucketName - The bucket name (e.g., 'audio')
- * @returns {string} The filename without bucket prefix (e.g., '24mar10.wav')
+ * @param storagePath - The storage path (e.g., 'audio/24mar10.wav')
+ * @param bucketName - The bucket name (e.g., 'audio')
+ * @returns The filename without bucket prefix (e.g., '24mar10.wav')
  */
-function removeBucketPrefix(storagePath, bucketName) {
+function removeBucketPrefix(storagePath: string, bucketName: string): string {
   const prefix = `${bucketName}/`
   if (storagePath.startsWith(prefix)) {
     return storagePath.substring(prefix.length)
@@ -66,27 +90,27 @@ function removeBucketPrefix(storagePath, bucketName) {
 
 /**
  * Extract clean filename from storage path (removes bucket prefix and file extension)
- * @param {string} storagePath - The storage path (e.g., 'audio/25aug05.wav')
- * @param {string} bucketName - The bucket name (e.g., 'audio')
- * @returns {string} The clean filename without bucket prefix or extension (e.g., '25aug05')
+ * @param storagePath - The storage path (e.g., 'audio/25aug05.wav')
+ * @param bucketName - The bucket name (e.g., 'audio')
+ * @returns The clean filename without bucket prefix or extension (e.g., '25aug05')
  */
-function extractFilenameFromStoragePath(storagePath, bucketName = 'audio') {
+function extractFilenameFromStoragePath(storagePath: string, bucketName: string = 'audio'): string {
   const withoutPrefix = removeBucketPrefix(storagePath, bucketName)
   return withoutPrefix.replace(/\.wav$/, '')
 }
 
 /**
  * Generate a pre-signed URL for a Supabase storage object
- * @param {string} storagePath - The storage path (e.g., 'audio/filename.wav')
- * @param {string} bucketName - The bucket name (default: 'audio')
- * @param {number} expiresIn - Expiration time in seconds (default: 3600 = 1 hour)
- * @returns {Promise<string>} The pre-signed URL
+ * @param storagePath - The storage path (e.g., 'audio/filename.wav')
+ * @param bucketName - The bucket name (default: 'audio')
+ * @param expiresIn - Expiration time in seconds (default: 3600 = 1 hour)
+ * @returns The pre-signed URL
  */
 async function generatePresignedUrl(
-  storagePath,
-  bucketName = 'audio',
-  expiresIn = 3600
-) {
+  storagePath: string,
+  bucketName: string = 'audio',
+  expiresIn: number = 3600
+): Promise<string> {
   // Check cache first
   const cacheKey = `${bucketName}:${storagePath}:${expiresIn}`
 
@@ -97,7 +121,7 @@ async function generatePresignedUrl(
   }
 
   if (urlCache.has(cacheKey)) {
-    const cached = urlCache.get(cacheKey)
+    const cached = urlCache.get(cacheKey)!
     // Check if cached URL is still valid (with buffer time)
     if (cached.expiresAt > now + CACHE_CONFIG.bufferTime) {
       return cached.url
@@ -157,7 +181,7 @@ async function generatePresignedUrl(
 
     return data.signedUrl
   } catch (error) {
-    console.error('Error in generatePresignedUrl:', error.message)
+    console.error('Error in generatePresignedUrl:', error instanceof Error ? error.message : String(error))
     // Fall back to public URL on any error
     return `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${bucketName}/${storagePath}`
   }
@@ -165,11 +189,11 @@ async function generatePresignedUrl(
 
 /**
  * Generate pre-signed URLs for multiple audio files
- * @param {Array} audioFiles - Array of audio objects with storage_path
- * @param {number} expiresIn - Expiration time in seconds (default: 3600 = 1 hour)
- * @returns {Promise<Array>} Array of audio objects with pre-signed URLs
+ * @param audioFiles - Array of audio objects with storage_path
+ * @param expiresIn - Expiration time in seconds (default: 3600 = 1 hour)
+ * @returns Array of audio objects with pre-signed URLs
  */
-async function generatePresignedUrlsForAudio(audioFiles, expiresIn = 3600) {
+async function generatePresignedUrlsForAudio(audioFiles: AudioFile[], expiresIn: number = 3600): Promise<AudioWithUrl[]> {
   if (!audioFiles || audioFiles.length === 0) {
     return []
   }
@@ -214,7 +238,7 @@ async function generatePresignedUrlsForAudio(audioFiles, expiresIn = 3600) {
 
     return audioWithUrls
   } catch (error) {
-    console.error('Error generating pre-signed URLs for audio:', error.message)
+    console.error('Error generating pre-signed URLs for audio:', error instanceof Error ? error.message : String(error))
     // Fall back to public URLs on error
     return audioFiles.map((audio) => ({
       ...audio,
@@ -227,27 +251,27 @@ async function generatePresignedUrlsForAudio(audioFiles, expiresIn = 3600) {
 /**
  * Clear the URL cache (useful for testing or when you want to force regeneration)
  */
-function clearUrlCache() {
+function clearUrlCache(): void {
   urlCache.clear()
   lastCleanupTime = Date.now()
 }
 
 /**
  * Update cache configuration dynamically
- * @param {Object} newConfig - New configuration options
+ * @param newConfig - New configuration options
  */
-function updateCacheConfig(newConfig) {
+function updateCacheConfig(newConfig: Partial<CacheConfig>): void {
   if (newConfig.maxSize !== undefined) {
-    CACHE_CONFIG.maxSize = Math.max(1, parseInt(newConfig.maxSize, 10))
+    CACHE_CONFIG.maxSize = Math.max(1, parseInt(String(newConfig.maxSize), 10))
   }
   if (newConfig.cleanupInterval !== undefined) {
     CACHE_CONFIG.cleanupInterval = Math.max(
       1000,
-      parseInt(newConfig.cleanupInterval, 10)
+      parseInt(String(newConfig.cleanupInterval), 10)
     )
   }
   if (newConfig.bufferTime !== undefined) {
-    CACHE_CONFIG.bufferTime = Math.max(1000, parseInt(newConfig.bufferTime, 10))
+    CACHE_CONFIG.bufferTime = Math.max(1000, parseInt(String(newConfig.bufferTime), 10))
   }
 
   // Force cleanup if new config is more restrictive
@@ -259,7 +283,16 @@ function updateCacheConfig(newConfig) {
 /**
  * Get cache statistics (useful for debugging)
  */
-function getCacheStats() {
+function getCacheStats(): {
+  totalEntries: number
+  validEntries: number
+  expiredEntries: number
+  totalExpired: number
+  maxSize: number
+  cleanupInterval: number
+  lastCleanup: number
+  timeSinceLastCleanup: number
+} {
   const now = Date.now()
   let validEntries = 0
   let expiredEntries = 0
@@ -289,14 +322,14 @@ function getCacheStats() {
 
 /**
  * Generate a presigned URL for a single audio file on-demand
- * @param {string} storagePath - The storage path (e.g., 'audio/filename.wav')
- * @param {number} expiresIn - Expiration time in seconds (default: 1 hour)
- * @returns {Promise<string>} Presigned URL
+ * @param storagePath - The storage path (e.g., 'audio/filename.wav')
+ * @param expiresIn - Expiration time in seconds (default: 1 hour)
+ * @returns Presigned URL
  */
 export async function generatePresignedUrlOnDemand(
-  storagePath,
-  expiresIn = 3600
-) {
+  storagePath: string,
+  expiresIn: number = 3600
+): Promise<string> {
   try {
     // Check cache first
     const cacheKey = `${storagePath}_${expiresIn}`
