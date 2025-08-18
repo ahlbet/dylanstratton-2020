@@ -1,12 +1,28 @@
-const { createCanvas } = require('canvas')
+import { createCanvas, Canvas, CanvasRenderingContext2D } from 'canvas'
 
 /**
  * Server-side cover art generator using Tat sketch logic
  * Generates 2500x2500 PNG images for blog post cover art
  */
 
+interface Point {
+  x: number
+  y: number
+}
+
+type ShapeType = 'horizontalLine' | 'verticalLine' | 'circle' | 'triangle' | 'square' | 'bezier'
+
 class CoverArtGenerator {
-  constructor(seed = 0, size = 2500) {
+  private seed: number
+  private size: number
+  private canvas: Canvas
+  public ctx: CanvasRenderingContext2D
+  private border: number
+  private spacing: number
+  public shapes: ShapeType[]
+  private randomSeed: number
+
+  constructor(seed: number = 0, size: number = 2500) {
     this.seed = seed
     this.size = size
     this.canvas = createCanvas(size, size)
@@ -15,7 +31,7 @@ class CoverArtGenerator {
     // Tat sketch parameters scaled for cover art - 4x4 grid
     this.border = Math.floor(size * 0.15) // ~375px for 2500px canvas
     this.spacing = Math.floor(size * 0.23) // ~575px for 2500px canvas
-    this.shapes = ['horizontalLine', 'verticalLine', 'circle', 'bezier']
+    this.shapes = ['horizontalLine', 'verticalLine', 'circle', 'triangle', 'square', 'bezier']
 
     // Seeded random number generator
     this.randomSeed = seed
@@ -23,29 +39,34 @@ class CoverArtGenerator {
   }
 
   // Seeded random number generator (simple LCG)
-  random(min = 0, max = 1) {
+  random(min: number = 0, max: number = 1): number {
     this.randomSeed = (this.randomSeed * 1664525 + 1013904223) % 4294967296
     const val = this.randomSeed / 4294967296
     return min + val * (max - min)
   }
 
   // Random integer between min and max (inclusive)
-  randomInt(min, max) {
+  randomInt(min: number, max: number): number {
     return Math.floor(this.random(min, max + 1))
   }
 
   // Choose random array element
-  randomChoice(array) {
+  randomChoice<T>(array: T[]): T {
     return array[this.randomInt(0, array.length - 1)]
   }
 
   // Noise function (simplified)
-  noise(x, y = 0, z = 0) {
+  noise(x: number, y: number = 0, z: number = 0): number {
     const hash = (x * 73856093) ^ (y * 19349663) ^ (z * 83492791)
     return Math.abs(Math.sin(hash)) % 1
   }
 
-  setupCanvas() {
+  // Getter for size to allow Tat class access
+  getSize(): number {
+    return this.size
+  }
+
+  private setupCanvas(): void {
     // Set background to light gray like original
     this.ctx.fillStyle = '#E6E6E6' // RGB(230, 230, 230)
     this.ctx.fillRect(0, 0, this.size, this.size)
@@ -57,8 +78,8 @@ class CoverArtGenerator {
     this.ctx.lineJoin = 'round'
   }
 
-  generateTats() {
-    const tats = []
+  generateTats(): Tat[] {
+    const tats: Tat[] = []
 
     // Create grid of Tats like original sketch
     for (let y = this.border; y <= this.size - this.border; y += this.spacing) {
@@ -75,7 +96,7 @@ class CoverArtGenerator {
     return tats
   }
 
-  drawTats() {
+  drawTats(): void {
     // Create a single centered Tat instead of a grid
     const centerX = this.size / 2
     const centerY = this.size / 2
@@ -85,14 +106,22 @@ class CoverArtGenerator {
     tat.show()
   }
 
-  generateCoverArt() {
+  generateCoverArt(): Buffer {
     this.drawTats()
     return this.canvas.toBuffer('image/png')
   }
 }
 
 class Tat {
-  constructor(x, y, generator) {
+  private x: number
+  private y: number
+  private generator: CoverArtGenerator
+  private ctx: CanvasRenderingContext2D
+  private typesCount: number
+  private shapes: ShapeType[]
+  private n: number
+
+  constructor(x: number, y: number, generator: CoverArtGenerator) {
     this.x = x
     this.y = y
     this.generator = generator
@@ -102,19 +131,19 @@ class Tat {
     this.n = 6 // Even more repetitions for complex layering
   }
 
-  chooseShapes() {
+  chooseShapes(): void {
     for (let i = 0; i < this.typesCount; i++) {
       this.shapes.push(this.generator.randomChoice(this.generator.shapes))
     }
   }
 
-  show() {
+  show(): void {
     // Start at the center and chain shapes together in a connected flow
-    let currentPoint = { x: this.x, y: this.y }
+    let currentPoint: Point = { x: this.x, y: this.y }
 
     // Draw multiple shapes with connected endpoints
-    this.shapes.forEach((shapeType, index) => {
-      const baseRadius = this.generator.size * 0.25 // 25% of canvas size as base
+    this.shapes.forEach((shapeType: ShapeType, index: number) => {
+      const baseRadius = this.generator.getSize() * 0.25 // 25% of canvas size as base
       const radius = this.generator.random(
         baseRadius * 0.5, // 50% to 120% of base radius (12.5% to 30% of canvas)
         baseRadius * 1.2
@@ -122,7 +151,7 @@ class Tat {
       const repetitions = this.generator.randomInt(0, this.n - 1)
 
       // Draw shape starting at current point and get its endpoint
-      let endpoint = currentPoint
+      let endpoint: Point = currentPoint
 
       switch (shapeType) {
         case 'horizontalLine':
@@ -181,7 +210,7 @@ class Tat {
   }
 
   // Connected drawing methods that return endpoints for chaining
-  drawConnectedHorizontalLine(x, y, r, n) {
+  private drawConnectedHorizontalLine(x: number, y: number, r: number, n: number): Point {
     // Draw additional lines with shifts
     for (let i = 0; i < n; i++) {
       if (this.repeatAndShift()) {
@@ -196,7 +225,7 @@ class Tat {
     return { x: x + r / 2, y: y }
   }
 
-  drawConnectedVerticalLine(x, y, r, n) {
+  private drawConnectedVerticalLine(x: number, y: number, r: number, n: number): Point {
     // Draw additional lines with shifts
     for (let i = 0; i < n; i++) {
       if (this.repeatAndShift()) {
@@ -211,7 +240,7 @@ class Tat {
     return { x: x, y: y + r / 2 }
   }
 
-  drawConnectedCircle(x, y, r, n) {
+  private drawConnectedCircle(x: number, y: number, r: number, n: number): Point {
     // Draw additional circles with shifts
     for (let i = 0; i < n; i++) {
       if (this.repeatAndShift()) {
@@ -233,7 +262,7 @@ class Tat {
     }
   }
 
-  drawConnectedTriangle(x, y, r, n) {
+  private drawConnectedTriangle(x: number, y: number, r: number, n: number): Point {
     // Draw additional triangles with shifts
     for (let i = 0; i < n; i++) {
       if (this.repeatAndShift()) {
@@ -255,7 +284,7 @@ class Tat {
     }
   }
 
-  drawConnectedSquare(x, y, r, n) {
+  private drawConnectedSquare(x: number, y: number, r: number, n: number): Point {
     // Draw additional squares with shifts
     for (let i = 0; i < n; i++) {
       if (this.repeatAndShift()) {
@@ -270,7 +299,7 @@ class Tat {
     this.drawSquareShape(x, y, r)
 
     // Return one of the square's corners
-    const corners = [
+    const corners: Point[] = [
       { x: x + r / 2, y: y + r / 2 },
       { x: x - r / 2, y: y + r / 2 },
       { x: x - r / 2, y: y - r / 2 },
@@ -279,7 +308,7 @@ class Tat {
     return this.generator.randomChoice(corners)
   }
 
-  drawConnectedBezier(x, y, r, n) {
+  private drawConnectedBezier(x: number, y: number, r: number, n: number): Point {
     // Draw additional bezier curves with shifts
     for (let i = 0; i < n; i++) {
       if (this.repeatAndShift()) {
@@ -295,20 +324,20 @@ class Tat {
   }
 
   // Helper drawing methods
-  drawLine(x1, y1, x2, y2) {
+  private drawLine(x1: number, y1: number, x2: number, y2: number): void {
     this.ctx.beginPath()
     this.ctx.moveTo(x1, y1)
     this.ctx.lineTo(x2, y2)
     this.ctx.stroke()
   }
 
-  drawCircleShape(x, y, r) {
+  private drawCircleShape(x: number, y: number, r: number): void {
     this.ctx.beginPath()
     this.ctx.arc(x, y, r / 2, 0, Math.PI * 2)
     this.ctx.stroke()
   }
 
-  drawTriangleShape(x, y, r) {
+  private drawTriangleShape(x: number, y: number, r: number): void {
     const height = (r * Math.sqrt(3)) / 2
     this.ctx.beginPath()
     this.ctx.moveTo(x, y - height / 2)
@@ -318,13 +347,13 @@ class Tat {
     this.ctx.stroke()
   }
 
-  drawSquareShape(x, y, r) {
+  private drawSquareShape(x: number, y: number, r: number): void {
     this.ctx.beginPath()
     this.ctx.rect(x - r / 2, y - r / 2, r, r)
     this.ctx.stroke()
   }
 
-  drawBezierShape(x, y, r) {
+  private drawBezierShape(x: number, y: number, r: number): void {
     // Generate random bezier curve points within the radius
     const angle1 = this.generator.random(0, Math.PI * 2)
     const angle2 = this.generator.random(0, Math.PI * 2)
@@ -353,7 +382,7 @@ class Tat {
     this.ctx.stroke()
   }
 
-  drawConnectedBezierShape(x, y, r) {
+  private drawConnectedBezierShape(x: number, y: number, r: number): Point {
     // Start point is the current position (where previous shape ended)
     const startX = x
     const startY = y
@@ -384,13 +413,13 @@ class Tat {
     return { x: endX, y: endY }
   }
 
-  repeatAndShift() {
+  private repeatAndShift(): boolean {
     return this.generator.random() < 0.25
   }
 }
 
 // Helper function to generate seed from post name
-function generateSeedFromPostName(postName) {
+function generateSeedFromPostName(postName: string): number {
   if (!postName || typeof postName !== 'string') return 0
 
   let seed = 0
@@ -403,7 +432,7 @@ function generateSeedFromPostName(postName) {
 }
 
 // Main function to generate cover art for a blog post
-async function generateCoverArt(postName, size = 2500) {
+async function generateCoverArt(postName: string, size: number = 2500): Promise<Buffer> {
   const seed = generateSeedFromPostName(postName)
   const generator = new CoverArtGenerator(seed, size)
   const pngBuffer = generator.generateCoverArt()
@@ -414,7 +443,7 @@ async function generateCoverArt(postName, size = 2500) {
   return pngBuffer
 }
 
-module.exports = {
+export {
   CoverArtGenerator,
   generateCoverArt,
   generateSeedFromPostName,
