@@ -1,7 +1,33 @@
 // Client-side Markov Generator for browser use
 // This is a simplified version that doesn't use Node.js-specific modules
 
+// Define types for cache data
+interface CacheData {
+  text: string
+  stats?: {
+    lines: number
+    characters: number
+  }
+  timestamp: number
+}
+
+// Define types for API response
+interface APIResponse {
+  text: string
+  stats?: {
+    lines: number
+    characters: number
+  }
+}
+
 class MarkovGeneratorClient {
+  private order: number
+  private ngrams: Record<string, string[]>
+  private beginnings: string[]
+  private lines: string[]
+  private recentBeginnings: string[] // Track recently used beginnings
+  private maxRecentBeginnings: number // Keep track of last 5 used
+
   constructor(order = 9) {
     this.order = order
     this.ngrams = {}
@@ -12,7 +38,7 @@ class MarkovGeneratorClient {
   }
 
   // Load text from API endpoint with caching
-  async loadTextFromAPI() {
+  async loadTextFromAPI(): Promise<boolean> {
     try {
       // Check cache first
       const cacheKey = 'markov-corpus-cache'
@@ -32,7 +58,7 @@ class MarkovGeneratorClient {
         return this.loadFallbackText()
       }
 
-      const data = await response.json()
+      const data: APIResponse = await response.json()
 
       if (!data.text || data.text.length < 100) {
         console.warn('⚠️ No substantial text from API, using fallback')
@@ -58,7 +84,7 @@ class MarkovGeneratorClient {
   }
 
   // Fallback text for when Supabase fails
-  loadFallbackText() {
+  loadFallbackText(): boolean {
     const fallbackText = [
       'The quick brown fox jumps over the lazy dog.',
       'A journey of a thousand miles begins with a single step.',
@@ -81,13 +107,13 @@ class MarkovGeneratorClient {
   }
 
   // Load text from an array of strings
-  loadTextFromArray(textArray) {
+  loadTextFromArray(textArray: string[]): void {
     this.lines = textArray.filter((line) => line && line.trim().length > 0)
     this.buildNgrams()
   }
 
   // Load text from a string
-  loadTextFromString(text) {
+  loadTextFromString(text: string): void {
     if (!text || typeof text !== 'string') {
       console.warn('Invalid text input for MarkovGeneratorClient')
       return
@@ -115,7 +141,7 @@ class MarkovGeneratorClient {
   }
 
   // Clean text to remove character names and formatting artifacts
-  cleanText(text) {
+  cleanText(text: string): string {
     if (!text) return text
 
     // Much more conservative cleaning - only remove obvious headers
@@ -167,7 +193,7 @@ class MarkovGeneratorClient {
   }
 
   // Clean and compile text from array
-  compileAndCleanText(textArray) {
+  compileAndCleanText(textArray: string[]): string[] {
     if (!Array.isArray(textArray)) {
       console.warn('Invalid textArray input for compileAndCleanText')
       return []
@@ -180,7 +206,7 @@ class MarkovGeneratorClient {
   }
 
   // Build n-grams from loaded text
-  buildNgrams() {
+  buildNgrams(): void {
     this.ngrams = {}
     this.beginnings = []
 
@@ -204,7 +230,7 @@ class MarkovGeneratorClient {
   }
 
   // Generate text using Markov chain
-  generateText(maxLength = 500, maxSentences = 2) {
+  generateText(maxLength = 500, maxSentences = 2): string {
     if (this.beginnings.length === 0) {
       return ''
     }
@@ -279,7 +305,7 @@ class MarkovGeneratorClient {
   }
 
   // Clean generated text to remove character names and formatting artifacts
-  cleanGeneratedText(text) {
+  cleanGeneratedText(text: string): string {
     if (!text) return text
 
     let cleaned = text
@@ -307,8 +333,8 @@ class MarkovGeneratorClient {
   }
 
   // Generate multiple lines
-  generateMultipleLines(count = 1, maxLength = 500, maxSentences = 2) {
-    const lines = []
+  generateMultipleLines(count = 1, maxLength = 500, maxSentences = 2): string[] {
+    const lines: string[] = []
     let attempts = 0
     const maxAttempts = count * 10 // Allow more attempts to get good lines
 
@@ -327,7 +353,7 @@ class MarkovGeneratorClient {
   }
 
   // Check if text contains only a character name or is problematic
-  containsOnlyCharacterName(text) {
+  containsOnlyCharacterName(text: string): boolean {
     const trimmed = text.trim()
 
     // Check if text is just numbers
@@ -348,14 +374,14 @@ class MarkovGeneratorClient {
   }
 
   // Cache management
-  getCachedCorpus(cacheKey, expiryHours) {
+  getCachedCorpus(cacheKey: string, expiryHours: number): CacheData | null {
     try {
       const cached = localStorage.getItem(cacheKey)
       if (!cached) {
         return null
       }
 
-      const data = JSON.parse(cached)
+      const data: CacheData = JSON.parse(cached)
       const ageHours = (Date.now() - data.timestamp) / (1000 * 60 * 60)
 
       if (ageHours > expiryHours) {
@@ -370,9 +396,9 @@ class MarkovGeneratorClient {
     }
   }
 
-  cacheCorpus(cacheKey, data) {
+  cacheCorpus(cacheKey: string, data: APIResponse): boolean {
     try {
-      const cacheData = {
+      const cacheData: CacheData = {
         text: data.text,
         stats: data.stats,
         timestamp: Date.now(),
@@ -388,7 +414,7 @@ class MarkovGeneratorClient {
 
       localStorage.setItem(cacheKey, JSON.stringify(cacheData))
       return true
-    } catch (error) {
+    } catch (error: any) {
       if (error.name === 'QuotaExceededError') {
         return this.handleStorageQuotaExceeded(cacheKey, data)
       }
@@ -397,7 +423,7 @@ class MarkovGeneratorClient {
     }
   }
 
-  handleStorageQuotaExceeded(cacheKey, data) {
+  handleStorageQuotaExceeded(cacheKey: string, data: APIResponse): boolean {
     try {
       // Try with reduced data (25% of original)
       const reducedText = data.text
@@ -405,11 +431,11 @@ class MarkovGeneratorClient {
         .filter((_, index) => index % 4 === 0) // Keep every 4th line
         .join('\n')
 
-      const reducedData = {
+      const reducedData: CacheData = {
         text: reducedText,
         stats: {
           ...data.stats,
-          lines: Math.floor(data.stats.lines / 4),
+          lines: Math.floor((data.stats?.lines || 0) / 4),
           characters: reducedText.length,
         },
         timestamp: Date.now(),
@@ -430,7 +456,7 @@ class MarkovGeneratorClient {
     }
   }
 
-  tryUltraReducedCache(cacheKey, data) {
+  tryUltraReducedCache(cacheKey: string, data: APIResponse): boolean {
     try {
       // Try with ultra-reduced data (10% of original)
       const ultraReducedText = data.text
@@ -438,11 +464,11 @@ class MarkovGeneratorClient {
         .filter((_, index) => index % 10 === 0) // Keep every 10th line
         .join('\n')
 
-      const ultraReducedData = {
+      const ultraReducedData: CacheData = {
         text: ultraReducedText,
         stats: {
           ...data.stats,
-          lines: Math.floor(data.stats.lines / 10),
+          lines: Math.floor((data.stats?.lines || 0) / 10),
           characters: ultraReducedText.length,
         },
         timestamp: Date.now(),
@@ -472,14 +498,14 @@ class MarkovGeneratorClient {
     }
   }
 
-  clearOldCacheEntries() {
+  clearOldCacheEntries(): void {
     try {
       const keys = Object.keys(localStorage)
       const cacheKeys = keys.filter((key) => key.includes('cache'))
 
       for (const key of cacheKeys) {
         try {
-          const data = JSON.parse(localStorage.getItem(key))
+          const data: CacheData = JSON.parse(localStorage.getItem(key) || '{}')
           const ageHours = (Date.now() - data.timestamp) / (1000 * 60 * 60)
 
           if (ageHours > 24) {
@@ -494,7 +520,7 @@ class MarkovGeneratorClient {
     }
   }
 
-  logStorageUsage() {
+  logStorageUsage(): void {
     try {
       let totalSize = 0
       for (const key in localStorage) {

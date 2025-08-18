@@ -2,7 +2,7 @@
 import { SUPABASE_PUBLIC_URL_DOMAIN } from './supabase-config'
 import { isLocalDev } from './local-dev-utils'
 
-export const convertToLocalAudioUrl = (supabaseUrl) => {
+export const convertToLocalAudioUrl = (supabaseUrl: string | null | undefined): string | null | undefined => {
   if (!isLocalDev || !supabaseUrl) {
     return supabaseUrl
   }
@@ -24,7 +24,9 @@ export const convertToLocalAudioUrl = (supabaseUrl) => {
   }
 }
 
-export const convertAudioUrlsToLocal = (audioUrls) => {
+export const convertAudioUrlsToLocal = (
+  audioUrls: string[] | string | null | undefined
+): string[] | string | null | undefined => {
   if (!isLocalDev || !audioUrls) {
     return audioUrls
   }
@@ -40,7 +42,10 @@ export const convertAudioUrlsToLocal = (audioUrls) => {
   return audioUrls
 }
 
-export const convertCoverArtUrlToLocal = (supabaseUrl, postName) => {
+export const convertCoverArtUrlToLocal = (
+  supabaseUrl: string | null | undefined,
+  postName?: string
+): string | null | undefined => {
   if (!isLocalDev || !supabaseUrl) {
     return supabaseUrl
   }
@@ -58,7 +63,7 @@ export const convertCoverArtUrlToLocal = (supabaseUrl, postName) => {
       } else if (supabaseUrl.includes('/')) {
         // Handle storage path like "cover-art/25jul16.png"
         const filename = supabaseUrl.split('/').pop()
-        postNameFromUrl = filename.replace('.png', '')
+        postNameFromUrl = filename?.replace('.png', '') || ''
       }
     }
 
@@ -69,7 +74,7 @@ export const convertCoverArtUrlToLocal = (supabaseUrl, postName) => {
   }
 }
 
-export const getCoverArtUrl = (storagePath) => {
+export const getCoverArtUrl = (storagePath: string | null | undefined): string | null => {
   if (!storagePath) {
     return null
   }

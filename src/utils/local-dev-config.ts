@@ -18,7 +18,7 @@ export const LOCAL_DEV_CONFIG = {
   fallbackToSupabase: process.env.GATSBY_LOCAL_FALLBACK_TO_SUPABASE === 'true',
 }
 
-export const getAudioUrl = (filename) => {
+export const getAudioUrl = (filename: string): string | null => {
   if (LOCAL_DEV_CONFIG.enabled) {
     return `${LOCAL_DEV_CONFIG.paths.audio}${filename}`
   }
@@ -26,7 +26,7 @@ export const getAudioUrl = (filename) => {
   return null
 }
 
-export const getCoverArtUrl = (postName) => {
+export const getCoverArtUrl = (postName: string): string | null => {
   if (LOCAL_DEV_CONFIG.enabled) {
     return `${LOCAL_DEV_CONFIG.paths.coverArt}${postName}.png`
   }
@@ -34,14 +34,14 @@ export const getCoverArtUrl = (postName) => {
   return null
 }
 
-export const getMarkovTextsPath = () => {
+export const getMarkovTextsPath = (): string | null => {
   if (LOCAL_DEV_CONFIG.enabled) {
     return LOCAL_DEV_CONFIG.paths.markovTexts
   }
   return null
 }
 
-export const getMarkovSourcePath = () => {
+export const getMarkovSourcePath = (): string | null => {
   if (LOCAL_DEV_CONFIG.enabled) {
     return LOCAL_DEV_CONFIG.paths.markovSource
   }

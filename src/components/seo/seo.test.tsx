@@ -3,11 +3,15 @@ import { render } from '@testing-library/react'
 import { useStaticQuery } from 'gatsby'
 import SEO from './seo'
 
-// Mock the Gatsby graphql query
-jest.mock('gatsby', () => ({
-  useStaticQuery: jest.fn(),
-  graphql: jest.fn(),
-}))
+// Mock the Gatsby graphql query in a way that doesn't reference outer variables (avoids hoisting issues)
+jest.mock('gatsby', () => {
+  const actual = jest.requireActual('gatsby')
+  return {
+    ...actual,
+    useStaticQuery: jest.fn(),
+    graphql: jest.fn(),
+  }
+})
 
 // Mock Helmet since we can't test it directly
 jest.mock('react-helmet', () => {
@@ -36,7 +40,7 @@ jest.mock('react-helmet', () => {
 
 describe('SEO component', () => {
   beforeEach(() => {
-    useStaticQuery.mockReturnValue({
+    ;(useStaticQuery as jest.Mock).mockReturnValue({
       site: {
         siteMetadata: {
           title: 'Test Site Title',

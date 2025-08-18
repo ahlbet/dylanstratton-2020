@@ -259,4 +259,5 @@ class AudioPlayerManager {
   }
 }
 
-export { AudioPlayerManager, AudioPlayer, AudioPlaybackOptions }
+export { AudioPlayerManager }
+export type { AudioPlayer, AudioPlaybackOptions }

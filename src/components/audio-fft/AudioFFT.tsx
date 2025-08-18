@@ -33,7 +33,7 @@ declare global {
 
 export default function AudioFFT({
   markovText = '',
-}: AudioFFTProps): JSX.Element {
+}: AudioFFTProps): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const p5InstanceRef = useRef<any>(null)
   const { audioRef } = useAudioPlayer()
