@@ -6,6 +6,7 @@ interface MarkovText {
   text_content: string
   coherency_level: number
   daily_id: string
+  text_length: number
 }
 
 interface TextProcessingResult {
@@ -206,7 +207,8 @@ class MarkovManager {
     return editedTexts.map((text, index) => ({
       text_content: text,
       coherency_level: coherencyLevels[index],
-      daily_id: dailyId
+      daily_id: dailyId,
+      text_length: text.length
     }))
   }
 
