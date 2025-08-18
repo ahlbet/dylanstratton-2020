@@ -8,8 +8,9 @@
  */
 export class Particle {
   // Global constants for particle behavior
-  static MAX_VELOCITY = 6.0 // Maximum velocity for any particle
-  static MAX_SPEED = 8.0 // Maximum speed multiplier for any particle
+  static MAX_VELOCITY = 2.0 // Maximum velocity for any particle (reduced from 6.0)
+  static MAX_SPEED = 3.0 // Maximum speed multiplier for any particle (reduced from 8.0)
+  static MIN_VELOCITY = 0.2 // Minimum velocity floor to ensure visible movement
 
   // Helper function to map all colors to blue-to-red spectrum (eliminates green entirely)
   static avoidGreenHue(hue) {
@@ -62,12 +63,12 @@ export class Particle {
     // Individual particle properties for unique movement
     this.noiseOffsetX = p.random(1000)
     this.noiseOffsetY = p.random(1000)
-    this.noiseScale = p.random(0.005, 0.025) // Reduced from 0.01, 0.05
-    this.noiseStrength = p.random(0.5, 2.0)
+    this.noiseScale = p.random(0.002, 0.01) // Reduced from 0.005-0.025 for slower movement
+    this.noiseStrength = p.random(0.2, 1.0) // Reduced from 0.5-2.0 for slower movement
     this.individualSeed = p.random(10000)
-    this.rotationSpeed = p.random(-0.1, 0.1)
-    this.oscillationSpeed = p.random(0.01, 0.04) // Reduced from 0.02, 0.08
-    this.oscillationAmplitude = p.random(5, 20)
+    this.rotationSpeed = p.random(-0.05, 0.05) // Reduced from -0.1-0.1 for slower rotation
+    this.oscillationSpeed = p.random(0.005, 0.02) // Reduced from 0.01-0.04 for slower oscillation
+    this.oscillationAmplitude = p.random(2, 10) // Reduced from 5-20 for smaller oscillation
 
     // Individual color variation properties based on visual style
     if (visualStyle) {
@@ -120,7 +121,7 @@ export class Particle {
       .createVector(p.cos(p.random(p.TWO_PI)), p.sin(p.random(p.TWO_PI)))
       .mult(this.speed * 0.02) // Reduced from 0.05
     this.alpha = 1
-    this.size = this.size * 0.1
+    this.size = this.size * 0.02
     this.originalSize = this.size
     this.lifeFrames = 0
     this.maxLifeFrames = 200 + p.random(50)
@@ -559,19 +560,19 @@ export class Particle {
     // Add smooth noise movement with visual style modifier
     const noiseForce = p5
       .createVector(noiseX, noiseY)
-      .mult(this.noiseStrength * 0.02 * movementMultiplier) // Reduced from 0.05
+      .mult(this.noiseStrength * 0.005 * movementMultiplier) // Reduced from 0.02 for much slower movement
     this.vel.add(noiseForce)
 
     // Individual oscillation with visual style modifier - reduced for more natural movement
     const oscillationX =
       p5.sin(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
-      0.0005 * // Reduced from 0.002 for much more subtle oscillation
+      0.0002 * // Reduced from 0.0005 for much more subtle oscillation
       (oscillationMultiplier / 15) // Normalize to base oscillation strength
     const oscillationY =
       p5.cos(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
-      0.0005 * // Reduced from 0.002 for much more subtle oscillation
+      0.0002 * // Reduced from 0.0005 for much more subtle oscillation
       (oscillationMultiplier / 15) // Normalize to base oscillation strength
     this.vel.add(oscillationX, oscillationY)
 
@@ -610,11 +611,11 @@ export class Particle {
     // Apply frequency band-specific movement patterns
     this.applyFrequencyBandMovement(p5, distanceMultiplier)
 
-    // Limit velocity based on audio reactivity and distance from spawn - much more dramatic variation
+    // Limit velocity based on audio reactivity and distance from spawn - much more conservative
     const maxVelocity =
-      (0.5 + this.audioReactivity * 4.0) *
+      (0.2 + this.audioReactivity * 1.5) * // Reduced from 0.5 + 4.0 for much slower movement
       distanceMultiplier *
-      0.75 *
+      0.5 * // Reduced from 0.75 for slower movement
       movementMultiplier // Apply visual style movement modifier
 
     // Apply absolute maximum velocity limit to prevent excessive speed
@@ -622,6 +623,26 @@ export class Particle {
     const finalMaxVelocity = Math.min(maxVelocity, absoluteMaxVelocity)
 
     this.vel.limit(finalMaxVelocity)
+
+    // Enforce minimum velocity to keep particles visibly moving
+    const allowedMinVelocity = Math.min(Particle.MIN_VELOCITY, finalMaxVelocity)
+    const currentSpeed = Math.sqrt(
+      this.vel.x * this.vel.x + this.vel.y * this.vel.y
+    )
+    if (allowedMinVelocity > 0 && currentSpeed < allowedMinVelocity) {
+      if (currentSpeed === 0) {
+        // Nudge in a small random direction if completely still
+        const angle = p5.random
+          ? p5.random(0, p5.TWO_PI)
+          : Math.random() * Math.PI * 2
+        this.vel.x = Math.cos(angle) * allowedMinVelocity
+        this.vel.y = Math.sin(angle) * allowedMinVelocity
+      } else {
+        const scaleUp = allowedMinVelocity / Math.max(currentSpeed, 1e-6)
+        this.vel.x *= scaleUp
+        this.vel.y *= scaleUp
+      }
+    }
 
     // Constrain particle position to stay close to spawn position
     this.constrainToSpawnArea(p5)
@@ -645,13 +666,13 @@ export class Particle {
         )
 
         // Much more subtle pulsing effect - directly tied to audio level
-        const pulseStrength = 1.5 * this.audioReactivity * movementMultiplier // Reduced from 3.0 for less dramatic effect
+        const pulseStrength = 0.8 * this.audioReactivity * movementMultiplier // Reduced from 1.5 for much slower movement
         // Use audio reactivity to control the frequency and intensity of pulsing
-        const audioFrequency = 0.1 + this.audioReactivity * 0.2 // Reduced from 0.15 for less dramatic frequency
+        const audioFrequency = 0.08 + this.audioReactivity * 0.15 // Reduced from 0.1 for less dramatic frequency
         const pulseDirection =
           p5.sin(p5.frameCount * audioFrequency + this.individualSeed) *
           pulseStrength *
-          (1 + this.audioReactivity * 1.5) // Reduced from 3 for less dramatic effect
+          (1 + this.audioReactivity * 0.8) // Reduced from 1.5 for much less dramatic effect
 
         if (pulseDirection > 0) {
           // Expand outward - controlled dramatic effect with audio-reactive variation
@@ -694,12 +715,12 @@ export class Particle {
         const audioRotationSpeed =
           (this.rotationSpeed + rotationMultiplier) *
           this.audioReactivity *
-          7.0 * // Increased from 5.0 for more sensitivity
+          2.0 * // Reduced from 7.0 for much slower rotation
           movementMultiplier // Apply visual style modifiers
         const chaoticVariation =
-          p5.sin(p5.frameCount * (0.25 + this.audioReactivity * 0.7)) * // Increased from 0.2 for more sensitivity
+          p5.sin(p5.frameCount * (0.15 + this.audioReactivity * 0.3)) * // Reduced from 0.25 for less dramatic frequency
           this.audioReactivity *
-          3.0 // Increased from 2.0 for more dramatic effect
+          1.0 // Reduced from 3.0 for much less dramatic effect
         this.vel.rotate(audioRotationSpeed + chaoticVariation)
 
         // Much more responsive velocity limit for bass - varies dramatically with audio
@@ -716,11 +737,11 @@ export class Particle {
         break
       case 3: // Mid - much more dramatic wavey movement directly tied to audio
         // Audio affects both frequency and amplitude of wavey movement - reduced for more natural movement
-        const audioWaveFreq = 0.15 + this.audioReactivity * 0.3 // Reduced from 0.25 for less dramatic frequency
+        const audioWaveFreq = 0.1 + this.audioReactivity * 0.2 // Reduced from 0.15 for less dramatic frequency
         const audioWaveAmp =
-          0.6 * // Reduced from 1.2 for less dramatic amplitude
+          0.3 * // Reduced from 0.6 for much less dramatic amplitude
           this.audioReactivity *
-          (1 + this.audioReactivity * 2) * // Reduced from 4 for less dramatic effect
+          (1 + this.audioReactivity * 1.2) * // Reduced from 2 for much less dramatic effect
           movementMultiplier // Apply visual style movement modifier
 
         this.vel.x +=
@@ -740,7 +761,7 @@ export class Particle {
           this.pos.y - p5.height / 2
         )
         expansionForce.normalize()
-        expansionForce.mult(1.5 * this.audioReactivity * movementMultiplier) // Apply visual style movement modifier
+        expansionForce.mult(0.6 * this.audioReactivity * movementMultiplier) // Reduced from 1.5 for much slower movement
         this.vel.add(expansionForce)
 
         // Add velocity limit for high mid frequencies
@@ -750,7 +771,7 @@ export class Particle {
       case 5: // Presence - much more dramatic chaotic movement
         this.vel.add(
           p5
-            .createVector(p5.random(-1.0, 1.0), p5.random(-1.0, 1.0)) // Increased from 0.6 to 1.0 (much more dramatic)
+            .createVector(p5.random(-0.5, 0.5), p5.random(-0.5, 0.5)) // Reduced from -1.0 to 1.0 for slower movement
             .mult(this.audioReactivity * movementMultiplier) // Apply visual style movement modifier
         )
 
@@ -1126,7 +1147,7 @@ export class Particle {
       p.ellipse(this.pos.x, this.pos.y, rippleSize * 1.8)
     }
 
-    // 2. Main particle (drawn on top of glow)
+    // 4. Main particle (drawn on top of glow)
     // Apply motion blur if enabled
     if (this.visualStyle?.motionBlur) {
       const motionBlurLength = 3

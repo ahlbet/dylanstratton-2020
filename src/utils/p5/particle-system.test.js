@@ -512,8 +512,8 @@ describe('Particle', () => {
       particle.spawnY = 100
 
       // Test that global constants are defined
-      expect(Particle.MAX_VELOCITY).toBe(6.0)
-      expect(Particle.MAX_SPEED).toBe(8.0)
+      expect(Particle.MAX_VELOCITY).toBe(2.0)
+      expect(Particle.MAX_SPEED).toBe(3.0)
 
       // Test that particle respects speed limits
       const originalSpeed = particle.speed
