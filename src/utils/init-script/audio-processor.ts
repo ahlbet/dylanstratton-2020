@@ -22,43 +22,79 @@ class AudioProcessor {
    * @returns AudioData object containing found audio files
    */
   static findAudioFiles(postName: string): AudioData {
-    const downloadsPath = path.join(process.env.HOME || '', 'Downloads')
+    const downloadsPath = path.join(process.env.HOME || process.env.USERPROFILE || '', 'Downloads')
     const subfolderPath = path.join(downloadsPath, postName)
     const singleFilePath = path.join(downloadsPath, `${postName}.wav`)
 
     const localPlaybackFiles: AudioFile[] = []
 
-    // Check if subfolder exists
+    // Check if subfolder exists and contains WAV files
     if (fs.existsSync(subfolderPath) && fs.statSync(subfolderPath).isDirectory()) {
       const files = fs.readdirSync(subfolderPath)
       const wavFiles = files.filter(file => file.toLowerCase().endsWith('.wav'))
 
       if (wavFiles.length > 0) {
-        wavFiles.forEach(file => {
-          const filePath = path.join(subfolderPath, file)
-          const stats = fs.statSync(filePath)
+        console.log(`Found ${wavFiles.length} WAV file(s) in subfolder '${postName}'.`)
+
+        // Create backup of the entire subfolder
+        const backupSubfolderPath = path.join(downloadsPath, `${postName}-backup`)
+        if (fs.existsSync(backupSubfolderPath)) {
+          fs.rmSync(backupSubfolderPath, { recursive: true, force: true })
+        }
+        fs.cpSync(subfolderPath, backupSubfolderPath, { recursive: true })
+        console.log(`Created backup at '${backupSubfolderPath}'.`)
+
+        // Process all WAV files from subfolder
+        for (let index = 0; index < wavFiles.length; index++) {
+          const wavFile = wavFiles[index]
+          const sourcePath = path.join(subfolderPath, wavFile)
+
+          // Create unique filename with just the name and index, sanitized
+          const fileExtension = path.extname(wavFile)
+          const sanitizedName = this.sanitizeFilename(postName)
+          const uniqueFileName = wavFiles.length === 1
+            ? `${sanitizedName}${fileExtension}`
+            : `${sanitizedName}-${index + 1}${fileExtension}`
+
+          // Store local path for playback
           localPlaybackFiles.push({
-            fileName: file,
-            localPath: filePath,
-            size: stats.size
+            fileName: uniqueFileName,
+            localPath: sourcePath,
+            size: fs.statSync(sourcePath).size
           })
-        })
-        console.log(`Found ${wavFiles.length} WAV files in subfolder '${postName}'`)
+
+          console.log(`Processed file '${wavFile}' as '${uniqueFileName}'.`)
+        }
+
+        // Remove empty subfolder
+        if (fs.readdirSync(subfolderPath).length === 0) {
+          fs.rmdirSync(subfolderPath)
+          console.log(`Removed empty subfolder '${subfolderPath}'.`)
+        }
       } else {
-        console.log(`No WAV files found in subfolder '${postName}'`)
+        console.warn(`Subfolder '${postName}' exists but contains no WAV files.`)
       }
-    }
-    // Check if single file exists
-    else if (fs.existsSync(singleFilePath) && fs.statSync(singleFilePath).isFile()) {
-      const stats = fs.statSync(singleFilePath)
+    } else if (fs.existsSync(singleFilePath)) {
+      // Handle single file case
+      console.log(`Found single WAV file '${postName}.wav'.`)
+
+      // Duplicate the original file before moving
+      const backupPath = path.join(downloadsPath, `${postName}-backup.wav`)
+
+      fs.copyFileSync(singleFilePath, backupPath)
+      console.log(`Created backup at '${backupPath}'.`)
+
+      // Store local path for playback
+      const sanitizedName = this.sanitizeFilename(postName)
       localPlaybackFiles.push({
-        fileName: `${postName}.wav`,
+        fileName: `${sanitizedName}.wav`,
         localPath: singleFilePath,
-        size: stats.size
+        size: fs.statSync(singleFilePath).size
       })
-      console.log(`Found single WAV file '${postName}.wav'`)
+
+      console.log(`Processed file '${postName}.wav' as '${sanitizedName}.wav'.`)
     } else {
-      console.log(`No WAV files found. Neither subfolder '${postName}' nor single file '${postName}.wav' exist in Downloads.`)
+      console.warn(`No WAV files found. Neither subfolder '${postName}' nor single file '${postName}.wav' exist in Downloads.`)
     }
 
     return { localPlaybackFiles }
