@@ -41,10 +41,10 @@ export const HomepageGeneratedText: React.FC<HomepageGeneratedTextProps> = ({
         {currentBlogPost?.date}
       </h3>
       <div className="space-y-4">
-        {currentBlogPost?.markovTexts.length === 0 ? (
+        {(currentBlogPost?.markovTexts ?? []).length === 0 ? (
           <p className="text-gray-400">No thoughts for this day</p>
         ) : (
-          currentBlogPost?.markovTexts.map((text) => (
+          (currentBlogPost?.markovTexts ?? []).map((text) => (
             <div key={text.id} className="text-gray-300 leading-relaxed">
               <p className="text-gray-300 leading-relaxed">
                 {text.text_content}

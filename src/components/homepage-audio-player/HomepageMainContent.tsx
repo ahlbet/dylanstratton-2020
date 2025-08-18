@@ -42,7 +42,7 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
           {/* Placeholder for P5 sketch - replace with your actual sketch */}
           <div className="w-full h-128 bg-gradient-to-br from-purple-900/20 to-blue-900/20 relative">
             <AudioFFT
-              markovText={currentBlogPost?.markovTexts
+              markovText={(currentBlogPost?.markovTexts ?? [])
                 .map((text) => text.text_content)
                 .join(' ')}
             />
