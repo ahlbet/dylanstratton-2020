@@ -58,11 +58,11 @@ export class Particle {
     // Individual particle properties for unique movement
     this.noiseOffsetX = p.random(1000)
     this.noiseOffsetY = p.random(1000)
-    this.noiseScale = p.random(0.01, 0.05)
+    this.noiseScale = p.random(0.005, 0.025) // Reduced from 0.01, 0.05
     this.noiseStrength = p.random(0.5, 2.0)
     this.individualSeed = p.random(10000)
     this.rotationSpeed = p.random(-0.1, 0.1)
-    this.oscillationSpeed = p.random(0.02, 0.08)
+    this.oscillationSpeed = p.random(0.01, 0.04) // Reduced from 0.02, 0.08
     this.oscillationAmplitude = p.random(5, 20)
 
     // Individual color variation properties based on visual style
@@ -114,7 +114,7 @@ export class Particle {
 
     this.vel = p
       .createVector(p.cos(p.random(p.TWO_PI)), p.sin(p.random(p.TWO_PI)))
-      .mult(this.speed * 0.05)
+      .mult(this.speed * 0.02) // Reduced from 0.05
     this.alpha = 1
     this.size = this.size * 0.1
     this.originalSize = this.size
@@ -139,7 +139,7 @@ export class Particle {
 
     switch (this.frequencyBand) {
       case 0: // Sub-bass (20-60 Hz) - much more dramatic
-        this.speed = p.map(boostedAmp, 0, 1, 0, 15 * baseSpeed)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 8 * baseSpeed) // Reduced from 15
         this.size = p.map(boostedAmp, 0, 1, 8, baseSize * 1.4)
         this.alphaDecay = 1.5
         this.maxLifeFrames = Math.floor(
@@ -182,7 +182,7 @@ export class Particle {
         this.oscillationAmplitude = baseOscillation * 0.8
         break
       case 1: // Bass (60-250 Hz) - most dramatic
-        this.speed = p.map(boostedAmp, 0, 1, 0, 25 * baseSpeed)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 12 * baseSpeed) // Reduced from 25
         this.size = p.map(boostedAmp, 0, 1, 6, baseSize * 1.3)
         this.alphaDecay = 2
         this.maxLifeFrames = Math.floor(
@@ -224,7 +224,7 @@ export class Particle {
         this.oscillationAmplitude = baseOscillation * 1.0
         break
       case 2: // Low Mid (250-500 Hz)
-        this.speed = p.map(boostedAmp, 0, 1, 0, 28 * baseSpeed)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 14 * baseSpeed) // Reduced from 28
         this.size = p.map(boostedAmp, 0, 1, 5, baseSize * 1.1)
         this.alphaDecay = 2.5
         this.maxLifeFrames = Math.floor(
@@ -266,7 +266,7 @@ export class Particle {
         this.oscillationAmplitude = baseOscillation * 1.2
         break
       case 3: // Mid (500-2000 Hz) - very responsive
-        this.speed = p.map(boostedAmp, 0, 1, 0, 30 * baseSpeed)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 15 * baseSpeed) // Reduced from 30
         this.size = p.map(boostedAmp, 0, 1, 4, baseSize * 1.0)
         this.alphaDecay = 3
         this.maxLifeFrames = Math.floor(
@@ -308,7 +308,7 @@ export class Particle {
         this.oscillationAmplitude = baseOscillation * 1.4
         break
       case 4: // High Mid (2000-4000 Hz)
-        this.speed = p.map(boostedAmp, 0, 1, 0, 32 * baseSpeed)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 16 * baseSpeed) // Reduced from 32
         this.size = p.map(boostedAmp, 0, 1, 3, baseSize * 0.9)
         this.alphaDecay = 3.5
         this.maxLifeFrames = Math.floor(
@@ -350,7 +350,7 @@ export class Particle {
         this.oscillationAmplitude = baseOscillation * 1.6
         break
       case 5: // Presence (4000-6000 Hz)
-        this.speed = p.map(boostedAmp, 0, 1, 0, 35 * baseSpeed)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 18 * baseSpeed) // Reduced from 35
         this.size = p.map(boostedAmp, 0, 1, 2, baseSize * 0.8)
         this.alphaDecay = 4
         this.maxLifeFrames = Math.floor(
@@ -392,7 +392,7 @@ export class Particle {
         this.oscillationAmplitude = baseOscillation * 1.8
         break
       case 6: // Brilliance (6000-8000 Hz)
-        this.speed = p.map(boostedAmp, 0, 1, 0, 38 * baseSpeed)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 19 * baseSpeed) // Reduced from 38
         this.size = p.map(boostedAmp, 0, 1, 2, baseSize * 0.7)
         this.alphaDecay = 4.5
         this.maxLifeFrames = Math.floor(
@@ -434,7 +434,7 @@ export class Particle {
         this.oscillationAmplitude = baseOscillation * 2.0
         break
       case 7: // Air (8000-20000 Hz)
-        this.speed = p.map(boostedAmp, 0, 1, 0, 40 * baseSpeed)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 20 * baseSpeed) // Reduced from 40
         this.size = p.map(boostedAmp, 0, 1, 1, baseSize * 0.6)
         this.alphaDecay = 5
         this.maxLifeFrames = Math.floor(
@@ -476,7 +476,7 @@ export class Particle {
         this.oscillationAmplitude = baseOscillation * 2.2
         break
       default:
-        this.speed = p.map(boostedAmp, 0, 1, 0, 25 * baseSpeed)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 12 * baseSpeed) // Reduced from 25
         this.size = p.map(boostedAmp, 0, 1, 4, baseSize * 1.0)
         this.alphaDecay = 3
         if (visualStyle) {
@@ -529,19 +529,19 @@ export class Particle {
     // Add smooth noise movement with visual style modifier
     const noiseForce = p5
       .createVector(noiseX, noiseY)
-      .mult(this.noiseStrength * 0.05 * movementMultiplier)
+      .mult(this.noiseStrength * 0.02 * movementMultiplier) // Reduced from 0.05
     this.vel.add(noiseForce)
 
     // Individual oscillation with visual style modifier
     const oscillationX =
       p5.sin(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
-      0.005 *
+      0.002 * // Reduced from 0.005
       (oscillationMultiplier / 15) // Normalize to base oscillation strength
     const oscillationY =
       p5.cos(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
-      0.005 *
+      0.002 * // Reduced from 0.005
       (oscillationMultiplier / 15) // Normalize to base oscillation strength
     this.vel.add(oscillationX, oscillationY)
 

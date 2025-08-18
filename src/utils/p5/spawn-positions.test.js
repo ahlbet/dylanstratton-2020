@@ -123,7 +123,7 @@ describe('spawn-positions', () => {
 
       addDynamicMovementToPositions(tatShapePositions, mockP5)
 
-      expect(mockP5.random).toHaveBeenCalledWith(0.5, 2.0) // movementSpeed
+      expect(mockP5.random).toHaveBeenCalledWith(0.2, 0.8) // movementSpeed - updated for slower movement
       expect(mockP5.random).toHaveBeenCalledWith(20, 360) // movementRadius
       expect(mockP5.random).toHaveBeenCalledWith(mockP5.TWO_PI) // movementAngle
       expect(mockP5.random).toHaveBeenCalledWith([-1, 1]) // movementDirection

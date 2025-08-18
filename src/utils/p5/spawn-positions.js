@@ -11,7 +11,7 @@
 export const updateTatShapePositions = (tatShapePositions, p) => {
   tatShapePositions.forEach((pos) => {
     // Circular movement around original position
-    pos.movementAngle += pos.movementSpeed * 0.01 * pos.movementDirection
+    pos.movementAngle += pos.movementSpeed * 0.005 * pos.movementDirection // Reduced from 0.01
 
     pos.x = pos.originalX + Math.cos(pos.movementAngle) * pos.movementRadius
     pos.y = pos.originalY + Math.sin(pos.movementAngle) * pos.movementRadius
@@ -31,7 +31,7 @@ export const addDynamicMovementToPositions = (tatShapePositions, p) => {
   tatShapePositions.forEach((pos, index) => {
     pos.originalX = pos.x
     pos.originalY = pos.y
-    pos.movementSpeed = p.random(0.5, 2.0)
+    pos.movementSpeed = p.random(0.2, 0.8) // Reduced from 0.5, 2.0
     pos.movementRadius = p.random(20, 360)
     pos.movementAngle = p.random(p.TWO_PI)
     pos.movementDirection = p.random([-1, 1])
@@ -68,9 +68,9 @@ export const calculateTatSpawnPosition = (
 
     // Add smooth noise for organic movement
     const noiseOffsetX =
-      (position.x + particleIndex * 100) * 0.01 + p.frameCount * 0.003
+      (position.x + particleIndex * 100) * 0.01 + p.frameCount * 0.001 // Reduced from 0.003
     const noiseOffsetY =
-      (position.y + particleIndex * 200) * 0.01 + p.frameCount * 0.003
+      (position.y + particleIndex * 200) * 0.01 + p.frameCount * 0.001 // Reduced from 0.003
     const noiseX = (p.noise(noiseOffsetX) - 0.5) * 40 // Smaller noise for sub-bass
     const noiseY = (p.noise(noiseOffsetY) - 0.5) * 40 // Smaller noise for sub-bass
 
@@ -85,8 +85,8 @@ export const calculateTatSpawnPosition = (
   const position = tatShapePositions[positionIndex]
 
   // Add smooth noise to spawn position
-  const noiseOffsetX = position.x * 0.01 + p.frameCount * 0.005
-  const noiseOffsetY = position.y * 0.01 + p.frameCount * 0.005
+  const noiseOffsetX = position.x * 0.01 + p.frameCount * 0.002 // Reduced from 0.005
+  const noiseOffsetY = position.y * 0.01 + p.frameCount * 0.002 // Reduced from 0.005
   const noiseX = (p.noise(noiseOffsetX) - 0.5) * 60
   const noiseY = (p.noise(noiseOffsetY) - 0.5) * 60
 
@@ -114,7 +114,7 @@ export const calculateFallbackSpawnPosition = (
   bandIndex,
   p
 ) => {
-  const time = frameCount * 0.01
+  const time = frameCount * 0.005 // Reduced from 0.01
   let baseX, baseY
 
   switch (spawnArea) {
