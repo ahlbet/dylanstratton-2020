@@ -1,4 +1,28 @@
+// Define types for the API responses
+interface LocalTextData {
+  texts: Array<{
+    text_content: string
+  }>
+}
+
+interface APITextData {
+  texts: Array<{
+    text: string
+  }>
+  error?: string
+}
+
+interface APIError {
+  error: string
+}
+
 class MarkovGeneratorAPIClient {
+  private apiUrl: string
+  private texts: string[]
+  private isLoading: boolean
+  private isLocalMode: boolean
+  private _availabilityChecked?: boolean
+
   constructor() {
     // Always use local data in development mode
     const isLocalDev = process.env.NODE_ENV === 'development'
@@ -8,9 +32,9 @@ class MarkovGeneratorAPIClient {
     this.isLocalMode = isLocalDev
   }
 
-  async loadTextBatch(count = 20) {
+  async loadTextBatch(count: number = 20): Promise<string[]> {
     if (this.isLoading) {
-      return this.texts.length
+      return this.texts
     }
 
     try {
@@ -24,7 +48,7 @@ class MarkovGeneratorAPIClient {
           throw new Error(`Failed to load local data: ${response.status}`)
         }
 
-        const data = await response.json()
+        const data: LocalTextData = await response.json()
         if (data.texts && data.texts.length > 0) {
           // Get random texts from the local data
           const shuffled = [...data.texts].sort(() => 0.5 - Math.random())
@@ -40,7 +64,7 @@ class MarkovGeneratorAPIClient {
           throw new Error(`API request failed: ${response.status}`)
         }
 
-        const data = await response.json()
+        const data: APITextData = await response.json()
         if (data.error) {
           throw new Error(`API error: ${data.error}`)
         }
@@ -53,13 +77,13 @@ class MarkovGeneratorAPIClient {
       return this.texts
     } catch (error) {
       console.error('❌ Error loading text batch:', error)
-      return 0
+      return []
     } finally {
       this.isLoading = false
     }
   }
 
-  async isAvailable() {
+  async isAvailable(): Promise<boolean> {
     // Cache the availability check to prevent repeated calls
     if (this._availabilityChecked !== undefined) {
       return this._availabilityChecked
