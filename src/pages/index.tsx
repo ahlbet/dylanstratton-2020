@@ -204,7 +204,7 @@ const BlogIndex = ({
         markovTexts: postMarkovTexts,
       })
     }
-  }, [processedPosts, currentBlogPost, supabaseData])
+  }, [processedPosts, supabaseData?.daily, supabaseData?.markovTexts])
 
   // Function to change the current blog post
   const changeBlogPost = (blogPost: BlogPost) => {
@@ -276,7 +276,7 @@ const BlogIndex = ({
         (text): text is MarkovText =>
           text.text_content !== undefined &&
           text.text_content !== null &&
-          text.daily_id === currentBlogPost.daily_id
+          text.daily_id === currentBlogPost?.daily_id
       )
       .map((text) => ({
         id: text.id,
