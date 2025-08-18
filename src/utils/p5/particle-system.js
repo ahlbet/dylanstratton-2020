@@ -562,16 +562,16 @@ export class Particle {
       .mult(this.noiseStrength * 0.02 * movementMultiplier) // Reduced from 0.05
     this.vel.add(noiseForce)
 
-    // Individual oscillation with visual style modifier
+    // Individual oscillation with visual style modifier - reduced for more natural movement
     const oscillationX =
       p5.sin(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
-      0.002 * // Reduced from 0.005
+      0.0005 * // Reduced from 0.002 for much more subtle oscillation
       (oscillationMultiplier / 15) // Normalize to base oscillation strength
     const oscillationY =
       p5.cos(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
-      0.002 * // Reduced from 0.005
+      0.0005 * // Reduced from 0.002 for much more subtle oscillation
       (oscillationMultiplier / 15) // Normalize to base oscillation strength
     this.vel.add(oscillationX, oscillationY)
 
@@ -644,14 +644,14 @@ export class Particle {
           center.y - this.pos.y
         )
 
-        // Much more dramatic pulsing effect - directly tied to audio level
-        const pulseStrength = 3.0 * this.audioReactivity * movementMultiplier // Increased from 2.0 for more sensitivity
+        // Much more subtle pulsing effect - directly tied to audio level
+        const pulseStrength = 1.5 * this.audioReactivity * movementMultiplier // Reduced from 3.0 for less dramatic effect
         // Use audio reactivity to control the frequency and intensity of pulsing
-        const audioFrequency = 0.15 + this.audioReactivity * 0.5 // Increased from 0.1 for more sensitivity
+        const audioFrequency = 0.1 + this.audioReactivity * 0.2 // Reduced from 0.15 for less dramatic frequency
         const pulseDirection =
           p5.sin(p5.frameCount * audioFrequency + this.individualSeed) *
           pulseStrength *
-          (1 + this.audioReactivity * 3) // Increased from 2 for more dramatic effect
+          (1 + this.audioReactivity * 1.5) // Reduced from 3 for less dramatic effect
 
         if (pulseDirection > 0) {
           // Expand outward - controlled dramatic effect with audio-reactive variation
@@ -715,12 +715,12 @@ export class Particle {
           this.vel.y *= -(0.8 + this.audioReactivity * 2.5) * movementMultiplier // Apply visual style movement modifier
         break
       case 3: // Mid - much more dramatic wavey movement directly tied to audio
-        // Audio affects both frequency and amplitude of wavey movement
-        const audioWaveFreq = 0.25 + this.audioReactivity * 0.6 // Increased from 0.2 for more sensitivity
+        // Audio affects both frequency and amplitude of wavey movement - reduced for more natural movement
+        const audioWaveFreq = 0.15 + this.audioReactivity * 0.3 // Reduced from 0.25 for less dramatic frequency
         const audioWaveAmp =
-          1.2 *
+          0.6 * // Reduced from 1.2 for less dramatic amplitude
           this.audioReactivity *
-          (1 + this.audioReactivity * 4) * // Increased from 3 for more dramatic effect
+          (1 + this.audioReactivity * 2) * // Reduced from 4 for less dramatic effect
           movementMultiplier // Apply visual style movement modifier
 
         this.vel.x +=
@@ -759,12 +759,12 @@ export class Particle {
         this.vel.limit(presenceMaxVel)
         break
       case 6: // Brilliance - much more dramatic rapid oscillation directly tied to audio
-        // Audio affects both oscillation frequency and creates chaotic patterns
-        const audioOscFreq = 0.5 + this.audioReactivity * 1.0 // Increased from 0.4 for more sensitivity
+        // Audio affects both oscillation frequency and creates chaotic patterns - reduced for more natural movement
+        const audioOscFreq = 0.3 + this.audioReactivity * 0.5 // Reduced from 0.5 for less dramatic frequency
         const audioOscAmp =
-          1.5 * // Increased from 1.2 for more dramatic effect
+          0.8 * // Reduced from 1.5 for less dramatic amplitude
           this.audioReactivity *
-          (1 + this.audioReactivity * 5) * // Increased from 4 for more dramatic effect
+          (1 + this.audioReactivity * 2.5) * // Reduced from 5 for less dramatic effect
           movementMultiplier // Apply visual style movement modifier
 
         // Add chaotic variation based on audio level
@@ -918,36 +918,36 @@ export class Particle {
       this.alpha / 255
     )
 
-    // Much more dramatic size pulsing based on frequency band and audio reactivity
+    // Much more subtle size pulsing based on frequency band and audio reactivity
     let pulseSize = this.size
 
     // Use audio reactivity to control the intensity of the pulse
-    const audioMultiplier = Math.max(0.05, this.audioReactivity) // Reduced minimum from 0.1 for more dramatic contrast
+    const audioMultiplier = Math.max(0.1, this.audioReactivity) // Increased minimum for less dramatic contrast
 
     if (this.frequencyBand === 0) {
-      // Sub-bass pulses much more dramatically - very obvious difference
-      const pulseFactor = 0.4 + 0.6 * p.sin(p.frameCount * 0.5) // Increased from 0.4 for more dramatic range
-      const sizeMultiplier = 0.4 + pulseFactor * 1.2 // Scale from 0.4x to 1.6x (more dramatic range)
-      pulseSize = this.size * sizeMultiplier * (0.3 + audioMultiplier * 1.4) // More dramatic audio scaling
+      // Sub-bass pulses subtly
+      const pulseFactor = 0.8 + 0.2 * p.sin(p.frameCount * 0.3) // Reduced from 0.4-1.0 to 0.8-1.0 range
+      const sizeMultiplier = 0.8 + pulseFactor * 0.2 // Scale from 0.8x to 1.0x (much more subtle)
+      pulseSize = this.size * sizeMultiplier * (0.7 + audioMultiplier * 0.6) // Less dramatic audio scaling
     } else if (this.frequencyBand === 1) {
-      // Bass pulses more dramatically
-      const pulseFactor = 0.4 + 0.6 * p.sin(p.frameCount * 0.4) // Increased from 0.3 for more dramatic range
-      const sizeMultiplier = 0.4 + pulseFactor * 1.2 // Scale from 0.4x to 1.6x (more dramatic range)
-      pulseSize = this.size * sizeMultiplier * (0.3 + audioMultiplier * 1.4) // More dramatic audio scaling
+      // Bass pulses subtly
+      const pulseFactor = 0.8 + 0.2 * p.sin(p.frameCount * 0.25) // Reduced range and frequency
+      const sizeMultiplier = 0.8 + pulseFactor * 0.2 // Scale from 0.8x to 1.0x (much more subtle)
+      pulseSize = this.size * sizeMultiplier * (0.7 + audioMultiplier * 0.6) // Less dramatic audio scaling
     } else if (this.frequencyBand >= 6) {
-      // High frequencies vibrate much more rapidly
-      const pulseFactor = 0.4 + 0.6 * p.sin(p.frameCount * 1.2) // Increased from 1.0 for more dramatic range
-      const sizeMultiplier = 0.4 + pulseFactor * 1.2 // Scale from 0.4x to 1.6x (more dramatic range)
-      pulseSize = this.size * sizeMultiplier * (0.3 + audioMultiplier * 1.4) // More dramatic audio scaling
+      // High frequencies vibrate subtly
+      const pulseFactor = 0.8 + 0.2 * p.sin(p.frameCount * 0.6) // Reduced range and frequency
+      const sizeMultiplier = 0.8 + pulseFactor * 0.2 // Scale from 0.8x to 1.0x (much more subtle)
+      pulseSize = this.size * sizeMultiplier * (0.7 + audioMultiplier * 0.6) // Less dramatic audio scaling
     } else {
-      // Mid frequencies have much more dramatic pulsing
-      const pulseFactor = 0.4 + 0.6 * p.sin(p.frameCount * 0.3) // Increased from 0.2 for more dramatic range
-      const sizeMultiplier = 0.4 + pulseFactor * 1.2 // Scale from 0.4x to 1.6x (more dramatic range)
-      pulseSize = this.size * sizeMultiplier * (0.3 + audioMultiplier * 1.4) // More dramatic audio scaling
+      // Mid frequencies have subtle pulsing
+      const pulseFactor = 0.8 + 0.2 * p.sin(p.frameCount * 0.2) // Reduced range and frequency
+      const sizeMultiplier = 0.8 + pulseFactor * 0.2 // Scale from 0.8x to 1.0x (much more subtle)
+      pulseSize = this.size * sizeMultiplier * (0.7 + audioMultiplier * 0.6) // Less dramatic audio scaling
     }
 
-    // Safety check - ensure size never goes below 40% of original size (reduced from 50%)
-    const absoluteMinSize = this.size * 0.4
+    // Safety check - ensure size never goes below 80% of original size (increased from 40%)
+    const absoluteMinSize = this.size * 0.8
     pulseSize = Math.max(pulseSize, absoluteMinSize)
 
     // Apply visual style effects in order (back to front)
