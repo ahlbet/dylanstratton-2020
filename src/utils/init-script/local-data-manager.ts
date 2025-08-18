@@ -13,7 +13,6 @@ interface MarkovText {
   text_content: string
   coherency_level: number
   daily_id?: string
-  name?: string
 }
 
 interface LocalData {
