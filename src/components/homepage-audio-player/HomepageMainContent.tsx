@@ -55,7 +55,7 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
       <div className="flex relative bg-black p-6">
         <div className="w-full h-full rounded-lg overflow-hidden relative">
           {/* Placeholder for P5 sketch - replace with your actual sketch */}
-          <div className="w-full h-64 bg-gradient-to-br from-purple-900/20 to-blue-900/20 relative">
+          <div className="w-full h-128 bg-gradient-to-br from-purple-900/20 to-blue-900/20 relative">
             <AudioFFT
               markovText={markovTexts.map((text) => text.content).join(' ')}
             />
