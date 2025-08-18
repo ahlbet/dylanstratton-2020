@@ -7,6 +7,10 @@
  * Audio-reactive particle class
  */
 export class Particle {
+  // Global constants for particle behavior
+  static MAX_VELOCITY = 6.0 // Maximum velocity for any particle
+  static MAX_SPEED = 8.0 // Maximum speed multiplier for any particle
+
   // Helper function to map all colors to blue-to-red spectrum (eliminates green entirely)
   static avoidGreenHue(hue) {
     // Map the full 360° spectrum to blue-to-red (240° to 0°/360°)
@@ -538,6 +542,10 @@ export class Particle {
       const baseSpeed = this.visualStyle?.movementSpeed ?? 1.0
       const speedMultiplier = 0.1 + exponentialAmp * 4.0 // Scale from 0.1x to 4.1x (more dramatic)
       this.speed = this.speed * speedMultiplier
+
+      // Ensure speed doesn't exceed maximum reasonable limit
+      const maxSpeed = Particle.MAX_SPEED // Maximum reasonable speed limit
+      this.speed = Math.min(this.speed, maxSpeed)
     }
 
     // Apply visual style movement modifiers
@@ -608,7 +616,12 @@ export class Particle {
       distanceMultiplier *
       0.75 *
       movementMultiplier // Apply visual style movement modifier
-    this.vel.limit(maxVelocity)
+
+    // Apply absolute maximum velocity limit to prevent excessive speed
+    const absoluteMaxVelocity = Particle.MAX_VELOCITY // Maximum velocity regardless of audio reactivity
+    const finalMaxVelocity = Math.min(maxVelocity, absoluteMaxVelocity)
+
+    this.vel.limit(finalMaxVelocity)
 
     // Constrain particle position to stay close to spawn position
     this.constrainToSpawnArea(p5)
@@ -671,9 +684,10 @@ export class Particle {
         }
 
         // Much more responsive velocity limit for sub-bass - varies dramatically with audio
-        this.vel.limit(
+        const subBassMaxVel =
           (0.3 + this.audioReactivity * 1.5) * 0.75 * movementMultiplier
-        ) // Apply visual style movement modifier
+        const absoluteSubBassMax = Particle.MAX_VELOCITY * 0.67 // 67% of global max for sub-bass
+        this.vel.limit(Math.min(subBassMaxVel, absoluteSubBassMax))
         break
       case 1: // Bass - much more dramatic spiral movement directly tied to audio
         // Audio affects both rotation speed and adds chaotic variation
@@ -689,9 +703,10 @@ export class Particle {
         this.vel.rotate(audioRotationSpeed + chaoticVariation)
 
         // Much more responsive velocity limit for bass - varies dramatically with audio
-        this.vel.limit(
+        const bassMaxVel =
           (0.5 + this.audioReactivity * 2.0) * 0.75 * movementMultiplier
-        ) // Apply visual style movement modifier
+        const absoluteBassMax = Particle.MAX_VELOCITY * 0.83 // 83% of global max for bass
+        this.vel.limit(Math.min(bassMaxVel, absoluteBassMax))
         break
       case 2: // Low Mid - much more dramatic bouncing with audio-reactive bounciness
         if (this.pos.x < 0 || this.pos.x > p5.width)
@@ -714,6 +729,10 @@ export class Particle {
         this.vel.y +=
           p5.cos(p5.frameCount * audioWaveFreq + this.individualSeed) *
           audioWaveAmp
+
+        // Add velocity limit for mid frequencies
+        const midMaxVel = Particle.MAX_VELOCITY // 100% of global max for mid
+        this.vel.limit(midMaxVel)
         break
       case 4: // High Mid - much more dramatic expanding/contracting movement
         const expansionForce = p5.createVector(
@@ -723,6 +742,10 @@ export class Particle {
         expansionForce.normalize()
         expansionForce.mult(1.5 * this.audioReactivity * movementMultiplier) // Apply visual style movement modifier
         this.vel.add(expansionForce)
+
+        // Add velocity limit for high mid frequencies
+        const highMidMaxVel = Particle.MAX_VELOCITY * 0.92 // 92% of global max for high mid
+        this.vel.limit(highMidMaxVel)
         break
       case 5: // Presence - much more dramatic chaotic movement
         this.vel.add(
@@ -730,6 +753,10 @@ export class Particle {
             .createVector(p5.random(-1.0, 1.0), p5.random(-1.0, 1.0)) // Increased from 0.6 to 1.0 (much more dramatic)
             .mult(this.audioReactivity * movementMultiplier) // Apply visual style movement modifier
         )
+
+        // Add velocity limit for presence frequencies
+        const presenceMaxVel = Particle.MAX_VELOCITY * 0.83 // 83% of global max for presence
+        this.vel.limit(presenceMaxVel)
         break
       case 6: // Brilliance - much more dramatic rapid oscillation directly tied to audio
         // Audio affects both oscillation frequency and creates chaotic patterns
@@ -757,15 +784,23 @@ export class Particle {
             audioOscAmp +
           chaoticX
         this.vel.y +=
-          p5.sin(p5.frameCount * audioOscFreq + this.individualSeed) *
+          p5.cos(p5.frameCount * audioOscFreq + this.individualSeed) *
             audioOscAmp +
           chaoticY
+
+        // Add velocity limit for brilliance frequencies
+        const brillianceMaxVel = Particle.MAX_VELOCITY * 0.75 // 75% of global max for brilliance
+        this.vel.limit(brillianceMaxVel)
         break
       case 7: // Air - much more dramatic random direction changes
         if (p5.random() < 0.5 * this.audioReactivity) {
           // Increased from 0.3 to 0.5 (much more frequent)
           this.vel.rotate(p5.random(-p5.PI, p5.PI) * movementMultiplier) // Apply visual style movement modifier
         }
+
+        // Add velocity limit for air frequencies
+        const airMaxVel = Particle.MAX_VELOCITY * 0.67 // 67% of global max for air
+        this.vel.limit(airMaxVel)
         break
     }
   }
