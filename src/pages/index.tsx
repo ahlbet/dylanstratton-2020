@@ -177,7 +177,7 @@ const BlogIndex = ({
   useEffect(() => {
     if (processedPosts.length > 0 && !currentBlogPost) {
       const post = processedPosts[0]
-      const postMarkovTexts = supabaseData?.markovTexts.filter(
+      const postMarkovTexts = (supabaseData?.markovTexts ?? []).filter(
         (text) => text.daily_id === post.daily_id
       )
       // Filter tracks for the selected blog post
@@ -201,7 +201,7 @@ const BlogIndex = ({
       changeBlogPost({
         ...post,
         audio: tracks || [],
-        markovTexts: postMarkovTexts,
+        markovTexts: postMarkovTexts || [],
       })
     }
   }, [processedPosts, supabaseData?.audio, supabaseData?.markovTexts])
@@ -214,7 +214,7 @@ const BlogIndex = ({
         setIsPlaying(false)
       }
 
-      const postMarkovTexts = supabaseData?.markovTexts.filter(
+      const postMarkovTexts = (supabaseData?.markovTexts ?? []).filter(
         (text) => text.daily_id === blogPost.daily_id
       )
 
@@ -239,7 +239,7 @@ const BlogIndex = ({
 
       setCurrentBlogPost({
         ...blogPost,
-        audio: tracks,
+        audio: tracks || [],
         markovTexts: postMarkovTexts || [],
       })
     }
