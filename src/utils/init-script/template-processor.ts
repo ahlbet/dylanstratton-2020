@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { transformDate } from '../date-utils'
 import { generateCoverArt } from '../cover-art-generator'
+import { AudioProcessor } from './audio-processor'
 
 interface AudioFile {
   fileName: string
@@ -108,7 +109,6 @@ class TemplateProcessor {
       console.log('Generating cover art for blog post...')
       const coverArtBuffer = await generateCoverArt(postName, 2500)
 
-      const { AudioProcessor } = await import('./audio-processor')
       const sanitizedName = AudioProcessor.sanitizeFilename(postName)
       const coverArtFileName = `${sanitizedName}.png`
 
