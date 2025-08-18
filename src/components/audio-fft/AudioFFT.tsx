@@ -86,11 +86,97 @@ const generateBlogPostSeed = (metadata: BlogPostMetadata): number => {
 const generateVisualStyle = (seed: number) => {
   const p5 = window.p5
 
+  // Create more sophisticated color relationships
+  const baseHue = seed % 360
+  const complementaryHue = (baseHue + 180) % 360
+  const analogousHue1 = (baseHue + 30) % 360
+  const analogousHue2 = (baseHue - 30 + 360) % 360
+  const triadicHue1 = (baseHue + 120) % 360
+  const triadicHue2 = (baseHue + 240) % 360
+
+  // Create color scheme variations based on seed
+  const colorScheme = seed % 8 // 8 different color schemes
+  let primaryHue, secondaryHue, accentHue, tertiaryHue
+
+  switch (colorScheme) {
+    case 0: // Monochromatic with variations
+      primaryHue = baseHue
+      secondaryHue = (baseHue + 15) % 360
+      accentHue = (baseHue + 30) % 360
+      tertiaryHue = (baseHue + 45) % 360
+      break
+    case 1: // Complementary
+      primaryHue = baseHue
+      secondaryHue = complementaryHue
+      accentHue = (baseHue + 60) % 360
+      tertiaryHue = (complementaryHue + 60) % 360
+      break
+    case 2: // Analogous
+      primaryHue = baseHue
+      secondaryHue = analogousHue1
+      accentHue = analogousHue2
+      tertiaryHue = (baseHue + 45) % 360
+      break
+    case 3: // Triadic
+      primaryHue = baseHue
+      secondaryHue = triadicHue1
+      accentHue = triadicHue2
+      tertiaryHue = (baseHue + 90) % 360
+      break
+    case 4: // Split-complementary
+      primaryHue = baseHue
+      secondaryHue = (complementaryHue + 30) % 360
+      accentHue = (complementaryHue - 30 + 360) % 360
+      tertiaryHue = (baseHue + 45) % 360
+      break
+    case 5: // Tetradic (double complementary)
+      primaryHue = baseHue
+      secondaryHue = (baseHue + 90) % 360
+      accentHue = complementaryHue
+      tertiaryHue = (complementaryHue + 90) % 360
+      break
+    case 6: // Warm vs Cool
+      primaryHue = baseHue < 180 ? baseHue : (baseHue + 180) % 360
+      secondaryHue = baseHue < 180 ? (baseHue + 180) % 360 : baseHue
+      accentHue = (primaryHue + 60) % 360
+      tertiaryHue = (secondaryHue + 60) % 360
+      break
+    case 7: // High contrast
+      primaryHue = baseHue
+      secondaryHue = (baseHue + 120) % 360
+      accentHue = (baseHue + 240) % 360
+      tertiaryHue = (baseHue + 60) % 360
+      break
+    default:
+      primaryHue = baseHue
+      secondaryHue = (baseHue + 137) % 360
+      accentHue = (baseHue + 73) % 360
+      tertiaryHue = (baseHue + 200) % 360
+  }
+
+  // Add subtle variations to prevent identical colors
+  const hueVariation = (seed % 20) - 10 // ±10 degree variation
+
   return {
-    // Color palette variations - more dramatic ranges
-    primaryHue: seed % 360,
-    secondaryHue: (seed * 137) % 360,
-    accentHue: (seed * 73) % 360,
+    // Enhanced color palette with more sophisticated relationships
+    primaryHue: (primaryHue + hueVariation + 360) % 360,
+    secondaryHue: (secondaryHue + hueVariation + 360) % 360,
+    accentHue: (accentHue + hueVariation + 360) % 360,
+    tertiaryHue: (tertiaryHue + hueVariation + 360) % 360,
+
+    // Color scheme identifier for debugging
+    colorScheme,
+
+    // Enhanced saturation and brightness variations
+    primarySaturation: 70 + (seed % 30), // 70-100%
+    secondarySaturation: 65 + (seed % 35), // 65-100%
+    accentSaturation: 75 + (seed % 25), // 75-100%
+    tertiarySaturation: 60 + (seed % 40), // 60-100%
+
+    primaryBrightness: 75 + (seed % 25), // 75-100%
+    secondaryBrightness: 70 + (seed % 30), // 70-100%
+    accentBrightness: 80 + (seed % 20), // 80-100%
+    tertiaryBrightness: 65 + (seed % 35), // 65-100%,
 
     // Shape and pattern variations - more dramatic ranges
     shapeDensity: 0.3 + ((seed % 100) / 100) * 2.7, // 0.3 to 3.0 (more dramatic)
@@ -322,6 +408,7 @@ export default function AudioFFT({
 
   return (
     <div
+      data-testid="audio-fft-container"
       style={{
         width: '100%',
         height: '100%',

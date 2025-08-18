@@ -53,6 +53,7 @@ export class Particle {
     this.frequencyBand = frequencyBand // 0-7: different frequency ranges
     this.lifeFrames = 0
     this.visualStyle = visualStyle // Store visual style for use throughout the particle's lifecycle
+    this.markovSeed = markovSeed // Store markov seed for fallback color generation
 
     // Individual particle properties for unique movement
     this.noiseOffsetX = p.random(1000)
@@ -64,21 +65,43 @@ export class Particle {
     this.oscillationSpeed = p.random(0.02, 0.08)
     this.oscillationAmplitude = p.random(5, 20)
 
-    // Individual color variation properties based on markov seed and visual style
-    const primaryHue = visualStyle?.primaryHue ?? markovSeed % 360
-    const hueVariation = p.random(-30, 30) // ±30 degree variation
-    this.colorHue = Particle.avoidGreenHue(
-      (primaryHue + hueVariation + 360) % 360
-    )
-    const baseSaturationInit = p.random(60, 100)
-    const baseBrightnessInit = p.random(70, 100)
-    const adjustedColorsInit = Particle.adjustGreenishColors(
-      this.colorHue,
-      baseSaturationInit,
-      baseBrightnessInit
-    )
-    this.colorSaturation = adjustedColorsInit.saturation
-    this.colorBrightness = adjustedColorsInit.brightness
+    // Individual color variation properties based on visual style
+    if (visualStyle) {
+      // Use visual style colors with individual variations
+      const hueVariation = p.random(-15, 15) // ±15 degree variation
+      this.colorHue = Particle.avoidGreenHue(
+        (visualStyle.primaryHue + hueVariation + 360) % 360
+      )
+
+      // Use individual saturation and brightness from visual style
+      const satVariation = p.random(-10, 10)
+      const brightVariation = p.random(-10, 10)
+      this.colorSaturation = Math.max(
+        50,
+        Math.min(100, (visualStyle.primarySaturation || 85) + satVariation)
+      )
+      this.colorBrightness = Math.max(
+        60,
+        Math.min(100, (visualStyle.primaryBrightness || 85) + brightVariation)
+      )
+    } else {
+      // Fallback to markov seed colors
+      const primaryHue = markovSeed % 360
+      const hueVariation = p.random(-30, 30) // ±30 degree variation
+      this.colorHue = Particle.avoidGreenHue(
+        (primaryHue + hueVariation + 360) % 360
+      )
+      const baseSaturationInit = p.random(60, 100)
+      const baseBrightnessInit = p.random(70, 100)
+      const adjustedColorsInit = Particle.adjustGreenishColors(
+        this.colorHue,
+        baseSaturationInit,
+        baseBrightnessInit
+      )
+      this.colorSaturation = adjustedColorsInit.saturation
+      this.colorBrightness = adjustedColorsInit.brightness
+    }
+
     this.colorShiftSpeed = p.random(0.5, 2.0)
     this.colorShiftDirection = p.random([-1, 1])
 
@@ -87,7 +110,7 @@ export class Particle {
     const exponentialAmp = Math.pow(normalizedAmp, 0.15) // Much more sensitive to low values (increased from 0.3)
 
     // Configure particle based on frequency band and visual style
-    this.configureByFrequencyBand(exponentialAmp, primaryHue)
+    this.configureByFrequencyBand(exponentialAmp, visualStyle)
 
     this.vel = p
       .createVector(p.cos(p.random(p.TWO_PI)), p.sin(p.random(p.TWO_PI)))
@@ -100,7 +123,7 @@ export class Particle {
     this.audioReactivity = exponentialAmp // Store for dynamic updates
   }
 
-  configureByFrequencyBand(exponentialAmp, primaryHue) {
+  configureByFrequencyBand(exponentialAmp, visualStyle) {
     const p = this.p
 
     // Boost the exponential amplitude for more dramatic response
@@ -110,9 +133,9 @@ export class Particle {
     const lifespanVariation = p.random(0.7, 1.3)
 
     // Apply visual style overrides if available
-    const baseSize = this.visualStyle?.maxParticleSize ?? 25
-    const baseSpeed = this.visualStyle?.movementSpeed ?? 1.0
-    const baseOscillation = this.visualStyle?.oscillationStrength ?? 15
+    const baseSize = visualStyle?.maxParticleSize ?? 25
+    const baseSpeed = visualStyle?.movementSpeed ?? 1.0
+    const baseOscillation = visualStyle?.oscillationStrength ?? 15
 
     switch (this.frequencyBand) {
       case 0: // Sub-bass (20-60 Hz) - much more dramatic
@@ -123,24 +146,38 @@ export class Particle {
           (180 + boostedAmp * 120) * lifespanVariation
         )
         // Use visual style colors if available
-        if (this.visualStyle) {
+        if (visualStyle) {
           this.colorHue = Particle.avoidGreenHue(
-            (this.visualStyle.primaryHue + p.random(-10, 10) + 360) % 360
+            (visualStyle.primaryHue + p.random(-10, 10) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.primarySaturation || 90) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.primaryBrightness || 90) + p.random(-5, 5)
+            )
           )
         } else {
           this.colorHue = Particle.avoidGreenHue(
-            (primaryHue + p.random(-10, 10) + 360) % 360
+            ((this.markovSeed % 360) + p.random(-10, 10) + 360) % 360
           )
+          const baseSaturation = p.random(90, 100)
+          const baseBrightness = p.random(90, 100)
+          const adjustedColors = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation,
+            baseBrightness
+          )
+          this.colorSaturation = adjustedColors.saturation
+          this.colorBrightness = adjustedColors.brightness
         }
-        const baseSaturation = p.random(90, 100)
-        const baseBrightness = p.random(90, 100)
-        const adjustedColors = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation,
-          baseBrightness
-        )
-        this.colorSaturation = adjustedColors.saturation
-        this.colorBrightness = adjustedColors.brightness
         this.noiseStrength *= 0.3
         this.oscillationAmplitude = baseOscillation * 0.8
         break
@@ -151,24 +188,38 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (150 + boostedAmp * 100) * lifespanVariation
         )
-        if (this.visualStyle) {
+        if (visualStyle) {
           this.colorHue = Particle.avoidGreenHue(
-            (this.visualStyle.secondaryHue + p.random(-8, 8) + 360) % 360
+            (visualStyle.secondaryHue + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.secondarySaturation || 85) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.secondaryBrightness || 85) + p.random(-5, 5)
+            )
           )
         } else {
           this.colorHue = Particle.avoidGreenHue(
-            (primaryHue + 30 + p.random(-8, 8) + 360) % 360
+            ((this.markovSeed % 360) + 30 + p.random(-8, 8) + 360) % 360
           )
+          const baseSaturation1 = p.random(85, 100)
+          const baseBrightness1 = p.random(85, 100)
+          const adjustedColors1 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation1,
+            baseBrightness1
+          )
+          this.colorSaturation = adjustedColors1.saturation
+          this.colorBrightness = adjustedColors1.brightness
         }
-        const baseSaturation1 = p.random(85, 100)
-        const baseBrightness1 = p.random(85, 100)
-        const adjustedColors1 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation1,
-          baseBrightness1
-        )
-        this.colorSaturation = adjustedColors1.saturation
-        this.colorBrightness = adjustedColors1.brightness
         this.noiseStrength *= 0.6
         this.oscillationAmplitude = baseOscillation * 1.0
         break
@@ -179,24 +230,38 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (120 + boostedAmp * 80) * lifespanVariation
         )
-        if (this.visualStyle) {
+        if (visualStyle) {
           this.colorHue = Particle.avoidGreenHue(
-            (this.visualStyle.accentHue + p.random(-8, 8) + 360) % 360
+            (visualStyle.accentHue + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.accentSaturation || 80) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.accentBrightness || 80) + p.random(-5, 5)
+            )
           )
         } else {
           this.colorHue = Particle.avoidGreenHue(
-            (primaryHue + 60 + p.random(-8, 8) + 360) % 360
+            ((this.markovSeed % 360) + 60 + p.random(-8, 8) + 360) % 360
           )
+          const baseSaturation2 = p.random(80, 100)
+          const baseBrightness2 = p.random(80, 100)
+          const adjustedColors2 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation2,
+            baseBrightness2
+          )
+          this.colorSaturation = adjustedColors2.saturation
+          this.colorBrightness = adjustedColors2.brightness
         }
-        const baseSaturation2 = p.random(80, 100)
-        const baseBrightness2 = p.random(80, 100)
-        const adjustedColors2 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation2,
-          baseBrightness2
-        )
-        this.colorSaturation = adjustedColors2.saturation
-        this.colorBrightness = adjustedColors2.brightness
         this.noiseStrength *= 1.0
         this.oscillationAmplitude = baseOscillation * 1.2
         break
@@ -207,24 +272,38 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (100 + boostedAmp * 60) * lifespanVariation
         )
-        if (this.visualStyle) {
+        if (visualStyle) {
           this.colorHue = Particle.avoidGreenHue(
-            (this.visualStyle.primaryHue + 90 + p.random(-8, 8) + 360) % 360
+            (visualStyle.tertiaryHue + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.tertiarySaturation || 75) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.tertiaryBrightness || 75) + p.random(-5, 5)
+            )
           )
         } else {
           this.colorHue = Particle.avoidGreenHue(
-            (primaryHue + 90 + p.random(-8, 8) + 360) % 360
+            ((this.markovSeed % 360) + 90 + p.random(-8, 8) + 360) % 360
           )
+          const baseSaturation3 = p.random(75, 100)
+          const baseBrightness3 = p.random(75, 100)
+          const adjustedColors3 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation3,
+            baseBrightness3
+          )
+          this.colorSaturation = adjustedColors3.saturation
+          this.colorBrightness = adjustedColors3.brightness
         }
-        const baseSaturation3 = p.random(75, 100)
-        const baseBrightness3 = p.random(75, 100)
-        const adjustedColors3 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation3,
-          baseBrightness3
-        )
-        this.colorSaturation = adjustedColors3.saturation
-        this.colorBrightness = adjustedColors3.brightness
         this.noiseStrength *= 1.4
         this.oscillationAmplitude = baseOscillation * 1.4
         break
@@ -235,24 +314,38 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (80 + boostedAmp * 40) * lifespanVariation
         )
-        if (this.visualStyle) {
+        if (visualStyle) {
           this.colorHue = Particle.avoidGreenHue(
-            (this.visualStyle.secondaryHue + 140 + p.random(-8, 8) + 360) % 360
+            (visualStyle.primaryHue + 140 + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.primarySaturation || 70) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.primaryBrightness || 70) + p.random(-5, 5)
+            )
           )
         } else {
           this.colorHue = Particle.avoidGreenHue(
-            (primaryHue + 140 + p.random(-8, 8) + 360) % 360
+            ((this.markovSeed % 360) + 140 + p.random(-8, 8) + 360) % 360
           )
+          const baseSaturation4 = p.random(70, 100)
+          const baseBrightness4 = p.random(70, 100)
+          const adjustedColors4 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation4,
+            baseBrightness4
+          )
+          this.colorSaturation = adjustedColors4.saturation
+          this.colorBrightness = adjustedColors4.brightness
         }
-        const baseSaturation4 = p.random(70, 100)
-        const baseBrightness4 = p.random(70, 100)
-        const adjustedColors4 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation4,
-          baseBrightness4
-        )
-        this.colorSaturation = adjustedColors4.saturation
-        this.colorBrightness = adjustedColors4.brightness
         this.noiseStrength *= 1.8
         this.oscillationAmplitude = baseOscillation * 1.6
         break
@@ -263,24 +356,38 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (60 + boostedAmp * 30) * lifespanVariation
         )
-        if (this.visualStyle) {
+        if (visualStyle) {
           this.colorHue = Particle.avoidGreenHue(
-            (this.visualStyle.accentHue + 150 + p.random(-8, 8) + 360) % 360
+            (visualStyle.secondaryHue + 150 + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.secondarySaturation || 65) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.secondaryBrightness || 65) + p.random(-5, 5)
+            )
           )
         } else {
           this.colorHue = Particle.avoidGreenHue(
-            (primaryHue + 150 + p.random(-8, 8) + 360) % 360
+            ((this.markovSeed % 360) + 150 + p.random(-8, 8) + 360) % 360
           )
+          const baseSaturation5 = p.random(65, 100)
+          const baseBrightness5 = p.random(65, 100)
+          const adjustedColors5 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation5,
+            baseBrightness5
+          )
+          this.colorSaturation = adjustedColors5.saturation
+          this.colorBrightness = adjustedColors5.brightness
         }
-        const baseSaturation5 = p.random(65, 100)
-        const baseBrightness5 = p.random(65, 100)
-        const adjustedColors5 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation5,
-          baseBrightness5
-        )
-        this.colorSaturation = adjustedColors5.saturation
-        this.colorBrightness = adjustedColors5.brightness
         this.noiseStrength *= 2.2
         this.oscillationAmplitude = baseOscillation * 1.8
         break
@@ -291,24 +398,38 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (40 + boostedAmp * 20) * lifespanVariation
         )
-        if (this.visualStyle) {
+        if (visualStyle) {
           this.colorHue = Particle.avoidGreenHue(
-            (this.visualStyle.primaryHue + 180 + p.random(-8, 8) + 360) % 360
+            (visualStyle.accentHue + 180 + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.accentSaturation || 60) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.accentBrightness || 60) + p.random(-5, 5)
+            )
           )
         } else {
           this.colorHue = Particle.avoidGreenHue(
-            (primaryHue + 180 + p.random(-8, 8) + 360) % 360
+            ((this.markovSeed % 360) + 180 + p.random(-8, 8) + 360) % 360
           )
+          const baseSaturation6 = p.random(60, 100)
+          const baseBrightness6 = p.random(60, 100)
+          const adjustedColors6 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation6,
+            baseBrightness6
+          )
+          this.colorSaturation = adjustedColors6.saturation
+          this.colorBrightness = adjustedColors6.brightness
         }
-        const baseSaturation6 = p.random(60, 100)
-        const baseBrightness6 = p.random(60, 100)
-        const adjustedColors6 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation6,
-          baseBrightness6
-        )
-        this.colorSaturation = adjustedColors6.saturation
-        this.colorBrightness = adjustedColors6.brightness
         this.noiseStrength *= 2.6
         this.oscillationAmplitude = baseOscillation * 2.0
         break
@@ -319,24 +440,38 @@ export class Particle {
         this.maxLifeFrames = Math.floor(
           (30 + boostedAmp * 15) * lifespanVariation
         )
-        if (this.visualStyle) {
+        if (visualStyle) {
           this.colorHue = Particle.avoidGreenHue(
-            (this.visualStyle.secondaryHue + 210 + p.random(-8, 8) + 360) % 360
+            (visualStyle.tertiaryHue + 210 + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.tertiarySaturation || 55) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.tertiaryBrightness || 55) + p.random(-5, 5)
+            )
           )
         } else {
           this.colorHue = Particle.avoidGreenHue(
-            (primaryHue + 210 + p.random(-8, 8) + 360) % 360
+            ((this.markovSeed % 360) + 210 + p.random(-8, 8) + 360) % 360
           )
+          const baseSaturation7 = p.random(55, 100)
+          const baseBrightness7 = p.random(55, 100)
+          const adjustedColors7 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation7,
+            baseBrightness7
+          )
+          this.colorSaturation = adjustedColors7.saturation
+          this.colorBrightness = adjustedColors7.brightness
         }
-        const baseSaturation7 = p.random(55, 100)
-        const baseBrightness7 = p.random(55, 100)
-        const adjustedColors7 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation7,
-          baseBrightness7
-        )
-        this.colorSaturation = adjustedColors7.saturation
-        this.colorBrightness = adjustedColors7.brightness
         this.noiseStrength *= 3.0
         this.oscillationAmplitude = baseOscillation * 2.2
         break
@@ -344,24 +479,38 @@ export class Particle {
         this.speed = p.map(boostedAmp, 0, 1, 0, 25 * baseSpeed)
         this.size = p.map(boostedAmp, 0, 1, 4, baseSize * 1.0)
         this.alphaDecay = 3
-        if (this.visualStyle) {
+        if (visualStyle) {
           this.colorHue = Particle.avoidGreenHue(
-            (this.visualStyle.primaryHue + p.random(-20, 20) + 360) % 360
+            (visualStyle.primaryHue + p.random(-20, 20) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.primarySaturation || 75) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.primaryBrightness || 75) + p.random(-5, 5)
+            )
           )
         } else {
           this.colorHue = Particle.avoidGreenHue(
-            (primaryHue + p.random(-20, 20) + 360) % 360
+            ((this.markovSeed % 360) + p.random(-20, 20) + 360) % 360
           )
+          const baseSaturationDefault = p.random(75, 100)
+          const baseBrightnessDefault = p.random(75, 100)
+          const adjustedColorsDefault = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturationDefault,
+            baseBrightnessDefault
+          )
+          this.colorSaturation = adjustedColorsDefault.saturation
+          this.colorBrightness = adjustedColorsDefault.brightness
         }
-        const baseSaturationDefault = p.random(50, 100)
-        const baseBrightnessDefault = p.random(60, 100)
-        const adjustedColorsDefault = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturationDefault,
-          baseBrightnessDefault
-        )
-        this.colorSaturation = adjustedColorsDefault.saturation
-        this.colorBrightness = adjustedColorsDefault.brightness
         this.oscillationAmplitude = baseOscillation * 1.0
     }
   }
@@ -748,10 +897,28 @@ export class Particle {
 
     // 1. Glow effect (drawn first, behind everything)
     if (enableGlow) {
+      let glowHue = this.colorHue
+      let glowSaturation = adjustedColors.saturation * 0.7
+      let glowBrightness = adjustedColors.brightness * 1.2
+
+      // Use visual style colors for glow if available
+      if (this.visualStyle) {
+        // Alternate between primary and secondary colors for glow
+        if (this.frequencyBand % 2 === 0) {
+          glowHue = this.visualStyle.primaryHue
+          glowSaturation = (this.visualStyle.primarySaturation || 85) * 0.8
+          glowBrightness = (this.visualStyle.primaryBrightness || 85) * 1.3
+        } else {
+          glowHue = this.visualStyle.secondaryHue
+          glowSaturation = (this.visualStyle.secondarySaturation || 80) * 0.8
+          glowBrightness = (this.visualStyle.secondaryBrightness || 80) * 1.3
+        }
+      }
+
       const glowColor = p.color(
-        this.colorHue,
-        adjustedColors.saturation * 0.7,
-        adjustedColors.brightness * 1.2,
+        glowHue,
+        glowSaturation,
+        glowBrightness,
         (this.alpha / 255) * 0.15
       )
       p.fill(glowColor)
@@ -764,12 +931,34 @@ export class Particle {
         const trailAlpha =
           (this.alpha / 255) * (0.3 / i) * (1 - i / (trailLength + 1))
         const trailSize = pulseSize * (1 + i * 0.2)
-        p.fill(
-          currentColor.levels[0],
-          currentColor.levels[1],
-          currentColor.levels[2],
-          trailAlpha
-        )
+
+        let trailHue = this.colorHue
+        let trailSaturation = adjustedColors.saturation
+        let trailBrightness = adjustedColors.brightness
+
+        // Use visual style colors for trails if available
+        if (this.visualStyle) {
+          // Use different colors for different trail layers
+          switch (i % 3) {
+            case 0: // First trail layer
+              trailHue = this.visualStyle.primaryHue
+              trailSaturation = this.visualStyle.primarySaturation || 85
+              trailBrightness = this.visualStyle.primaryBrightness || 85
+              break
+            case 1: // Second trail layer
+              trailHue = this.visualStyle.secondaryHue
+              trailSaturation = this.visualStyle.secondarySaturation || 80
+              trailBrightness = this.visualStyle.secondaryBrightness || 80
+              break
+            case 2: // Third trail layer
+              trailHue = this.visualStyle.accentHue
+              trailSaturation = this.visualStyle.accentSaturation || 75
+              trailBrightness = this.visualStyle.accentBrightness || 75
+              break
+          }
+        }
+
+        p.fill(trailHue, trailSaturation, trailBrightness, trailAlpha)
         p.ellipse(this.pos.x, this.pos.y, trailSize)
       }
     }
@@ -777,10 +966,23 @@ export class Particle {
     // 3. Ripple effect
     if (enableRipple) {
       const rippleSize = pulseSize * (1 + p.sin(p.frameCount * 0.1) * 0.3)
+
+      let rippleHue = this.colorHue
+      let rippleSaturation = adjustedColors.saturation
+      let rippleBrightness = adjustedColors.brightness
+
+      // Use visual style colors for ripple if available
+      if (this.visualStyle) {
+        // Use tertiary color for ripple effect
+        rippleHue = this.visualStyle.tertiaryHue
+        rippleSaturation = this.visualStyle.tertiarySaturation || 70
+        rippleBrightness = this.visualStyle.tertiaryBrightness || 70
+      }
+
       p.fill(
-        currentColor.levels[0],
-        currentColor.levels[1],
-        currentColor.levels[2],
+        rippleHue,
+        rippleSaturation,
+        rippleBrightness,
         (this.alpha / 255) * 0.2
       )
       p.ellipse(this.pos.x, this.pos.y, rippleSize * 1.8)
@@ -794,7 +996,40 @@ export class Particle {
     if (enableSparkle && p.random() < sparkleFrequency) {
       const sparkleSize = pulseSize * 0.3
       const sparkleAlpha = (this.alpha / 255) * 0.8
-      p.fill(255, 255, 255, sparkleAlpha) // White sparkle
+
+      let sparkleHue = 0 // Default to white
+      let sparkleSaturation = 0
+      let sparkleBrightness = 100
+
+      // Use visual style colors for sparkle if available
+      if (this.visualStyle) {
+        // Alternate between different visual style colors for sparkles
+        const sparkleColorIndex = Math.floor(p.random(0, 4))
+        switch (sparkleColorIndex) {
+          case 0: // Primary color
+            sparkleHue = this.visualStyle.primaryHue
+            sparkleSaturation = this.visualStyle.primarySaturation || 85
+            sparkleBrightness = this.visualStyle.primaryBrightness || 85
+            break
+          case 1: // Secondary color
+            sparkleHue = this.visualStyle.secondaryHue
+            sparkleSaturation = this.visualStyle.secondarySaturation || 80
+            sparkleBrightness = this.visualStyle.secondaryBrightness || 80
+            break
+          case 2: // Accent color
+            sparkleHue = this.visualStyle.accentHue
+            sparkleSaturation = this.visualStyle.accentSaturation || 75
+            sparkleBrightness = this.visualStyle.accentBrightness || 75
+            break
+          case 3: // Tertiary color
+            sparkleHue = this.visualStyle.tertiaryHue
+            sparkleSaturation = this.visualStyle.tertiarySaturation || 70
+            sparkleBrightness = this.visualStyle.tertiaryBrightness || 70
+            break
+        }
+      }
+
+      p.fill(sparkleHue, sparkleSaturation, sparkleBrightness, sparkleAlpha)
       p.ellipse(
         this.pos.x + p.random(-pulseSize / 2, pulseSize / 2),
         this.pos.y + p.random(-pulseSize / 2, pulseSize / 2),
