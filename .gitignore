@@ -74,3 +74,4 @@ playwright-report/
 
 tsconfig.tsbuildinfo
 dist/
+local-dev-data/
