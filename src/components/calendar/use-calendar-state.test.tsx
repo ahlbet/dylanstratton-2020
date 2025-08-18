@@ -6,7 +6,7 @@ import { UserPreferencesProvider } from './user-preferences-context'
 
 // Mock the calendar context
 const mockCalendarContext = {
-  currentView: 'dayGridMonth' as const,
+  currentView: 'dayGridMonth' as 'dayGridMonth' | 'timeGridWeek' | 'listWeek',
   currentDate: '2024-01-15',
   viewOptions: ['dayGridMonth', 'timeGridWeek', 'listWeek'] as const,
   setView: jest.fn(),

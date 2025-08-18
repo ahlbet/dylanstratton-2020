@@ -18,8 +18,8 @@ interface MarkovChain {
   [key: string]: string[]
 }
 
-type EditTextFunction = (text: string, index: number) => Promise<string>
-type GetCoherencyFunction = (text: string, index: number) => Promise<number>
+export type EditTextFunction = (text: string, index: number) => Promise<string>
+export type GetCoherencyFunction = (text: string, index: number) => Promise<number>
 
 /**
  * Manages Markov text generation and processing for the init script

@@ -5,7 +5,7 @@ import SEO from './seo'
 
 // Mock the Gatsby graphql query
 jest.mock('gatsby', () => ({
-  useStaticQuery: jest.fn(),
+  useStaticQuery: jest.fn() as jest.MockedFunction<typeof useStaticQuery>,
   graphql: jest.fn(),
 }))
 
