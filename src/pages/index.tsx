@@ -144,6 +144,29 @@ const BlogIndex = ({
   // Calculate total pages for pagination
   const totalPages = Math.ceil(totalCount / postsPerPage)
 
+  // Helper function to filter and process tracks for a blog post
+  const processTracksForBlogPost = (dailyId: string) => {
+    if (!supabaseData?.audio) return []
+
+    return supabaseData.audio
+      .filter(
+        (track): track is AudioItem =>
+          Boolean(track.storage_path) &&
+          Boolean(track.daily_id) &&
+          track.daily_id === dailyId
+      )
+      .map((track) => ({
+        id: track.id,
+        title: generateTrackTitle(track),
+        date: new Date(track.created_at || '').toLocaleDateString(),
+        duration: formatDuration(track.duration || 0),
+        durationSeconds: track.duration || 0,
+        storage_path: track.storage_path,
+        daily_id: track.daily_id,
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  }
+
   // Process daily data from Supabase into the format expected by components
   const processedPosts = useMemo(() => {
     if (!supabaseData?.daily) {
@@ -181,23 +204,8 @@ const BlogIndex = ({
         (text) => text.daily_id === post.daily_id
       )
       // Filter tracks for the selected blog post
-      const tracks = supabaseData.audio
-        .filter(
-          (track): track is AudioItem =>
-            Boolean(track.storage_path) &&
-            Boolean(track.daily_id) &&
-            track.daily_id === post.daily_id
-        )
-        .map((track) => ({
-          id: track.id,
-          title: generateTrackTitle(track),
-          date: new Date(track.created_at || '').toLocaleDateString(),
-          duration: formatDuration(track.duration || 0),
-          durationSeconds: track.duration || 0,
-          storage_path: track.storage_path,
-          daily_id: track.daily_id,
-        }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      const tracks = processTracksForBlogPost(post.daily_id)
+
       changeBlogPost({
         ...post,
         audio: tracks || [],
@@ -219,23 +227,7 @@ const BlogIndex = ({
       )
 
       // Filter tracks for the selected blog post
-      const tracks = supabaseData.audio
-        .filter(
-          (track): track is AudioItem =>
-            Boolean(track.storage_path) &&
-            Boolean(track.daily_id) &&
-            track.daily_id === blogPost.daily_id
-        )
-        .map((track) => ({
-          id: track.id,
-          title: generateTrackTitle(track),
-          date: new Date(track.created_at || '').toLocaleDateString(),
-          duration: formatDuration(track.duration || 0),
-          durationSeconds: track.duration || 0,
-          storage_path: track.storage_path,
-          daily_id: track.daily_id,
-        }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      const tracks = processTracksForBlogPost(blogPost.daily_id)
 
       setCurrentBlogPost({
         ...blogPost,
