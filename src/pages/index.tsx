@@ -204,7 +204,7 @@ const BlogIndex = ({
         markovTexts: postMarkovTexts,
       })
     }
-  }, [processedPosts, supabaseData?.daily, supabaseData?.markovTexts])
+  }, [processedPosts, supabaseData?.audio, supabaseData?.markovTexts])
 
   // Function to change the current blog post
   const changeBlogPost = (blogPost: BlogPost) => {
