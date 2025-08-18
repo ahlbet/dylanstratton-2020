@@ -125,7 +125,7 @@ export const createAudioReactiveAnimationLoop = (
     // Update and draw particles
     for (let i = particles.length - 1; i >= 0; i--) {
       const pt = particles[i]
-      pt.update()
+      pt.update(p, null, frequencyBands) // Pass frequency data for real-time reactivity
       pt.draw()
       if (pt.isDead()) {
         particles.splice(i, 1)
@@ -139,11 +139,11 @@ export const createAudioReactiveAnimationLoop = (
  * @param {Array} particles - Array of particles
  * @returns {Function} Simple update loop function
  */
-export const createSimpleParticleLoop = (particles) => {
+export const createSimpleParticleLoop = (particles, frequencyBands = null) => {
   return () => {
     for (let i = particles.length - 1; i >= 0; i--) {
       const pt = particles[i]
-      pt.update()
+      pt.update(null, null, frequencyBands) // Pass frequency data if available
       pt.draw()
       if (pt.isDead()) particles.splice(i, 1)
     }
