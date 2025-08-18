@@ -42,13 +42,11 @@ describe('NotFoundPage', () => {
 
     // Check for heading
     expect(
-      screen.getByRole('heading', { name: /not found/i })
+      screen.getByRole('heading', { name: /day not found/i })
     ).toBeInTheDocument()
 
     // Check for error message
-    expect(
-      screen.getByText(/you just hit a route that doesn't exist/i)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/day not found/i)).toBeInTheDocument()
   })
 
   test('passes correct title to SEO component', () => {
