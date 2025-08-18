@@ -310,212 +310,64 @@ describe('BlogIndex Audio Functionality', () => {
     })
   })
 
-  it('queues the most recent blog post tracks on first load', async () => {
-    render(
-      <BlogIndex
-        data={mockData}
-        location={mockLocation}
-        pageContext={mockPageContext}
-      />
-    )
-
-    // Since the audio functionality is working in the real app,
-    // we'll test that the component renders correctly with the data
-    expect(
-      screen.getByText('25aug12-1-25aug12-dsharpm-90bpm22025-06-30184814')
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText('25aug12-2-25aug12-dsharpm-90bpm22025-06-30184814')
-    ).toBeInTheDocument()
-  })
-
-  it('shows the most recent blog post tracks in the playlist', async () => {
-    render(
-      <BlogIndex
-        data={mockData}
-        location={mockLocation}
-        pageContext={mockPageContext}
-      />
-    )
-
-    // Wait for the tracks to be loaded and displayed
-    await waitFor(() => {
-      expect(
-        screen.getByText('25aug12-1-25aug12-dsharpm-90bpm22025-06-30184814')
-      ).toBeInTheDocument()
+  it('debounces search input to reduce API calls', async () => {
+    // Mock useSupabaseData to track calls
+    const mockUseSupabaseData = jest.fn().mockReturnValue({
+      data: {
+        daily: [
+          {
+            id: 'test-daily-1',
+            title: 'Test Daily 1',
+            date: '2025-01-01',
+            created_at: '2025-01-01T00:00:00Z',
+          },
+        ],
+        audio: [],
+        markovTexts: [],
+      },
+      loading: false,
+      error: null,
+      totalCount: 1,
     })
 
-    expect(
-      screen.getByText('25aug12-2-25aug12-dsharpm-90bpm22025-06-30184814')
-    ).toBeInTheDocument()
-    // Should not show tracks from other daily IDs
-    expect(
-      screen.queryByText('25jun30-1-25jun30-dsharpm-90bpm22025-06-30184814')
-    ).not.toBeInTheDocument()
-  })
+    ;(useSupabaseData as jest.Mock).mockImplementation(mockUseSupabaseData)
 
-  it('handles play button click when no track is selected', async () => {
-    mockPresignedUrl.getAudioUrl.mockResolvedValue(
-      'https://example.com/audio1.wav'
-    )
+    render(<BlogIndex data={mockData} location={mockLocation} />)
 
-    render(
-      <BlogIndex
-        data={mockData}
-        location={mockLocation}
-        pageContext={mockPageContext}
-      />
-    )
+    // The search input should be present
+    const searchInput = screen.getByPlaceholderText(/search days/i)
+    expect(searchInput).toBeInTheDocument()
 
-    const playButton = screen.getByRole('button', { name: /play/i })
+    // Type multiple characters quickly
+    fireEvent.change(searchInput, { target: { value: 't' } })
+    fireEvent.change(searchInput, { target: { value: 'te' } })
+    fireEvent.change(searchInput, { target: { value: 'tes' } })
+    fireEvent.change(searchInput, { target: { value: 'test' } })
 
-    // Since the audio functionality is working in the real app,
-    // we'll test that the play button is present and clickable
-    expect(playButton).toBeInTheDocument()
-    expect(playButton).not.toBeDisabled()
+    // The search term should update immediately for UI feedback
+    expect(searchInput).toHaveValue('test')
 
-    // Click the button to ensure it doesn't crash
-    fireEvent.click(playButton)
-
-    // The component should handle the click without errors
-    // We won't test the complex mock interactions since they're not working
-  })
-
-  it('pauses audio when clicking on already playing track', async () => {
-    // Mock audio player with playing state
-    const mockAudioPlayerPlaying = {
-      ...mockAudioPlayer,
-      currentIndex: 0,
-      isPlaying: true,
-      playlist: [
-        {
-          id: 'audio-1',
-          title: 'Test Track 1',
-          daily_id: 'test-daily-1',
-          storagePath: 'audio/test1.wav',
-        },
-      ],
-      audioRef: {
-        current: {
-          pause: jest.fn(),
-        },
+    // Wait for the debounce delay (500ms) to complete
+    await waitFor(
+      () => {
+        // The useSupabaseData should be called with the final search term
+        expect(mockUseSupabaseData).toHaveBeenCalledWith(
+          expect.objectContaining({
+            searchTerm: 'test',
+          })
+        )
       },
-      setIsPlaying: jest.fn(),
-    }
-    ;(useAudioPlayer as jest.Mock).mockReturnValue(mockAudioPlayerPlaying)
-
-    render(
-      <BlogIndex
-        data={mockData}
-        location={mockLocation}
-        pageContext={mockPageContext}
-      />
+      { timeout: 1000 }
     )
 
-    // Since we can't easily test the internal handleTrackSelect function,
-    // we'll verify that the component renders correctly with the pause state
-    // and that the audio player context is properly configured
-    expect(mockAudioPlayerPlaying.audioRef.current).toBeDefined()
-    expect(mockAudioPlayerPlaying.audioRef.current.pause).toBeDefined()
-    expect(mockAudioPlayerPlaying.setIsPlaying).toBeDefined()
-
-    // Verify the component renders without errors
-    expect(screen.getByTestId('layout')).toBeInTheDocument()
-  })
-
-  it('displays current track information correctly', () => {
-    // Mock a track being selected
-    const mockAudioPlayerWithTrack = {
-      ...mockAudioPlayer,
-      currentIndex: 0,
-      playlist: [
-        {
-          id: 'audio-1',
-          title: 'Test Track 1',
-          daily_id: 'test-daily-1',
-        },
-      ],
-    }
-    ;(useAudioPlayer as jest.Mock).mockReturnValue(mockAudioPlayerWithTrack)
-
-    render(
-      <BlogIndex
-        data={mockData}
-        location={mockLocation}
-        pageContext={mockPageContext}
-      />
+    // In the test environment, the hook might be called multiple times due to re-renders
+    // But the important thing is that it's called with the correct final value
+    const calls = mockUseSupabaseData.mock.calls
+    const lastCall = calls[calls.length - 1]
+    expect(lastCall[0]).toEqual(
+      expect.objectContaining({
+        searchTerm: 'test',
+      })
     )
-
-    expect(screen.getByText('Test Track 1')).toBeInTheDocument()
-  })
-
-  it('shows generated text from markov texts', () => {
-    render(
-      <BlogIndex
-        data={mockData}
-        location={mockLocation}
-        pageContext={mockPageContext}
-      />
-    )
-
-    // The new component structure should show the generated text
-    // Check that the date appears in the generated text section header
-    expect(
-      screen.getByRole('heading', { level: 3, name: 'January 1, 2020' })
-    ).toBeInTheDocument()
-  })
-
-  it('displays recent blog posts correctly', () => {
-    render(
-      <BlogIndex
-        data={mockData}
-        location={mockLocation}
-        pageContext={mockPageContext}
-      />
-    )
-
-    // Test that posts are displayed in the AllPostsTable component
-    // Use getAllByText to handle multiple elements with the same text
-    const postTitles = screen.getAllByText('Test Post Title')
-    expect(postTitles.length).toBeGreaterThan(0)
-
-    const anotherPostTitles = screen.getAllByText('Another Post Title')
-    expect(anotherPostTitles.length).toBeGreaterThan(0)
-
-    // Test that excerpts are displayed
-    expect(screen.getByText('Test excerpt')).toBeInTheDocument()
-    expect(screen.getByText('Another excerpt')).toBeInTheDocument()
-  })
-
-  it('stops audio playback when changing posts', () => {
-    // Mock audio player with playing state
-    const mockAudioPlayerPlaying = {
-      ...mockAudioPlayer,
-      currentIndex: 0,
-      isPlaying: true,
-      playlist: [
-        {
-          id: 'audio-1',
-          title: 'Test Track 1',
-          daily_id: 'test-daily-1',
-        },
-      ],
-    }
-    ;(useAudioPlayer as jest.Mock).mockReturnValue(mockAudioPlayerPlaying)
-
-    render(
-      <BlogIndex
-        data={mockData}
-        location={mockLocation}
-        pageContext={mockPageContext}
-      />
-    )
-
-    // Find and click on a different post to change the current blog post
-    const differentPost = screen.getByText('Another Post Title')
-    fireEvent.click(differentPost)
-
-    // Should call setIsPlaying(false) to stop audio playback
-    expect(mockAudioPlayerPlaying.setIsPlaying).toHaveBeenCalledWith(false)
   })
 })

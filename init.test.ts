@@ -1,11 +1,11 @@
-const { main } = require('./init')
+import { main } from './init'
 
 // Mock the InitOrchestrator
 jest.mock('./src/utils/init-script/init-orchestrator')
 
-describe('init.js', () => {
-  let mockOrchestrator
-  let mockInitOrchestrator
+describe('init.ts', () => {
+  let mockOrchestrator: any
+  let mockInitOrchestrator: jest.Mock
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -31,13 +31,20 @@ describe('init.js', () => {
     it('should create orchestrator and run it successfully', async () => {
       mockOrchestrator.run.mockResolvedValue(undefined)
 
-      await main('test-post', 'Test description')
+      // Mock process.argv to simulate command line arguments
+      const originalArgv = process.argv
+      process.argv = ['node', 'init.ts', '25dec01', 'Test description']
+
+      await main()
 
       expect(mockInitOrchestrator).toHaveBeenCalledWith(
-        'test-post',
+        '25dec01',
         'Test description'
       )
       expect(mockOrchestrator.run).toHaveBeenCalled()
+
+      // Restore original argv
+      process.argv = originalArgv
     })
 
     it('should handle orchestrator errors gracefully', async () => {
@@ -46,13 +53,19 @@ describe('init.js', () => {
 
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
 
-      await main('test-post')
+      // Mock process.argv to simulate command line arguments
+      const originalArgv = process.argv
+      process.argv = ['node', 'init.ts', '25dec01']
+
+      await main()
       expect(consoleSpy).toHaveBeenCalledWith(
-        'Script failed:',
+        '❌ Script failed:',
         'Orchestrator failed'
       )
       expect(process.exit).toHaveBeenCalledWith(1)
 
+      // Restore original argv
+      process.argv = originalArgv
       consoleSpy.mockRestore()
     })
   })
@@ -67,7 +80,7 @@ describe('init.js', () => {
   describe('command line execution', () => {
     it('should not execute main when imported as module', () => {
       // This test verifies that main() is not called when the module is imported
-      // The actual execution logic is in the if block at the bottom of init.js
+      // The actual execution logic is in the if block at the bottom of init.ts
       expect(mockOrchestrator.run).not.toHaveBeenCalled()
     })
   })

@@ -1,5 +1,5 @@
-const fs = require('fs')
-const path = require('path')
+import * as fs from 'fs'
+import * as path from 'path'
 
 /**
  * Manages local development data for the init script
@@ -7,11 +7,11 @@ const path = require('path')
 class LocalDataManager {
   /**
    * Update local audio files
-   * @param {Array} movedFiles - Array of file data from Supabase
-   * @param {Object} supabase - Supabase client instance
-   * @returns {Promise<void>}
+   * @param movedFiles - Array of file data from Supabase
+   * @param supabase - Supabase client instance
+   * @returns Promise<void>
    */
-  static async updateLocalAudioFiles(movedFiles, supabase) {
+  static async updateLocalAudioFiles(movedFiles: any[], supabase: any): Promise<void> {
     if (!movedFiles || movedFiles.length === 0) return
 
     const localAudioDir = path.join(process.cwd(), 'static/local-audio')
@@ -44,7 +44,7 @@ class LocalDataManager {
       } catch (error) {
         console.warn(
           `⚠️ Failed to add ${file.fileName} to local audio:`,
-          error.message
+          error instanceof Error ? error.message : 'Unknown error'
         )
       }
     }
@@ -52,11 +52,11 @@ class LocalDataManager {
 
   /**
    * Update local Markov texts
-   * @param {Array} newTexts - Array of new text data
-   * @param {string} postName - Name of the post
-   * @returns {Promise<void>}
+   * @param newTexts - Array of new text data
+   * @param postName - Name of the post
+   * @returns Promise<void>
    */
-  static async updateLocalMarkovTexts(newTexts, postName) {
+  static async updateLocalMarkovTexts(newTexts: any[], postName: string): Promise<void> {
     if (!newTexts || newTexts.length === 0) return
 
     const localDataDir = path.join(process.cwd(), 'static/local-data')
@@ -68,7 +68,7 @@ class LocalDataManager {
 
     try {
       // Read existing texts
-      let existingData = { texts: [] }
+      let existingData: { texts: any[] } = { texts: [] }
       if (fs.existsSync(markovTextsPath)) {
         const existingContent = fs.readFileSync(markovTextsPath, 'utf8')
         existingData = JSON.parse(existingContent)
@@ -77,7 +77,7 @@ class LocalDataManager {
       // Add new texts with unique IDs
       const maxId =
         existingData.texts.length > 0
-          ? Math.max(...existingData.texts.map((t) => t.id))
+          ? Math.max(...existingData.texts.map((t: any) => t.id))
           : 0
 
       const textsWithIds = newTexts.map((text, index) => ({
@@ -100,17 +100,17 @@ class LocalDataManager {
       fs.writeFileSync(markovTextsPath, JSON.stringify(existingData, null, 2))
       console.log(`✅ Added ${newTexts.length} new Markov texts to local data`)
     } catch (error) {
-      console.warn('⚠️ Failed to update local Markov texts:', error.message)
+      console.warn('⚠️ Failed to update local Markov texts:', error instanceof Error ? error.message : 'Unknown error')
     }
   }
 
   /**
    * Update local cover art
-   * @param {string} postName - Name of the post
-   * @param {Buffer} coverArtBuffer - Cover art buffer
-   * @returns {Promise<void>}
+   * @param postName - Name of the post
+   * @param coverArtBuffer - Cover art buffer
+   * @returns Promise<void>
    */
-  static async updateLocalCoverArt(postName, coverArtBuffer) {
+  static async updateLocalCoverArt(postName: string, coverArtBuffer: Buffer): Promise<void> {
     if (!coverArtBuffer) return
 
     const localCoverArtDir = path.join(process.cwd(), 'static/local-cover-art')
@@ -124,35 +124,35 @@ class LocalDataManager {
       fs.writeFileSync(coverArtPath, coverArtBuffer)
       console.log(`✅ Added cover art for ${postName} to local directory`)
     } catch (error) {
-      console.warn('⚠️ Failed to update local cover art:', error.message)
+      console.warn('⚠️ Failed to update local cover art:', error instanceof Error ? error.message : 'Unknown error')
     }
   }
 
   /**
    * Strip special characters except hyphens from filename
-   * @param {string} filename - Original filename
-   * @returns {string} Sanitized filename
+   * @param filename - Original filename
+   * @returns Sanitized filename
    */
-  static sanitizeFilename(filename) {
+  static sanitizeFilename(filename: string): string {
     return filename.replace(/[^a-zA-Z0-9\-]/g, '')
   }
 
   /**
    * Update all local development data
-   * @param {Array} movedFiles - Array of file data from Supabase
-   * @param {Array} supabaseTexts - Array of text data from Supabase
-   * @param {string} postName - Name of the post
-   * @param {Buffer|null} coverArtBuffer - Cover art buffer
-   * @param {Object} supabase - Supabase client instance
-   * @returns {Promise<void>}
+   * @param movedFiles - Array of file data from Supabase
+   * @param supabaseTexts - Array of text data from Supabase
+   * @param postName - Name of the post
+   * @param coverArtBuffer - Cover art buffer
+   * @param supabase - Supabase client instance
+   * @returns Promise<void>
    */
   static async updateAllLocalData(
-    movedFiles,
-    supabaseTexts,
-    postName,
-    coverArtBuffer,
-    supabase
-  ) {
+    movedFiles: any[],
+    supabaseTexts: any[],
+    postName: string,
+    coverArtBuffer: Buffer | null,
+    supabase: any
+  ): Promise<void> {
     try {
       console.log('\n🔄 Updating local development data...')
 
@@ -169,7 +169,7 @@ class LocalDataManager {
 
       console.log('✅ Local development data updated successfully!')
     } catch (error) {
-      console.warn('⚠️ Failed to update local development data:', error.message)
+      console.warn('⚠️ Failed to update local development data:', error instanceof Error ? error.message : 'Unknown error')
       console.log(
         'You can manually update local data with: yarn generate-local-data'
       )
@@ -177,4 +177,4 @@ class LocalDataManager {
   }
 }
 
-module.exports = { LocalDataManager }
+export { LocalDataManager }

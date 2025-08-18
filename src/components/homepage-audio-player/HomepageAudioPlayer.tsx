@@ -51,6 +51,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
     isPlaying,
     setIsPlaying,
     playTrack,
+    resetCurrentIndex,
     audioRef,
     volume,
     updateVolume,
@@ -66,11 +67,48 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   const [currentAudioUrl, setCurrentAudioUrl] = useState('')
   const [isMuted, setIsMuted] = useState<boolean>(false)
 
+  // Reset audio player state when switching blog posts
+  useEffect(() => {
+    // When currentBlogPostTracks changes (switching blog posts), reset the currentIndex
+    // to prevent accessing invalid playlist indices
+    if (currentBlogPostTracks.length === 0) {
+      // No tracks available, reset to no selection
+      if (currentIndex !== null) {
+        // Reset the currentIndex in the audio player context
+        resetCurrentIndex()
+        setCurrentAudioUrl('')
+        setError(null)
+      }
+    } else if (
+      currentIndex !== null &&
+      currentIndex >= currentBlogPostTracks.length
+    ) {
+      // Current index is out of bounds for the new blog post, reset it
+      console.warn(
+        `Current index ${currentIndex} is out of bounds for blog post with ${currentBlogPostTracks.length} tracks. Resetting.`
+      )
+      resetCurrentIndex()
+      setCurrentAudioUrl('')
+      setError(null)
+    }
+  }, [currentBlogPostTracks, currentIndex, resetCurrentIndex])
+
   // Generate presigned URL when current track changes
   useEffect(() => {
     const generateAudioUrl = async () => {
       if (currentIndex !== null && playlist[currentIndex]) {
         const currentTrack = playlist[currentIndex]
+
+        // Safety check: ensure currentTrack exists and has required properties
+        if (!currentTrack || !currentTrack.storagePath) {
+          console.warn(
+            'Current track is missing or has no storagePath:',
+            currentTrack
+          )
+          setCurrentAudioUrl('')
+          return
+        }
+
         if (currentTrack.storagePath) {
           try {
             // Check if we should use local audio files for development
@@ -294,6 +332,17 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
       // No track selected, start with first track
       try {
         const firstTrack = playlist[0]
+
+        // Safety check: ensure firstTrack exists and has required properties
+        if (!firstTrack || !firstTrack.storagePath) {
+          console.warn(
+            'First track is missing or has no storagePath:',
+            firstTrack
+          )
+          setError('Invalid first track')
+          return
+        }
+
         if (firstTrack.storagePath) {
           // Check if we should use local audio files for development
           const isLocalDevMode = isLocalDev()
@@ -347,6 +396,13 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
     const nextIndex = getNextTrackIndex(currentIndex, playlist.length)
     const nextTrack = playlist[nextIndex]
 
+    // Safety check: ensure nextTrack exists and has required properties
+    if (!nextTrack || !nextTrack.storagePath) {
+      console.warn('Next track is missing or has no storagePath:', nextTrack)
+      setError('Invalid next track')
+      return
+    }
+
     if (nextTrack.storagePath) {
       try {
         // Check if we should use local audio files for development
@@ -384,6 +440,16 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
 
     const prevIndex = getPreviousTrackIndex(currentIndex, playlist.length)
     const prevTrack = playlist[prevIndex]
+
+    // Safety check: ensure prevTrack exists and has required properties
+    if (!prevTrack || !prevTrack.storagePath) {
+      console.warn(
+        'Previous track is missing or has no storagePath:',
+        prevTrack
+      )
+      setError('Invalid previous track')
+      return
+    }
 
     if (prevTrack.storagePath) {
       try {
@@ -436,6 +502,17 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
     }
 
     const track = playlist[currentIndex]
+
+    // Safety check: ensure track exists and has required properties
+    if (!track || !track.id) {
+      console.warn(
+        'Track at index',
+        currentIndex,
+        'is missing or has no id:',
+        track
+      )
+      return { title: 'Invalid track', date: '' }
+    }
 
     // Find the corresponding track in currentBlogPostTracks to get the date
     const correspondingTrack = currentBlogPostTracks.find(

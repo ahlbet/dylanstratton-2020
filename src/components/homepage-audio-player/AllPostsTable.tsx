@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { Button } from '../ui/button'
 import { Card } from '../ui/card'
 import { Input } from '../ui/input'
@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  Filter,
   SortAsc,
   SortDesc,
 } from 'lucide-react'
@@ -25,59 +24,35 @@ interface AllPostsTableProps {
   posts: BlogPost[]
   currentBlogPost: string | null
   onPostClick: (post: BlogPost) => void
+  searchTerm: string
+  onSearchChange: (value: string) => void
+  sortDirection: 'asc' | 'desc'
+  onSortChange: () => void
+  currentPage: number
+  onPageChange: (page: number) => void
+  totalPages: number
+  totalCount: number
+  postsPerPage: number
+  searchLoading?: boolean
 }
-
-type SortDirection = 'asc' | 'desc'
 
 export const AllPostsTable: React.FC<AllPostsTableProps> = ({
   posts,
   currentBlogPost,
   onPostClick,
+  searchTerm,
+  onSearchChange,
+  sortDirection,
+  onSortChange,
+  currentPage,
+  onPageChange,
+  totalPages,
+  totalCount,
+  postsPerPage,
+  searchLoading = false,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [postsPerPage] = useState(10)
-
-  // Filter and sort posts
-  const filteredAndSortedPosts = useMemo(() => {
-    let filtered = posts.filter(
-      (post) =>
-        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.date.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-
-    // Sort posts by date
-    filtered.sort((a, b) => {
-      const aValue = new Date(a.date).getTime()
-      const bValue = new Date(b.date).getTime()
-
-      if (sortDirection === 'asc') {
-        return aValue > bValue ? 1 : -1
-      } else {
-        return aValue < bValue ? 1 : -1
-      }
-    })
-
-    return filtered
-  }, [posts, searchTerm, sortDirection])
-
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedPosts.length / postsPerPage)
   const startIndex = (currentPage - 1) * postsPerPage
   const endIndex = startIndex + postsPerPage
-  const currentPosts = filteredAndSortedPosts.slice(startIndex, endIndex)
-
-  const handleSort = () => {
-    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-    setCurrentPage(1) // Reset to first page when sorting
-  }
-
-  const handleSearch = (value: string) => {
-    setSearchTerm(value)
-    setCurrentPage(1) // Reset to first page when searching
-  }
 
   const isCurrentBlogPost = (post: BlogPost) => {
     return post.daily_id === currentBlogPost
@@ -100,15 +75,39 @@ export const AllPostsTable: React.FC<AllPostsTableProps> = ({
           <Input
             placeholder="Search days by title, content, or date..."
             value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10"
           />
+          {searchLoading && (
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <svg
+                className="animate-spin h-5 w-5 text-red-400"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={handleSort}
+            onClick={onSortChange}
             className="px-3"
             aria-label="Toggle sort direction"
           >
@@ -120,14 +119,13 @@ export const AllPostsTable: React.FC<AllPostsTableProps> = ({
       {/* Results Info */}
       <div className="text-sm text-gray-400">
         Showing {startIndex + 1}-
-        {Math.min(endIndex, filteredAndSortedPosts.length)} of{' '}
-        {filteredAndSortedPosts.length} days
+        {Math.min(startIndex + postsPerPage, totalCount)} of {totalCount} days
         {searchTerm && ` matching "${searchTerm}"`}
       </div>
 
       {/* Posts Table */}
       <div className="space-y-4">
-        {currentPosts.map((post) => (
+        {posts.map((post) => (
           <Card
             key={post.id}
             className={`bg-black border transition-colors cursor-pointer ${
@@ -158,7 +156,7 @@ export const AllPostsTable: React.FC<AllPostsTableProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(currentPage - 1)}
+              onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -167,7 +165,7 @@ export const AllPostsTable: React.FC<AllPostsTableProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(currentPage + 1)}
+              onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
             >
               Next
@@ -178,7 +176,7 @@ export const AllPostsTable: React.FC<AllPostsTableProps> = ({
       )}
 
       {/* No Results */}
-      {filteredAndSortedPosts.length === 0 && (
+      {posts.length === 0 && (
         <div className="text-center py-12">
           <p className="text-gray-400 text-lg">
             No days found matching your search criteria.
@@ -186,8 +184,8 @@ export const AllPostsTable: React.FC<AllPostsTableProps> = ({
           <Button
             variant="outline"
             onClick={() => {
-              setSearchTerm('')
-              setCurrentPage(1)
+              onSearchChange('')
+              onPageChange(1)
             }}
             className="mt-4"
           >

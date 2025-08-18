@@ -1,19 +1,56 @@
-const path = require('path')
-const { transformDate } = require('../date-utils')
-const { getAudioPlayer } = require('../audio-tools')
-const { GitOperations } = require('./git-operations')
-const { UserInteraction } = require('./user-interaction')
-const { AudioProcessor } = require('./audio-processor')
-const { SupabaseManager } = require('./supabase-manager')
-const { MarkovManager } = require('./markov-manager')
-const { LocalDataManager } = require('./local-data-manager')
-const { TemplateProcessor } = require('./template-processor')
+import * as fs from 'fs'
+import * as path from 'path'
+import { transformDate } from '../date-utils'
+import { getAudioPlayer } from '../audio-tools'
+import { GitOperations } from './git-operations'
+import { UserInteraction } from './user-interaction'
+import { AudioProcessor } from './audio-processor'
+import { SupabaseManager } from './supabase-manager'
+import { MarkovManager } from './markov-manager'
+import { LocalDataManager } from './local-data-manager'
+import { TemplateProcessor } from './template-processor'
+
+interface AudioFile {
+  fileName: string
+  url: string
+  duration: number
+  storagePath: string
+  localPath: string
+}
+
+interface CoverArtData {
+  path: string
+  url: string
+  buffer: Buffer
+}
+
+interface MarkovText {
+  text_content: string
+  coherency_level: number
+  daily_id: string
+  text_length: number
+}
 
 /**
  * Main orchestrator for the init script
  */
 class InitOrchestrator {
-  constructor(name, description = '') {
+  public name: string
+  public description: string
+  public date: string
+  public isTest: boolean
+  private userInteraction: UserInteraction
+  private supabaseManager: SupabaseManager
+  private markovManager: MarkovManager
+  public movedFiles: AudioFile[]
+  public localPlaybackFiles: any[]
+  private coverArtData: CoverArtData | null
+  private dailyId: string | null
+  private supabaseTexts: MarkovText[]
+  public editedTexts: string[]
+  public coherencyLevels: number[]
+
+  constructor(name: string, description: string = '') {
     this.name = name
     this.description = description
     this.date = transformDate(name, true)
@@ -30,12 +67,14 @@ class InitOrchestrator {
     this.coverArtData = null
     this.dailyId = null
     this.supabaseTexts = []
+    this.editedTexts = []
+    this.coherencyLevels = []
   }
 
   /**
    * Run the complete initialization process
    */
-  async run() {
+  async run(): Promise<void> {
     try {
       // Validate input
       this.validateInput()
@@ -72,7 +111,7 @@ class InitOrchestrator {
 
       console.log('✅ Initialization completed successfully!')
     } catch (error) {
-      console.error('❌ Initialization failed:', error.message)
+      console.error('❌ Initialization failed:', error instanceof Error ? error.message : String(error))
       throw error
     } finally {
       // Always close user interaction
@@ -83,7 +122,7 @@ class InitOrchestrator {
   /**
    * Validate input parameters
    */
-  validateInput() {
+  public validateInput(): void {
     if (!this.name) {
       const errorMessage = 'Name argument is required'
       console.log(`Usage: node ${path.basename(process.argv[1])} <name>`)
@@ -97,21 +136,21 @@ class InitOrchestrator {
   /**
    * Initialize Git branch
    */
-  async initializeGit() {
+  private async initializeGit(): Promise<void> {
     GitOperations.checkoutOrCreateBranch(this.name, this.isTest)
   }
 
   /**
    * Process audio files
    */
-  async processAudioFiles() {
+  private async processAudioFiles(): Promise<void> {
     // Find audio files
     const audioData = AudioProcessor.findAudioFiles(this.name)
     this.localPlaybackFiles = audioData.localPlaybackFiles
 
     // Ensure assets directory exists
     const destDir = TemplateProcessor.getAssetsDir()
-    require('fs').mkdirSync(destDir, { recursive: true })
+    fs.mkdirSync(destDir, { recursive: true })
 
     // Process each audio file
     for (const localFile of this.localPlaybackFiles) {
@@ -124,7 +163,8 @@ class InitOrchestrator {
         // Upload to Supabase
         const supabaseUrl = await this.supabaseManager.uploadToStorage(
           localFile.localPath,
-          localFile.fileName
+          localFile.fileName,
+          'audio'
         )
 
         // Track uploaded file
@@ -138,7 +178,7 @@ class InitOrchestrator {
 
         console.log(`Uploaded file '${localFile.fileName}' to Supabase.`)
       } catch (error) {
-        console.error(`Failed to upload ${localFile.fileName}:`, error.message)
+        console.error(`Failed to upload ${localFile.fileName}:`, error instanceof Error ? error.message : String(error))
       }
     }
   }
@@ -146,7 +186,7 @@ class InitOrchestrator {
   /**
    * Process Markov texts
    */
-  async processMarkovTexts() {
+  private async processMarkovTexts(): Promise<void> {
     console.log('📝 Generating 5 markov texts for interactive editing...')
 
     // Initialize Markov generator
@@ -171,7 +211,7 @@ class InitOrchestrator {
   /**
    * Generate cover art
    */
-  async generateCoverArt() {
+  private async generateCoverArt(): Promise<void> {
     this.coverArtData = await TemplateProcessor.generateCoverArt(
       this.name,
       this.supabaseManager
@@ -181,7 +221,7 @@ class InitOrchestrator {
   /**
    * Create database entries
    */
-  async createDatabaseEntries() {
+  private async createDatabaseEntries(): Promise<void> {
     // Create daily entry
     this.dailyId = await this.supabaseManager.createDailyEntry(
       this.name,
@@ -203,7 +243,7 @@ class InitOrchestrator {
   /**
    * Create daily audio entries
    */
-  async createDailyAudioEntries() {
+  private async createDailyAudioEntries(): Promise<void> {
     // Check for available audio tools
     const audioPlayer = getAudioPlayer()
     if (audioPlayer) {
@@ -256,7 +296,7 @@ class InitOrchestrator {
       } catch (error) {
         console.error(
           `Failed to create daily_audio entry for ${file.fileName}:`,
-          error.message
+          error instanceof Error ? error.message : String(error)
         )
       }
     }
@@ -265,7 +305,7 @@ class InitOrchestrator {
   /**
    * Upload Markov texts to database
    */
-  async uploadMarkovTexts() {
+  private async uploadMarkovTexts(): Promise<void> {
     // Prepare texts data with daily_id
     this.supabaseTexts = this.markovManager.prepareTextsData(
       this.editedTexts,
@@ -281,7 +321,7 @@ class InitOrchestrator {
   /**
    * Create blog post
    */
-  async createBlogPost() {
+  private async createBlogPost(): Promise<void> {
     // Read template
     const templatePath = TemplateProcessor.getTemplatePath()
     const template = TemplateProcessor.readTemplate(templatePath, this.isTest)
@@ -317,14 +357,14 @@ class InitOrchestrator {
   /**
    * Push changes to Git
    */
-  async pushToGit() {
+  private async pushToGit(): Promise<void> {
     GitOperations.commitAndPush(this.name, `feat: ${this.name}`, this.isTest)
   }
 
   /**
    * Update local development data
    */
-  async updateLocalData() {
+  private async updateLocalData(): Promise<void> {
     await LocalDataManager.updateAllLocalData(
       this.movedFiles,
       this.supabaseTexts,
@@ -335,4 +375,4 @@ class InitOrchestrator {
   }
 }
 
-module.exports = { InitOrchestrator }
+export { InitOrchestrator }

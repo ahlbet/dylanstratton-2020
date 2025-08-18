@@ -1,19 +1,48 @@
-const fs = require('fs')
-const path = require('path')
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-// Import Supabase for bucket access - only in Node.js environment
-let createClient
-if (typeof window === 'undefined') {
-  try {
-    const supabaseModule = require('@supabase/supabase-js')
-    createClient = supabaseModule.createClient
-  } catch (error) {
-    console.warn('Supabase not available in this environment')
-  }
+// Types
+interface NgramMap {
+  [key: string]: string[]
+}
+
+interface SupabaseFile {
+  name: string
+  id?: string
+  updated_at?: string
+  created_at?: string
+  last_accessed_at?: string
+  metadata?: Record<string, any>
+}
+
+interface SupabaseStorageResponse<T> {
+  data: T | null
+  error: any
+}
+
+interface SupabaseListResponse {
+  data: SupabaseFile[] | null
+  error: any
+}
+
+interface SupabaseDownloadResponse {
+  data: Blob | null
+  error: any
+}
+
+interface FilterSortParams {
+  searchTerm?: string
+  sortDirection?: 'asc' | 'desc'
+  currentPage?: number
+  postsPerPage?: number
 }
 
 class MarkovGenerator {
-  constructor(order = 7) {
+  private order: number
+  private ngrams: NgramMap
+  private beginnings: string[]
+  private lines: string[]
+
+  constructor(order: number = 7) {
     this.order = order
     this.ngrams = {}
     this.beginnings = []
@@ -21,24 +50,33 @@ class MarkovGenerator {
   }
 
   // Original file loading method (keeping for backwards compatibility)
-  async loadTextFromFile(filePath) {
+  async loadTextFromFile(filePath: string): Promise<boolean> {
     try {
+      // Note: fs.readFileSync is not available in browser environment
+      // This method is kept for Node.js compatibility but won't work in browser
+      if (typeof window !== 'undefined') {
+        console.warn('loadTextFromFile is not available in browser environment')
+        return false
+      }
+      
+      // For Node.js environment, you would need to import fs dynamically
+      const fs = await import('fs')
       const text = fs.readFileSync(filePath, 'utf8')
       this.lines = text.split('\n').filter((line) => line.trim().length > 0)
       this.buildNgrams()
       return true
     } catch (error) {
-      console.error('Error loading text file:', error.message)
+      console.error('Error loading text file:', error instanceof Error ? error.message : 'Unknown error')
       return false
     }
   }
 
   // New method to load from Supabase markov-text bucket with explicit credentials
   async loadTextFromSupabaseWithCredentials(
-    supabaseUrl,
-    supabaseKey,
-    bucketName = 'markov-text'
-  ) {
+    supabaseUrl: string,
+    supabaseKey: string,
+    bucketName: string = 'markov-text'
+  ): Promise<boolean> {
     // Check for local development mode first
     if (typeof window !== 'undefined') {
       // Client-side: try Supabase first, fallback to local data
@@ -88,10 +126,10 @@ class MarkovGenerator {
 
       // Try to load from Supabase directly
       try {
-        const supabase = createClient(supabaseUrl, supabaseKey)
+        const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey)
 
         // List all txt files in the markov-text bucket
-        const { data: files, error: listError } = await supabase.storage
+        const { data: files, error: listError }: SupabaseListResponse = await supabase.storage
           .from(bucketName)
           .list('', {
             limit: 100,
@@ -100,6 +138,11 @@ class MarkovGenerator {
 
         if (listError) {
           console.error('Error listing files from Supabase:', listError.message)
+          return this.loadTextFromFallback()
+        }
+
+        if (!files) {
+          console.warn('No files found in Supabase bucket')
           return this.loadTextFromFallback()
         }
 
@@ -123,7 +166,7 @@ class MarkovGenerator {
 
         for (const file of txtFiles) {
           try {
-            const { data, error } = await supabase.storage
+            const { data, error }: SupabaseDownloadResponse = await supabase.storage
               .from(bucketName)
               .download(file.name)
 
@@ -132,11 +175,16 @@ class MarkovGenerator {
               continue
             }
 
+            if (!data) {
+              console.error(`No data received for ${file.name}`)
+              continue
+            }
+
             const text = await data.text()
             allText += text + '\n'
             successfulDownloads++
           } catch (error) {
-            console.error(`Error processing ${file.name}:`, error.message)
+            console.error(`Error processing ${file.name}:`, error instanceof Error ? error.message : 'Unknown error')
           }
         }
 
@@ -160,20 +208,18 @@ class MarkovGenerator {
         )
         return true
       } catch (error) {
-        console.error('Error loading from Supabase:', error.message)
+        console.error('Error loading from Supabase:', error instanceof Error ? error.message : 'Unknown error')
         return this.loadTextFromFallback()
       }
     }
 
     // Browser environment but no createClient: fallback to local file
-    if (!createClient) {
-      console.warn('Supabase not available, falling back to local file')
-      return this.loadTextFromFallback()
-    }
+    console.warn('Supabase not available, falling back to local file')
+    return this.loadTextFromFallback()
   }
 
   // Helper method to compile and clean multiple text sources, returns array of lines
-  compileAndCleanText(textArray) {
+  compileAndCleanText(textArray: string[]): string[] {
     // Join all texts with double newlines to separate sources
     const combinedText = textArray.join('\n\n')
 
@@ -223,7 +269,7 @@ class MarkovGenerator {
   }
 
   // Clean generated text to remove character names and formatting artifacts
-  cleanGeneratedText(text) {
+  cleanGeneratedText(text: string): string {
     if (!text) return text
 
     let cleaned = text
@@ -251,23 +297,39 @@ class MarkovGenerator {
   }
 
   // Fallback to local file (backwards compatibility)
-  async loadTextFromFallback() {
-    const textFilePath = path.join(
-      process.cwd(),
-      'public',
-      'local-data',
-      '448.txt'
-    )
-    return this.loadTextFromFile(textFilePath)
+  async loadTextFromFallback(): Promise<boolean> {
+    if (typeof window !== 'undefined') {
+      console.warn('loadTextFromFallback is not available in browser environment')
+      return false
+    }
+
+    try {
+      const path = await import('path')
+      const textFilePath = path.join(
+        process.cwd(),
+        'public',
+        'local-data',
+        '448.txt'
+      )
+      return this.loadTextFromFile(textFilePath)
+    } catch (error) {
+      console.error('Error in loadTextFromFallback:', error instanceof Error ? error.message : 'Unknown error')
+      return false
+    }
   }
 
   // Existing method for loading from array (unchanged)
-  loadTextFromArray(textArray) {
+  loadTextFromArray(textArray: string[]): void {
     this.lines = textArray.filter((line) => line.trim().length > 0)
     this.buildNgrams()
   }
 
-  buildNgrams() {
+  // Public getter for lines
+  getLines(): string[] {
+    return [...this.lines] // Return a copy to maintain encapsulation
+  }
+
+  buildNgrams(): void {
     this.ngrams = {}
     this.beginnings = []
 
@@ -287,7 +349,7 @@ class MarkovGenerator {
     }
   }
 
-  generateText(maxLength = 1000, maxSentences = 2) {
+  generateText(maxLength: number = 1000, maxSentences: number = 2): string | null {
     if (this.beginnings.length === 0) {
       return null
     }
@@ -321,8 +383,8 @@ class MarkovGenerator {
     return result
   }
 
-  generateMultipleLines(count = 5, maxLength = 1000, maxSentences = 2) {
-    const lines = []
+  generateMultipleLines(count: number = 5, maxLength: number = 1000, maxSentences: number = 2): string[] {
+    const lines: string[] = []
     let attempts = 0
     const maxAttempts = count * 3 // Allow more attempts to get good lines
 
@@ -345,7 +407,7 @@ class MarkovGenerator {
   }
 
   // Check if text contains only a character name or is problematic
-  containsOnlyCharacterName(text) {
+  containsOnlyCharacterName(text: string): boolean {
     const trimmed = text.trim()
 
     // Check if text is just numbers
@@ -367,7 +429,7 @@ class MarkovGenerator {
 }
 
 // Helper function to generate text for blog posts
-async function generateBlogPostText(postName, linesCount = 5) {
+async function generateBlogPostText(postName: string, linesCount: number = 5): Promise<string> {
   const generator = new MarkovGenerator(7)
 
   // Try to load from Supabase markov-text bucket first with explicit credentials
@@ -410,4 +472,4 @@ async function generateBlogPostText(postName, linesCount = 5) {
   return markdownText
 }
 
-module.exports = { MarkovGenerator, generateBlogPostText }
+export { MarkovGenerator, generateBlogPostText }
