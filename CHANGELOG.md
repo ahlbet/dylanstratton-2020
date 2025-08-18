@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.4](https://github.com/gatsbyjs/gatsby-starter-blog/compare/v0.1.3...v0.1.4) (2025-08-18)
+
+
+### Bug Fixes
+
+* 404 ([26ed169](https://github.com/gatsbyjs/gatsby-starter-blog/commit/26ed16942522bd966a8c65e6855bdddc3289a5d7))
+* 404 ([a9083b8](https://github.com/gatsbyjs/gatsby-starter-blog/commit/a9083b88779009a79f7cd58351ce5ccf4c5e0876))
+* canvas height ([6cb684a](https://github.com/gatsbyjs/gatsby-starter-blog/commit/6cb684a6b7df1f78e17edede43be1ec9ad5869da))
+* state track index ([83c0a35](https://github.com/gatsbyjs/gatsby-starter-blog/commit/83c0a35416f5100d6ccc18b901e395c3689f9bba))
+
 ### [0.1.3](https://github.com/gatsbyjs/gatsby-starter-blog/compare/v0.1.2...v0.1.3) (2025-08-18)
 
 
