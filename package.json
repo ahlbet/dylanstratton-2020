@@ -144,7 +144,7 @@
     "test:e2e:ui": "E2E_BASE_URL=http://localhost:8000 npx playwright test --ui",
     "test:e2e:report": "npx playwright show-report",
     "test:e2e:install": "npx playwright install",
-    "new-day": "ts-node ./init.ts",
+    "new-day": "yarn build:init && node ./dist/init.js",
     "new-day-dry-run": "node scripts/init-dry-run.js",
     "new-day-coherency-test": "node scripts/init-dry-run-coherency.js",
     "markov-editor": "node scripts/markov-text-editor-cli.js",
