@@ -216,7 +216,8 @@ export const createParticleSpawningLoop = (
             p.frameCount,
             band.band,
             i,
-            p
+            p,
+            visualStyle // Pass visual style for enhanced spawn patterns
           )
 
           particles.push(

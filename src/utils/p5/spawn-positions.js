@@ -10,6 +10,19 @@
  */
 export const updateTatShapePositions = (tatShapePositions, p) => {
   tatShapePositions.forEach((pos) => {
+    // Check if position has required movement properties
+    if (
+      typeof pos.originalX === 'undefined' ||
+      typeof pos.originalY === 'undefined' ||
+      typeof pos.movementAngle === 'undefined' ||
+      typeof pos.movementSpeed === 'undefined' ||
+      typeof pos.movementRadius === 'undefined' ||
+      typeof pos.movementDirection === 'undefined'
+    ) {
+      console.warn('Position missing required movement properties:', pos)
+      return // Skip this position
+    }
+
     // Circular movement around original position
     pos.movementAngle += pos.movementSpeed * 0.005 * pos.movementDirection // Reduced from 0.01
 

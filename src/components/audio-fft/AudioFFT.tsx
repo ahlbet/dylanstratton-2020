@@ -55,17 +55,26 @@ const generateBlogPostSeed = (metadata: BlogPostMetadata): number => {
 
   // Use daily_id if available - enhanced weighting
   if (metadata.daily_id) {
-    seed += Number(metadata.daily_id) * 5000 // Increased from 1000 to 5000
+    const dailyIdNum = Number(metadata.daily_id)
+    if (isFinite(dailyIdNum)) {
+      seed += dailyIdNum * 5000 // Increased from 1000 to 5000
+    }
   }
 
   // Use date components - enhanced weighting
   if (metadata.date) {
-    const date = new Date(metadata.date)
-    seed += date.getFullYear() * 50000 // Increased from 10000 to 50000
-    seed += (date.getMonth() + 1) * 1000 // Increased from 100 to 1000
-    seed += date.getDate() * 100 // Increased from 1 to 100
-    // Add day of week for more variation
-    seed += date.getDay() * 10000
+    try {
+      const date = new Date(metadata.date)
+      if (!isNaN(date.getTime())) {
+        seed += date.getFullYear() * 50000 // Increased from 10000 to 50000
+        seed += (date.getMonth() + 1) * 1000 // Increased from 100 to 1000
+        seed += date.getDate() * 100 // Increased from 1 to 100
+        // Add day of week for more variation
+        seed += date.getDay() * 10000
+      }
+    } catch (error) {
+      console.warn('Error parsing date:', metadata.date, error)
+    }
   }
 
   // Use markov text length and content - enhanced weighting
@@ -94,7 +103,15 @@ const generateBlogPostSeed = (metadata: BlogPostMetadata): number => {
   // Add timestamp-based variation for posts created at different times
   seed += Date.now() % 1000000
 
-  return Math.abs(seed) % 10000000 // Increased range from 1000000 to 10000000
+  const finalSeed = Math.abs(seed) % 10000000 // Increased range from 1000000 to 10000000
+
+  // Ensure the final seed is finite
+  if (!isFinite(finalSeed)) {
+    console.warn('Invalid blog post seed generated, using fallback')
+    return 12345
+  }
+
+  return finalSeed
 }
 
 // Generate visual style parameters based on blog post metadata
@@ -340,8 +357,15 @@ export default function AudioFFT({
       const markovSeed = generateSeedFromText(markovText)
       const combinedSeed = blogPostSeed + markovSeed
 
+      // Validate seeds and provide fallbacks
+      const validBlogPostSeed = isFinite(blogPostSeed) ? blogPostSeed : 12345
+      const validMarkovSeed = isFinite(markovSeed) ? markovSeed : 67890
+      const validCombinedSeed = isFinite(combinedSeed)
+        ? combinedSeed
+        : validBlogPostSeed + validMarkovSeed
+
       // Generate visual style parameters
-      const visualStyle = generateVisualStyle(combinedSeed)
+      const visualStyle = generateVisualStyle(validCombinedSeed)
 
       let tatShapePositions: any[] = []
 
@@ -361,21 +385,60 @@ export default function AudioFFT({
               fftSmoothing: 0.9,
               fftSize: 2048,
               onResize: (width: number, height: number) => {
-                if (!isInitialized || !width || !height) return
+                if (!isInitialized || !width || !height) {
+                  return
+                }
 
                 // Regenerate Tat shape positions for new canvas size
                 tatShapePositions = generateTatShapePositions(
-                  combinedSeed,
+                  validCombinedSeed,
                   width,
                   height,
                   5
                 )
 
                 // Re-add dynamic movement properties to new positions
-                addDynamicMovementToPositions(tatShapePositions, p)
+                // addDynamicMovementToPositions(tatShapePositions, p)
 
                 // Clear existing particles to prevent them from spawning at old positions
                 particles.length = 0
+
+                // Update spawn positions dynamically
+                const updateSpawnPositions = () => {
+                  if (
+                    !isInitialized ||
+                    !tatShapePositions ||
+                    !p ||
+                    !p.width ||
+                    !p.height
+                  )
+                    return
+
+                  // Update Tat shape positions with current canvas dimensions
+                  // updateTatShapePositions(tatShapePositions, p)
+                }
+
+                // Create the main animation loop using utility (after FFT is initialized)
+                p.draw = createAudioReactiveAnimationLoop(
+                  p,
+                  fft,
+                  particles,
+                  smoothedData,
+                  tatShapePositions,
+                  validCombinedSeed,
+                  updateSpawnPositions,
+                  analyzeFrequencyBands,
+                  getFrequencyBands,
+                  calculateMaxParticles,
+                  calculateCanvasScale,
+                  calculateParticleCount,
+                  calculateSpawnPosition,
+                  calculateStaggeredSpawn,
+                  Particle,
+                  visualStyle
+                )
+
+                isInitialized = true
               },
             }
           )
@@ -398,6 +461,10 @@ export default function AudioFFT({
             containerWidth <= 0 ||
             containerHeight <= 0
           ) {
+            console.warn('Invalid canvas dimensions detected:', {
+              containerWidth,
+              containerHeight,
+            })
             return
           }
 
@@ -408,14 +475,14 @@ export default function AudioFFT({
 
           // Generate Tat shape positions for particle spawning with visual style
           tatShapePositions = generateTatShapePositions(
-            combinedSeed,
+            validCombinedSeed,
             containerWidth,
             containerHeight,
             5
           )
 
           // Add dynamic movement to spawn positions
-          addDynamicMovementToPositions(tatShapePositions, p)
+          // addDynamicMovementToPositions(tatShapePositions, p)
 
           // Update spawn positions dynamically
           const updateSpawnPositions = () => {
@@ -429,7 +496,7 @@ export default function AudioFFT({
               return
 
             // Update Tat shape positions with current canvas dimensions
-            updateTatShapePositions(tatShapePositions, p)
+            // updateTatShapePositions(tatShapePositions, p)
           }
 
           // Create the main animation loop using utility (after FFT is initialized)
@@ -439,7 +506,7 @@ export default function AudioFFT({
             particles,
             smoothedData,
             tatShapePositions,
-            combinedSeed,
+            validCombinedSeed,
             updateSpawnPositions,
             analyzeFrequencyBands,
             getFrequencyBands,

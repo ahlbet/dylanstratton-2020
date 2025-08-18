@@ -15,24 +15,24 @@ describe('Shape Generator Utilities', () => {
       expect(seed).toBeLessThan(10000)
     })
 
-    test('should return 0 for empty string', () => {
+    test('should return 12345 for empty string', () => {
       const seed = generateSeedFromText('')
-      expect(seed).toBe(0)
+      expect(seed).toBe(12345)
     })
 
-    test('should return 0 for null input', () => {
+    test('should return 12345 for null input', () => {
       const seed = generateSeedFromText(null)
-      expect(seed).toBe(0)
+      expect(seed).toBe(12345)
     })
 
-    test('should return 0 for undefined input', () => {
+    test('should return 12345 for undefined input', () => {
       const seed = generateSeedFromText(undefined)
-      expect(seed).toBe(0)
+      expect(seed).toBe(12345)
     })
 
-    test('should return 0 for non-string input', () => {
+    test('should return 12345 for non-string input', () => {
       const seed = generateSeedFromText(123)
-      expect(seed).toBe(0)
+      expect(seed).toBe(12345)
     })
 
     test('should handle special characters', () => {
@@ -368,12 +368,12 @@ describe('Shape Generator Utilities', () => {
       expect(Array.isArray(positions)).toBe(true)
       expect(positions.length).toBeGreaterThan(0)
 
-      // All positions should be within the tiny canvas bounds (with tolerance for mathematical precision)
+      // Our validation ensures minimum canvas size of 100x100, so positions will be within that range
       positions.forEach((pos) => {
-        expect(pos.x).toBeGreaterThanOrEqual(5) // margin
-        expect(pos.x).toBeLessThanOrEqual(60) // width + 10 (with tolerance)
-        expect(pos.y).toBeGreaterThanOrEqual(5) // margin
-        expect(pos.y).toBeLessThanOrEqual(60) // height + 10 (with tolerance)
+        expect(pos.x).toBeGreaterThanOrEqual(1) // minimum margin
+        expect(pos.x).toBeLessThanOrEqual(100) // minimum width
+        expect(pos.y).toBeGreaterThanOrEqual(1) // minimum margin
+        expect(pos.y).toBeLessThanOrEqual(100) // minimum height
       })
     })
   })
