@@ -244,6 +244,7 @@ async function generatePresignedUrlsForAudio(audioFiles: AudioFile[], expiresIn:
       ...audio,
       url: `https://${SUPABASE_PUBLIC_URL_DOMAIN}/storage/v1/object/public/${audio.storage_path}`,
       storage_path: audio.storage_path,
+      displayFilename: extractFilenameFromStoragePath(audio.storage_path),
     }))
   }
 }
