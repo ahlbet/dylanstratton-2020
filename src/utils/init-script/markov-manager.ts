@@ -1,5 +1,6 @@
 import * as fs from 'fs'
 import * as path from 'path'
+import { MarkovGenerator } from '../markov-generator'
 
 interface MarkovText {
   text_content: string
@@ -27,6 +28,7 @@ class MarkovManager {
   private markovTexts: string[]
   private markovChains: MarkovChain
   private isInitialized: boolean
+  private generator: MarkovGenerator | null
 
   constructor() {
     this.markovTexts = []
@@ -44,37 +46,49 @@ class MarkovManager {
 
     try {
       console.log('📥 Fetching markov texts from Supabase...')
-      await this.fetchMarkovTextsFromSupabase()
-      this.buildMarkovChains()
-      this.isInitialized = true
-      console.log('✅ Successfully loaded markov texts from Supabase')
+
+      this.generator = new MarkovGenerator(7)
+
+      const supabaseUrl = process.env.SUPABASE_URL
+      const supabaseKey =
+        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+
+      if (supabaseUrl && supabaseKey) {
+        const success =
+          await this.generator.loadTextFromSupabaseWithCredentials(
+            supabaseUrl,
+            supabaseKey,
+            'markov-text'
+          )
+        if (success) {
+          console.log('✅ Successfully loaded markov texts from Supabase')
+          this.markovTexts = this.generator.getLines()
+          this.isInitialized = true
+          return
+        } else {
+          console.warn('⚠️ Failed to load from Supabase, using fallback text')
+          this.generator.loadTextFromArray(this.getSampleMarkovTexts())
+          this.markovTexts = this.generator.getLines()
+          this.isInitialized = true
+          return
+        }
+      } else {
+        console.warn('⚠️ Missing Supabase credentials, using fallback text')
+        this.generator.loadTextFromArray(this.getSampleMarkovTexts())
+        this.markovTexts = this.generator.getLines()
+        this.isInitialized = true
+        return
+      }
     } catch (error) {
-      console.error('Failed to initialize Markov manager:', error instanceof Error ? error.message : String(error))
-      throw error
+      console.error('❌ Failed to initialize markov generator:', error instanceof Error ? error.message : String(error))
+      // Use fallback text as last resort
+      this.generator.loadTextFromArray(this.getSampleMarkovTexts())
+      this.markovTexts = this.generator.getLines()
+      this.isInitialized = true
     }
   }
 
-  /**
-   * Fetch Markov texts from Supabase
-   */
-  private async fetchMarkovTextsFromSupabase(): Promise<void> {
-    try {
-      // This would typically fetch from Supabase, but for now we'll use local data
-      // In a real implementation, you'd use the Supabase client
-      const localDataPath = path.join(process.cwd(), 'src', 'utils', 'markov-data.json')
-      
-      if (fs.existsSync(localDataPath)) {
-        const data = fs.readFileSync(localDataPath, 'utf8')
-        this.markovTexts = JSON.parse(data)
-      } else {
-        // Fallback to sample data
-        this.markovTexts = this.getSampleMarkovTexts()
-      }
-    } catch (error) {
-      console.warn('Failed to fetch from Supabase, using sample data')
-      this.markovTexts = this.getSampleMarkovTexts()
-    }
-  }
+
 
   /**
    * Get sample Markov texts for development
@@ -89,27 +103,7 @@ class MarkovManager {
     ]
   }
 
-  /**
-   * Build Markov chains from texts
-   */
-  private buildMarkovChains(): void {
-    this.markovChains = {}
-    
-    this.markovTexts.forEach(text => {
-      const words = text.split(/\s+/)
-      
-      for (let i = 0; i < words.length - 1; i++) {
-        const currentWord = words[i]
-        const nextWord = words[i + 1]
-        
-        if (!this.markovChains[currentWord]) {
-          this.markovChains[currentWord] = []
-        }
-        
-        this.markovChains[currentWord].push(nextWord)
-      }
-    })
-  }
+
 
   /**
    * Generate initial Markov texts
@@ -117,51 +111,21 @@ class MarkovManager {
    * @returns Array of generated texts
    */
   generateInitialTexts(count: number): string[] {
-    const texts: string[] = []
-    
-    for (let i = 0; i < count; i++) {
-      const text = this.generateMarkovText()
-      texts.push(text)
+    if (!this.generator) {
+      return this.getSampleMarkovTexts().slice(0, count)
     }
     
-    return texts
+    try {
+      // Use the generator to create multiple lines
+      const generatedLines = this.generator.generateMultipleLines(count, 1000, 2)
+      return generatedLines
+    } catch (error) {
+      console.warn('Failed to generate with MarkovGenerator, using sample texts')
+      return this.getSampleMarkovTexts().slice(0, count)
+    }
   }
 
-  /**
-   * Generate a single Markov text
-   * @returns Generated text
-   */
-  private generateMarkovText(): string {
-    const words: string[] = []
-    const startWords = Object.keys(this.markovChains).filter(word => 
-      word.length > 0 && /^[A-Z]/.test(word)
-    )
-    
-    if (startWords.length === 0) {
-      return "Generated text unavailable."
-    }
-    
-    let currentWord = startWords[Math.floor(Math.random() * startWords.length)]
-    words.push(currentWord)
-    
-    let wordCount = 0
-    const maxWords = 20
-    
-    while (wordCount < maxWords && this.markovChains[currentWord]) {
-      const possibleNextWords = this.markovChains[currentWord]
-      const nextWord = possibleNextWords[Math.floor(Math.random() * possibleNextWords.length)]
-      
-      if (nextWord) {
-        words.push(nextWord)
-        currentWord = nextWord
-        wordCount++
-      } else {
-        break
-      }
-    }
-    
-    return words.join(' ')
-  }
+
 
   /**
    * Process texts interactively with user input
