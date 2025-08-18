@@ -29,36 +29,33 @@ class TemplateProcessor {
   /**
    * Read template content from file
    * @param templatePath - Path to template file
-   * @param isTest - Whether running in test mode
+   * @param isTest - Whether running in test mode (deprecated, kept for backward compatibility)
    * @returns Template content
    * @throws {Error} If template file cannot be read
    */
   static readTemplate(templatePath: string, isTest: boolean = false): string {
+    let template: string
+    
     try {
-      const template = fs.readFileSync(templatePath, 'utf8')
-      console.log('template', template)
-      console.log('template type:', typeof template)
-      console.log('template length:', template ? template.length : 'undefined')
-
-      // Ensure template is a string
-      if (typeof template !== 'string') {
-        const errorMessage = `Template is not a string: ${typeof template}`
-        console.error(errorMessage)
-        if (isTest) {
-          throw new Error(errorMessage)
-        }
-        process.exit(1)
-      }
-
-      return template
+      template = fs.readFileSync(templatePath, 'utf8')
     } catch (err) {
       const errorMessage = `Template file not found at ${templatePath}`
       console.error(errorMessage)
-      if (isTest) {
-        throw new Error(errorMessage)
-      }
-      process.exit(1)
+      throw new Error(errorMessage)
     }
+
+    console.log('template', template)
+    console.log('template type:', typeof template)
+    console.log('template length:', template ? template.length : 'undefined')
+
+    // Ensure template is a string
+    if (typeof template !== 'string') {
+      const errorMessage = `Template is not a string: ${typeof template}`
+      console.error(errorMessage)
+      throw new Error(errorMessage)
+    }
+
+    return template
   }
 
   /**
@@ -72,11 +69,9 @@ class TemplateProcessor {
 
     // Replace all placeholders
     Object.entries(replacements).forEach(([key, value]) => {
-      const placeholder = `{${key}}`
-      processedTemplate = processedTemplate.replace(
-        new RegExp(placeholder, 'g'),
-        value || ''
-      )
+      // Match placeholders with optional spaces: { key } or {key}
+      const placeholder = new RegExp(`\\{\\s*${key}\\s*\\}`, 'g')
+      processedTemplate = processedTemplate.replace(placeholder, value || '')
     })
 
     return processedTemplate
@@ -161,19 +156,11 @@ class TemplateProcessor {
    * @returns Formatted markdown content for audio files
    */
   static generateAudioFilesContent(audioFiles: AudioFile[]): string {
-    if (audioFiles.length === 0) {
-      return 'No audio files available.'
+    if (!audioFiles || audioFiles.length === 0) {
+      return ''
     }
 
-    let content = '\n\n## Audio Files\n\n'
-    audioFiles.forEach((file, index) => {
-      content += `### Track ${index + 1}: ${file.fileName}\n\n`
-      content += `- **Duration:** ${file.duration} seconds\n`
-      content += `- **Storage Path:** \`${file.storagePath}\`\n`
-      content += `- **URL:** [${file.url}](${file.url})\n\n`
-    })
-
-    return content
+    return audioFiles.map((file) => `\`audio: ${file.url}\``).join('\n\n')
   }
 
   /**
