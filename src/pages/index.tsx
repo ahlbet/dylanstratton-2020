@@ -74,6 +74,14 @@ interface IndexPageData {
   }
 }
 
+interface BlogPostMetadata {
+  title?: string
+  date?: string
+  daily_id?: string | number
+  markovText?: string
+  cover_art?: string
+}
+
 const BlogIndex = ({
   data,
   location,
@@ -83,6 +91,9 @@ const BlogIndex = ({
 }) => {
   const [error, setError] = useState<string | null>(null)
   const [currentBlogPost, setCurrentBlogPost] = useState<string | null>(null)
+  const [currentBlogPostMetadata, setCurrentBlogPostMetadata] =
+    useState<BlogPostMetadata>({})
+
   const [currentBlogPostTracks, setCurrentBlogPostTracks] = useState<
     ProcessedAudioTrack[]
   >([])
@@ -181,6 +192,12 @@ const BlogIndex = ({
 
       if (mostRecentDailyId) {
         setCurrentBlogPost(mostRecentDailyId)
+
+        const mostRecentPostMetadata = posts.find(
+          (p) => p.node.frontmatter.daily_id === mostRecentDailyId
+        )
+
+        setCurrentBlogPostMetadata(mostRecentPostMetadata?.node.frontmatter)
 
         // Only process tracks if we have audio data
         if (supabaseData?.audio && supabaseData.audio.length > 0) {
@@ -409,6 +426,7 @@ const BlogIndex = ({
         {/* Main Content Area */}
         <HomepageMainContent
           markovTexts={processedTexts}
+          currentBlogPostMetadata={currentBlogPostMetadata}
           posts={processedPosts}
           currentBlogPost={currentBlogPost}
           onPostClick={handlePostClick}

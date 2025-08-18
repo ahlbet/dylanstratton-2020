@@ -10,8 +10,21 @@
  */
 export const updateTatShapePositions = (tatShapePositions, p) => {
   tatShapePositions.forEach((pos) => {
+    // Check if position has required movement properties
+    if (
+      typeof pos.originalX === 'undefined' ||
+      typeof pos.originalY === 'undefined' ||
+      typeof pos.movementAngle === 'undefined' ||
+      typeof pos.movementSpeed === 'undefined' ||
+      typeof pos.movementRadius === 'undefined' ||
+      typeof pos.movementDirection === 'undefined'
+    ) {
+      console.warn('Position missing required movement properties:', pos)
+      return // Skip this position
+    }
+
     // Circular movement around original position
-    pos.movementAngle += pos.movementSpeed * 0.01 * pos.movementDirection
+    pos.movementAngle += pos.movementSpeed * 0.005 * pos.movementDirection // Reduced from 0.01
 
     pos.x = pos.originalX + Math.cos(pos.movementAngle) * pos.movementRadius
     pos.y = pos.originalY + Math.sin(pos.movementAngle) * pos.movementRadius
@@ -31,7 +44,7 @@ export const addDynamicMovementToPositions = (tatShapePositions, p) => {
   tatShapePositions.forEach((pos, index) => {
     pos.originalX = pos.x
     pos.originalY = pos.y
-    pos.movementSpeed = p.random(0.5, 2.0)
+    pos.movementSpeed = p.random(0.2, 0.8) // Reduced from 0.5, 2.0
     pos.movementRadius = p.random(20, 360)
     pos.movementAngle = p.random(p.TWO_PI)
     pos.movementDirection = p.random([-1, 1])
@@ -68,9 +81,9 @@ export const calculateTatSpawnPosition = (
 
     // Add smooth noise for organic movement
     const noiseOffsetX =
-      (position.x + particleIndex * 100) * 0.01 + p.frameCount * 0.003
+      (position.x + particleIndex * 100) * 0.01 + p.frameCount * 0.001 // Reduced from 0.003
     const noiseOffsetY =
-      (position.y + particleIndex * 200) * 0.01 + p.frameCount * 0.003
+      (position.y + particleIndex * 200) * 0.01 + p.frameCount * 0.001 // Reduced from 0.003
     const noiseX = (p.noise(noiseOffsetX) - 0.5) * 40 // Smaller noise for sub-bass
     const noiseY = (p.noise(noiseOffsetY) - 0.5) * 40 // Smaller noise for sub-bass
 
@@ -85,8 +98,8 @@ export const calculateTatSpawnPosition = (
   const position = tatShapePositions[positionIndex]
 
   // Add smooth noise to spawn position
-  const noiseOffsetX = position.x * 0.01 + p.frameCount * 0.005
-  const noiseOffsetY = position.y * 0.01 + p.frameCount * 0.005
+  const noiseOffsetX = position.x * 0.01 + p.frameCount * 0.002 // Reduced from 0.005
+  const noiseOffsetY = position.y * 0.01 + p.frameCount * 0.002 // Reduced from 0.005
   const noiseX = (p.noise(noiseOffsetX) - 0.5) * 60
   const noiseY = (p.noise(noiseOffsetY) - 0.5) * 60
 
@@ -114,7 +127,7 @@ export const calculateFallbackSpawnPosition = (
   bandIndex,
   p
 ) => {
-  const time = frameCount * 0.01
+  const time = frameCount * 0.005 // Reduced from 0.01
   let baseX, baseY
 
   switch (spawnArea) {
@@ -173,7 +186,7 @@ export const calculateFallbackSpawnPosition = (
 }
 
 /**
- * Calculate spawn position for a particle
+ * Calculate spawn position for a particle with enhanced spawn patterns
  * @param {Array} tatShapePositions - Array of Tat shape positions
  * @param {string} spawnArea - Spawn area identifier
  * @param {number} canvasWidth - Canvas width
@@ -182,6 +195,7 @@ export const calculateFallbackSpawnPosition = (
  * @param {number} bandIndex - Frequency band index
  * @param {number} particleIndex - Particle index within the band
  * @param {Object} p - p5 instance
+ * @param {Object} visualStyle - Visual style parameters for spawn pattern
  * @returns {Object} Object with x and y coordinates
  */
 export const calculateSpawnPosition = (
@@ -192,7 +206,8 @@ export const calculateSpawnPosition = (
   frameCount,
   bandIndex,
   particleIndex,
-  p
+  p,
+  visualStyle = null
 ) => {
   // Try Tat shape positions first
   const tatPosition = calculateTatSpawnPosition(
@@ -206,6 +221,24 @@ export const calculateSpawnPosition = (
     return tatPosition
   }
 
+  // Enhanced spawn patterns based on visual style
+  if (visualStyle && visualStyle.spawnPattern !== undefined) {
+    const patternPosition = calculatePatternSpawnPosition(
+      visualStyle.spawnPattern,
+      canvasWidth,
+      canvasHeight,
+      frameCount,
+      bandIndex,
+      particleIndex,
+      p,
+      visualStyle
+    )
+
+    if (patternPosition) {
+      return patternPosition
+    }
+  }
+
   // Fallback to spawn area-based positioning
   return calculateFallbackSpawnPosition(
     spawnArea,
@@ -215,4 +248,110 @@ export const calculateSpawnPosition = (
     bandIndex,
     p
   )
+}
+
+/**
+ * Calculate spawn position based on visual style spawn pattern
+ * @param {number} spawnPattern - Spawn pattern identifier
+ * @param {number} canvasWidth - Canvas width
+ * @param {number} canvasHeight - Canvas height
+ * @param {number} frameCount - Current frame count
+ * @param {number} bandIndex - Frequency band index
+ * @param {number} particleIndex - Particle index within the band
+ * @param {Object} p - p5 instance
+ * @param {Object} visualStyle - Visual style parameters
+ * @returns {Object} Object with x and y coordinates
+ */
+export const calculatePatternSpawnPosition = (
+  spawnPattern,
+  canvasWidth,
+  canvasHeight,
+  frameCount,
+  bandIndex,
+  particleIndex,
+  p,
+  visualStyle
+) => {
+  const time = frameCount * 0.005
+  const centerX = canvasWidth / 2
+  const centerY = canvasHeight / 2
+
+  switch (spawnPattern) {
+    case 0: // Random
+      return {
+        x: p.random(0, canvasWidth),
+        y: p.random(0, canvasHeight),
+      }
+
+    case 1: // Grid
+      const gridCols = 8 + (visualStyle?.shapeDensity || 1) * 4
+      const gridRows = 6 + (visualStyle?.shapeDensity || 1) * 3
+      const col = (particleIndex + bandIndex * 3) % gridCols
+      const row =
+        Math.floor((particleIndex + bandIndex * 3) / gridCols) % gridRows
+      const cellWidth = canvasWidth / gridCols
+      const cellHeight = canvasHeight / gridRows
+      return {
+        x: col * cellWidth + cellWidth / 2 + p.random(-20, 20),
+        y: row * cellHeight + cellHeight / 2 + p.random(-20, 20),
+      }
+
+    case 2: // Spiral
+      const spiralAngle = (particleIndex + bandIndex * 5) * 0.5 + time
+      const spiralRadius = (particleIndex + bandIndex * 3) * 2 + 50
+      return {
+        x: centerX + Math.cos(spiralAngle) * spiralRadius,
+        y: centerY + Math.sin(spiralAngle) * spiralRadius,
+      }
+
+    case 3: // Wave
+      const waveX = (particleIndex + bandIndex * 2) * 30
+      const waveY = centerY + Math.sin(waveX * 0.01 + time) * 100
+      return {
+        x: waveX + p.random(-30, 30),
+        y: waveY + p.random(-20, 20),
+      }
+
+    case 4: // Radial
+      const radialAngle = (particleIndex + bandIndex * 4) * 0.3
+      const radialRadius = 50 + (particleIndex + bandIndex * 2) * 8
+      return {
+        x: centerX + Math.cos(radialAngle) * radialRadius,
+        y: centerY + Math.sin(radialAngle) * radialRadius,
+      }
+
+    case 5: // Chaotic
+      const chaosX =
+        centerX + p.noise(particleIndex * 0.1, time) * canvasWidth * 0.8
+      const chaosY =
+        centerY + p.noise(particleIndex * 0.1 + 100, time) * canvasHeight * 0.8
+      return {
+        x: chaosX + p.random(-50, 50),
+        y: chaosY + p.random(-50, 50),
+      }
+
+    case 6: // Vortex (new)
+      const vortexAngle = (particleIndex + bandIndex * 3) * 0.8 + time * 2
+      const vortexRadius = 30 + (particleIndex + bandIndex * 2) * 6
+      const vortexSpiral = Math.sin(time * 0.5) * 0.3
+      return {
+        x: centerX + Math.cos(vortexAngle + vortexSpiral) * vortexRadius,
+        y: centerY + Math.sin(vortexAngle + vortexSpiral) * vortexRadius,
+      }
+
+    case 7: // Fractal (new)
+      const fractalLevel = (particleIndex + bandIndex) % 4
+      const fractalScale = Math.pow(2, fractalLevel)
+      const fractalX = centerX + ((particleIndex % 16) - 8) * fractalScale * 20
+      const fractalY =
+        centerY +
+        ((Math.floor(particleIndex / 16) % 16) - 8) * fractalScale * 20
+      return {
+        x: fractalX + p.random(-15, 15),
+        y: fractalY + p.random(-15, 15),
+      }
+
+    default:
+      return null
+  }
 }

@@ -7,6 +7,11 @@
  * Audio-reactive particle class
  */
 export class Particle {
+  // Global constants for particle behavior
+  static MAX_VELOCITY = 2.0 // Maximum velocity for any particle (reduced from 6.0)
+  static MAX_SPEED = 3.0 // Maximum speed multiplier for any particle (reduced from 8.0)
+  static MIN_VELOCITY = 0.2 // Minimum velocity floor to ensure visible movement
+
   // Helper function to map all colors to blue-to-red spectrum (eliminates green entirely)
   static avoidGreenHue(hue) {
     // Map the full 360° spectrum to blue-to-red (240° to 0°/360°)
@@ -45,278 +50,530 @@ export class Particle {
     }
   }
 
-  constructor(p, x, y, amp, frequencyBand, markovSeed = 0) {
+  constructor(p, x, y, amp, frequencyBand, markovSeed = 0, visualStyle = null) {
     this.p = p
     this.pos = p.createVector(x, y)
     this.vel = p.createVector(0, 0)
     this.acc = p.createVector(0, 0)
     this.frequencyBand = frequencyBand // 0-7: different frequency ranges
     this.lifeFrames = 0
+    this.visualStyle = visualStyle // Store visual style for use throughout the particle's lifecycle
+    this.markovSeed = markovSeed // Store markov seed for fallback color generation
 
     // Individual particle properties for unique movement
     this.noiseOffsetX = p.random(1000)
     this.noiseOffsetY = p.random(1000)
-    this.noiseScale = p.random(0.01, 0.05)
-    this.noiseStrength = p.random(0.5, 2.0)
+    this.noiseScale = p.random(0.002, 0.01) // Reduced from 0.005-0.025 for slower movement
+    this.noiseStrength = p.random(0.2, 1.0) // Reduced from 0.5-2.0 for slower movement
     this.individualSeed = p.random(10000)
-    this.rotationSpeed = p.random(-0.1, 0.1)
-    this.oscillationSpeed = p.random(0.02, 0.08)
-    this.oscillationAmplitude = p.random(5, 20)
+    this.rotationSpeed = p.random(-0.05, 0.05) // Reduced from -0.1-0.1 for slower rotation
+    this.oscillationSpeed = p.random(0.005, 0.02) // Reduced from 0.01-0.04 for slower oscillation
+    this.oscillationAmplitude = p.random(2, 10) // Reduced from 5-20 for smaller oscillation
 
-    // Individual color variation properties based on markov seed
-    const primaryHue = markovSeed % 360 // Use markov seed for primary hue
-    const hueVariation = p.random(-30, 30) // ±30 degree variation
-    this.colorHue = Particle.avoidGreenHue(
-      (primaryHue + hueVariation + 360) % 360
-    )
-    const baseSaturationInit = p.random(60, 100)
-    const baseBrightnessInit = p.random(70, 100)
-    const adjustedColorsInit = Particle.adjustGreenishColors(
-      this.colorHue,
-      baseSaturationInit,
-      baseBrightnessInit
-    )
-    this.colorSaturation = adjustedColorsInit.saturation
-    this.colorBrightness = adjustedColorsInit.brightness
+    // Individual color variation properties based on visual style
+    if (visualStyle) {
+      // Use visual style colors with individual variations
+      const hueVariation = p.random(-15, 15) // ±15 degree variation
+      this.colorHue = Particle.avoidGreenHue(
+        (visualStyle.primaryHue + hueVariation + 360) % 360
+      )
+
+      // Use individual saturation and brightness from visual style
+      const satVariation = p.random(-10, 10)
+      const brightVariation = p.random(-10, 10)
+      this.colorSaturation = Math.max(
+        50,
+        Math.min(100, (visualStyle.primarySaturation || 85) + satVariation)
+      )
+      this.colorBrightness = Math.max(
+        60,
+        Math.min(100, (visualStyle.primaryBrightness || 85) + brightVariation)
+      )
+    } else {
+      // Fallback to markov seed colors
+      const primaryHue = markovSeed % 360
+      const hueVariation = p.random(-30, 30) // ±30 degree variation
+      this.colorHue = Particle.avoidGreenHue(
+        (primaryHue + hueVariation + 360) % 360
+      )
+      const baseSaturationInit = p.random(60, 100)
+      const baseBrightnessInit = p.random(70, 100)
+      const adjustedColorsInit = Particle.adjustGreenishColors(
+        this.colorHue,
+        baseSaturationInit,
+        baseBrightnessInit
+      )
+      this.colorSaturation = adjustedColorsInit.saturation
+      this.colorBrightness = adjustedColorsInit.brightness
+    }
+
     this.colorShiftSpeed = p.random(0.5, 2.0)
     this.colorShiftDirection = p.random([-1, 1])
 
     // Much more dramatic amplitude mapping using exponential scaling
     const normalizedAmp = amp / 255
-    const exponentialAmp = Math.pow(normalizedAmp, 0.15) // Much more sensitive to low values (increased from 0.3)
+    const exponentialAmp = Math.pow(normalizedAmp, 0.08) // Much more sensitive to low values (increased from 0.15)
 
-    // Configure particle based on frequency band
-    this.configureByFrequencyBand(exponentialAmp, primaryHue)
+    // Configure particle based on frequency band and visual style
+    this.configureByFrequencyBand(exponentialAmp, visualStyle)
 
     this.vel = p
       .createVector(p.cos(p.random(p.TWO_PI)), p.sin(p.random(p.TWO_PI)))
-      .mult(this.speed * 0.05)
+      .mult(this.speed * 0.02) // Reduced from 0.05
     this.alpha = 1
-    this.size = this.size * 0.1
+    this.size = this.size * 0.02
     this.originalSize = this.size
     this.lifeFrames = 0
     this.maxLifeFrames = 200 + p.random(50)
     this.audioReactivity = exponentialAmp // Store for dynamic updates
   }
 
-  configureByFrequencyBand(exponentialAmp, primaryHue) {
+  configureByFrequencyBand(exponentialAmp, visualStyle) {
     const p = this.p
 
     // Boost the exponential amplitude for more dramatic response
-    const boostedAmp = Math.pow(exponentialAmp, 0.3) // More sensitive curve
+    const boostedAmp = Math.pow(exponentialAmp, 0.2) // More sensitive curve (increased from 0.3)
 
     // Add random variation to lifespan to prevent synchronized death
     const lifespanVariation = p.random(0.7, 1.3)
 
+    // Apply visual style overrides if available
+    const baseSize = visualStyle?.maxParticleSize ?? 25
+    const baseSpeed = visualStyle?.movementSpeed ?? 1.0
+    const baseOscillation = visualStyle?.oscillationStrength ?? 15
+
     switch (this.frequencyBand) {
       case 0: // Sub-bass (20-60 Hz) - much more dramatic
-        this.speed = p.map(boostedAmp, 0, 1, 0, 15)
-        this.size = p.map(boostedAmp, 0, 1, 8, 35)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 8 * baseSpeed) // Reduced from 15
+        this.size = p.map(boostedAmp, 0, 1, 8, baseSize * 1.4)
         this.alphaDecay = 1.5
         this.maxLifeFrames = Math.floor(
           (180 + boostedAmp * 120) * lifespanVariation
         )
-        this.colorHue = Particle.avoidGreenHue(
-          (primaryHue + p.random(-10, 10) + 360) % 360
-        )
-        const baseSaturation = p.random(90, 100)
-        const baseBrightness = p.random(90, 100)
-        const adjustedColors = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation,
-          baseBrightness
-        )
-        this.colorSaturation = adjustedColors.saturation
-        this.colorBrightness = adjustedColors.brightness
+        // Use visual style colors if available
+        if (visualStyle) {
+          this.colorHue = Particle.avoidGreenHue(
+            (visualStyle.primaryHue + p.random(-10, 10) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.primarySaturation || 90) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.primaryBrightness || 90) + p.random(-5, 5)
+            )
+          )
+        } else {
+          this.colorHue = Particle.avoidGreenHue(
+            ((this.markovSeed % 360) + p.random(-10, 10) + 360) % 360
+          )
+          const baseSaturation = p.random(90, 100)
+          const baseBrightness = p.random(90, 100)
+          const adjustedColors = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation,
+            baseBrightness
+          )
+          this.colorSaturation = adjustedColors.saturation
+          this.colorBrightness = adjustedColors.brightness
+        }
         this.noiseStrength *= 0.3
+        this.oscillationAmplitude = baseOscillation * 0.8
         break
       case 1: // Bass (60-250 Hz) - most dramatic
-        this.speed = p.map(boostedAmp, 0, 1, 0, 25)
-        this.size = p.map(boostedAmp, 0, 1, 6, 32)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 12 * baseSpeed) // Reduced from 25
+        this.size = p.map(boostedAmp, 0, 1, 6, baseSize * 1.3)
         this.alphaDecay = 2
         this.maxLifeFrames = Math.floor(
           (150 + boostedAmp * 100) * lifespanVariation
         )
-        this.colorHue = Particle.avoidGreenHue(
-          (primaryHue + 30 + p.random(-8, 8) + 360) % 360
-        )
-        const baseSaturation1 = p.random(85, 100)
-        const baseBrightness1 = p.random(85, 100)
-        const adjustedColors1 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation1,
-          baseBrightness1
-        )
-        this.colorSaturation = adjustedColors1.saturation
-        this.colorBrightness = adjustedColors1.brightness
+        if (visualStyle) {
+          this.colorHue = Particle.avoidGreenHue(
+            (visualStyle.secondaryHue + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.secondarySaturation || 85) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.secondaryBrightness || 85) + p.random(-5, 5)
+            )
+          )
+        } else {
+          this.colorHue = Particle.avoidGreenHue(
+            ((this.markovSeed % 360) + 30 + p.random(-8, 8) + 360) % 360
+          )
+          const baseSaturation1 = p.random(85, 100)
+          const baseBrightness1 = p.random(85, 100)
+          const adjustedColors1 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation1,
+            baseBrightness1
+          )
+          this.colorSaturation = adjustedColors1.saturation
+          this.colorBrightness = adjustedColors1.brightness
+        }
         this.noiseStrength *= 0.6
+        this.oscillationAmplitude = baseOscillation * 1.0
         break
       case 2: // Low Mid (250-500 Hz)
-        this.speed = p.map(boostedAmp, 0, 1, 0, 28)
-        this.size = p.map(boostedAmp, 0, 1, 5, 28)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 14 * baseSpeed) // Reduced from 28
+        this.size = p.map(boostedAmp, 0, 1, 5, baseSize * 1.1)
         this.alphaDecay = 2.5
         this.maxLifeFrames = Math.floor(
           (120 + boostedAmp * 80) * lifespanVariation
         )
-        this.colorHue = Particle.avoidGreenHue(
-          (primaryHue + 60 + p.random(-8, 8) + 360) % 360
-        )
-        const baseSaturation2 = p.random(80, 100)
-        const baseBrightness2 = p.random(80, 100)
-        const adjustedColors2 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation2,
-          baseBrightness2
-        )
-        this.colorSaturation = adjustedColors2.saturation
-        this.colorBrightness = adjustedColors2.brightness
+        if (visualStyle) {
+          this.colorHue = Particle.avoidGreenHue(
+            (visualStyle.accentHue + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.accentSaturation || 80) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.accentBrightness || 80) + p.random(-5, 5)
+            )
+          )
+        } else {
+          this.colorHue = Particle.avoidGreenHue(
+            ((this.markovSeed % 360) + 60 + p.random(-8, 8) + 360) % 360
+          )
+          const baseSaturation2 = p.random(80, 100)
+          const baseBrightness2 = p.random(80, 100)
+          const adjustedColors2 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation2,
+            baseBrightness2
+          )
+          this.colorSaturation = adjustedColors2.saturation
+          this.colorBrightness = adjustedColors2.brightness
+        }
         this.noiseStrength *= 1.0
+        this.oscillationAmplitude = baseOscillation * 1.2
         break
       case 3: // Mid (500-2000 Hz) - very responsive
-        this.speed = p.map(boostedAmp, 0, 1, 0, 30)
-        this.size = p.map(boostedAmp, 0, 1, 4, 25)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 15 * baseSpeed) // Reduced from 30
+        this.size = p.map(boostedAmp, 0, 1, 4, baseSize * 1.0)
         this.alphaDecay = 3
         this.maxLifeFrames = Math.floor(
           (100 + boostedAmp * 60) * lifespanVariation
         )
-        this.colorHue = Particle.avoidGreenHue(
-          (primaryHue + 90 + p.random(-8, 8) + 360) % 360
-        )
-        const baseSaturation3 = p.random(75, 100)
-        const baseBrightness3 = p.random(75, 100)
-        const adjustedColors3 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation3,
-          baseBrightness3
-        )
-        this.colorSaturation = adjustedColors3.saturation
-        this.colorBrightness = adjustedColors3.brightness
+        if (visualStyle) {
+          this.colorHue = Particle.avoidGreenHue(
+            (visualStyle.tertiaryHue + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.tertiarySaturation || 75) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.tertiaryBrightness || 75) + p.random(-5, 5)
+            )
+          )
+        } else {
+          this.colorHue = Particle.avoidGreenHue(
+            ((this.markovSeed % 360) + 90 + p.random(-8, 8) + 360) % 360
+          )
+          const baseSaturation3 = p.random(75, 100)
+          const baseBrightness3 = p.random(75, 100)
+          const adjustedColors3 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation3,
+            baseBrightness3
+          )
+          this.colorSaturation = adjustedColors3.saturation
+          this.colorBrightness = adjustedColors3.brightness
+        }
         this.noiseStrength *= 1.4
+        this.oscillationAmplitude = baseOscillation * 1.4
         break
       case 4: // High Mid (2000-4000 Hz)
-        this.speed = p.map(boostedAmp, 0, 1, 0, 32)
-        this.size = p.map(boostedAmp, 0, 1, 3, 22)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 16 * baseSpeed) // Reduced from 32
+        this.size = p.map(boostedAmp, 0, 1, 3, baseSize * 0.9)
         this.alphaDecay = 3.5
         this.maxLifeFrames = Math.floor(
           (80 + boostedAmp * 40) * lifespanVariation
         )
-        this.colorHue = Particle.avoidGreenHue(
-          (primaryHue + 140 + p.random(-8, 8) + 360) % 360
-        )
-        const baseSaturation4 = p.random(70, 100)
-        const baseBrightness4 = p.random(70, 100)
-        const adjustedColors4 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation4,
-          baseBrightness4
-        )
-        this.colorSaturation = adjustedColors4.saturation
-        this.colorBrightness = adjustedColors4.brightness
+        if (visualStyle) {
+          this.colorHue = Particle.avoidGreenHue(
+            (visualStyle.primaryHue + 140 + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.primarySaturation || 70) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.primaryBrightness || 70) + p.random(-5, 5)
+            )
+          )
+        } else {
+          this.colorHue = Particle.avoidGreenHue(
+            ((this.markovSeed % 360) + 140 + p.random(-8, 8) + 360) % 360
+          )
+          const baseSaturation4 = p.random(70, 100)
+          const baseBrightness4 = p.random(70, 100)
+          const adjustedColors4 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation4,
+            baseBrightness4
+          )
+          this.colorSaturation = adjustedColors4.saturation
+          this.colorBrightness = adjustedColors4.brightness
+        }
         this.noiseStrength *= 1.8
+        this.oscillationAmplitude = baseOscillation * 1.6
         break
       case 5: // Presence (4000-6000 Hz)
-        this.speed = p.map(boostedAmp, 0, 1, 0, 35)
-        this.size = p.map(boostedAmp, 0, 1, 2, 20)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 18 * baseSpeed) // Reduced from 35
+        this.size = p.map(boostedAmp, 0, 1, 2, baseSize * 0.8)
         this.alphaDecay = 4
         this.maxLifeFrames = Math.floor(
           (60 + boostedAmp * 30) * lifespanVariation
         )
-        this.colorHue = Particle.avoidGreenHue(
-          (primaryHue + 150 + p.random(-8, 8) + 360) % 360
-        )
-        const baseSaturation5 = p.random(65, 100)
-        const baseBrightness5 = p.random(65, 100)
-        const adjustedColors5 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation5,
-          baseBrightness5
-        )
-        this.colorSaturation = adjustedColors5.saturation
-        this.colorBrightness = adjustedColors5.brightness
+        if (visualStyle) {
+          this.colorHue = Particle.avoidGreenHue(
+            (visualStyle.secondaryHue + 150 + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.secondarySaturation || 65) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.secondaryBrightness || 65) + p.random(-5, 5)
+            )
+          )
+        } else {
+          this.colorHue = Particle.avoidGreenHue(
+            ((this.markovSeed % 360) + 150 + p.random(-8, 8) + 360) % 360
+          )
+          const baseSaturation5 = p.random(65, 100)
+          const baseBrightness5 = p.random(65, 100)
+          const adjustedColors5 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation5,
+            baseBrightness5
+          )
+          this.colorSaturation = adjustedColors5.saturation
+          this.colorBrightness = adjustedColors5.brightness
+        }
         this.noiseStrength *= 2.2
+        this.oscillationAmplitude = baseOscillation * 1.8
         break
       case 6: // Brilliance (6000-8000 Hz)
-        this.speed = p.map(boostedAmp, 0, 1, 0, 38)
-        this.size = p.map(boostedAmp, 0, 1, 2, 18)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 19 * baseSpeed) // Reduced from 38
+        this.size = p.map(boostedAmp, 0, 1, 2, baseSize * 0.7)
         this.alphaDecay = 4.5
         this.maxLifeFrames = Math.floor(
           (40 + boostedAmp * 20) * lifespanVariation
         )
-        this.colorHue = Particle.avoidGreenHue(
-          (primaryHue + 180 + p.random(-8, 8) + 360) % 360
-        )
-        const baseSaturation6 = p.random(60, 100)
-        const baseBrightness6 = p.random(60, 100)
-        const adjustedColors6 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation6,
-          baseBrightness6
-        )
-        this.colorSaturation = adjustedColors6.saturation
-        this.colorBrightness = adjustedColors6.brightness
+        if (visualStyle) {
+          this.colorHue = Particle.avoidGreenHue(
+            (visualStyle.accentHue + 180 + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.accentSaturation || 60) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.accentBrightness || 60) + p.random(-5, 5)
+            )
+          )
+        } else {
+          this.colorHue = Particle.avoidGreenHue(
+            ((this.markovSeed % 360) + 180 + p.random(-8, 8) + 360) % 360
+          )
+          const baseSaturation6 = p.random(60, 100)
+          const baseBrightness6 = p.random(60, 100)
+          const adjustedColors6 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation6,
+            baseBrightness6
+          )
+          this.colorSaturation = adjustedColors6.saturation
+          this.colorBrightness = adjustedColors6.brightness
+        }
         this.noiseStrength *= 2.6
+        this.oscillationAmplitude = baseOscillation * 2.0
         break
       case 7: // Air (8000-20000 Hz)
-        this.speed = p.map(boostedAmp, 0, 1, 0, 40)
-        this.size = p.map(boostedAmp, 0, 1, 1, 16)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 20 * baseSpeed) // Reduced from 40
+        this.size = p.map(boostedAmp, 0, 1, 1, baseSize * 0.6)
         this.alphaDecay = 5
         this.maxLifeFrames = Math.floor(
           (30 + boostedAmp * 15) * lifespanVariation
         )
-        this.colorHue = Particle.avoidGreenHue(
-          (primaryHue + 210 + p.random(-8, 8) + 360) % 360
-        )
-        const baseSaturation7 = p.random(55, 100)
-        const baseBrightness7 = p.random(55, 100)
-        const adjustedColors7 = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturation7,
-          baseBrightness7
-        )
-        this.colorSaturation = adjustedColors7.saturation
-        this.colorBrightness = adjustedColors7.brightness
+        if (visualStyle) {
+          this.colorHue = Particle.avoidGreenHue(
+            (visualStyle.tertiaryHue + 210 + p.random(-8, 8) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.tertiarySaturation || 55) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.tertiaryBrightness || 55) + p.random(-5, 5)
+            )
+          )
+        } else {
+          this.colorHue = Particle.avoidGreenHue(
+            ((this.markovSeed % 360) + 210 + p.random(-8, 8) + 360) % 360
+          )
+          const baseSaturation7 = p.random(55, 100)
+          const baseBrightness7 = p.random(55, 100)
+          const adjustedColors7 = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturation7,
+            baseBrightness7
+          )
+          this.colorSaturation = adjustedColors7.saturation
+          this.colorBrightness = adjustedColors7.brightness
+        }
         this.noiseStrength *= 3.0
+        this.oscillationAmplitude = baseOscillation * 2.2
         break
       default:
-        this.speed = p.map(boostedAmp, 0, 1, 0, 25)
-        this.size = p.map(boostedAmp, 0, 1, 4, 25)
+        this.speed = p.map(boostedAmp, 0, 1, 0, 12 * baseSpeed) // Reduced from 25
+        this.size = p.map(boostedAmp, 0, 1, 4, baseSize * 1.0)
         this.alphaDecay = 3
-        this.colorHue = Particle.avoidGreenHue(
-          (primaryHue + p.random(-20, 20) + 360) % 360
-        )
-        const baseSaturationDefault = p.random(50, 100)
-        const baseBrightnessDefault = p.random(60, 100)
-        const adjustedColorsDefault = Particle.adjustGreenishColors(
-          this.colorHue,
-          baseSaturationDefault,
-          baseBrightnessDefault
-        )
-        this.colorSaturation = adjustedColorsDefault.saturation
-        this.colorBrightness = adjustedColorsDefault.brightness
+        if (visualStyle) {
+          this.colorHue = Particle.avoidGreenHue(
+            (visualStyle.primaryHue + p.random(-20, 20) + 360) % 360
+          )
+          this.colorSaturation = Math.max(
+            50,
+            Math.min(
+              100,
+              (visualStyle.primarySaturation || 75) + p.random(-5, 5)
+            )
+          )
+          this.colorBrightness = Math.max(
+            60,
+            Math.min(
+              100,
+              (visualStyle.primaryBrightness || 75) + p.random(-5, 5)
+            )
+          )
+        } else {
+          this.colorHue = Particle.avoidGreenHue(
+            ((this.markovSeed % 360) + p.random(-20, 20) + 360) % 360
+          )
+          const baseSaturationDefault = p.random(75, 100)
+          const baseBrightnessDefault = p.random(75, 100)
+          const adjustedColorsDefault = Particle.adjustGreenishColors(
+            this.colorHue,
+            baseSaturationDefault,
+            baseBrightnessDefault
+          )
+          this.colorSaturation = adjustedColorsDefault.saturation
+          this.colorBrightness = adjustedColorsDefault.brightness
+        }
+        this.oscillationAmplitude = baseOscillation * 1.0
     }
   }
 
   update(p, audioData, frequencyBands) {
     const p5 = p || this.p
+
+    // Update particle with real-time frequency data if available
+    if (frequencyBands && frequencyBands[this.frequencyBand]) {
+      const currentBand = frequencyBands[this.frequencyBand]
+      const currentAmp = currentBand.amp / 255
+
+      // Much more sensitive amplitude mapping - exponential curve for dramatic response
+      const exponentialAmp = Math.pow(currentAmp, 0.1) // More sensitive than 0.15
+
+      // Update audio reactivity in real-time
+      this.audioReactivity = exponentialAmp
+
+      // Real-time size adjustment based on current frequency amplitude
+      const baseSize = this.visualStyle?.maxParticleSize ?? 25
+      const sizeMultiplier = 0.2 + exponentialAmp * 3.0 // Scale from 0.2x to 3.2x (more dramatic)
+      this.size = this.originalSize * sizeMultiplier
+
+      // Real-time speed adjustment based on current frequency amplitude
+      const baseSpeed = this.visualStyle?.movementSpeed ?? 1.0
+      const speedMultiplier = 0.1 + exponentialAmp * 4.0 // Scale from 0.1x to 4.1x (more dramatic)
+      this.speed = this.speed * speedMultiplier
+
+      // Ensure speed doesn't exceed maximum reasonable limit
+      const maxSpeed = Particle.MAX_SPEED // Maximum reasonable speed limit
+      this.speed = Math.min(this.speed, maxSpeed)
+    }
+
+    // Apply visual style movement modifiers
+    const movementMultiplier = this.visualStyle?.movementSpeed ?? 1.0
+    const oscillationMultiplier = this.visualStyle?.oscillationStrength ?? 15
+
     // Individual noise-based movement
     const noiseX = p5.noise(this.noiseOffsetX) * 2 - 1
     const noiseY = p5.noise(this.noiseOffsetY) * 2 - 1
 
-    // Add smooth noise movement
+    // Add smooth noise movement with visual style modifier
     const noiseForce = p5
       .createVector(noiseX, noiseY)
-      .mult(this.noiseStrength * 0.05)
+      .mult(this.noiseStrength * 0.005 * movementMultiplier) // Reduced from 0.02 for much slower movement
     this.vel.add(noiseForce)
 
-    // Individual oscillation
+    // Individual oscillation with visual style modifier - reduced for more natural movement
     const oscillationX =
       p5.sin(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
-      0.005
+      0.0002 * // Reduced from 0.0005 for much more subtle oscillation
+      (oscillationMultiplier / 15) // Normalize to base oscillation strength
     const oscillationY =
       p5.cos(p5.frameCount * this.oscillationSpeed + this.individualSeed) *
       this.oscillationAmplitude *
-      0.005
+      0.0002 * // Reduced from 0.0005 for much more subtle oscillation
+      (oscillationMultiplier / 15) // Normalize to base oscillation strength
     this.vel.add(oscillationX, oscillationY)
 
     // Update position
@@ -354,10 +611,38 @@ export class Particle {
     // Apply frequency band-specific movement patterns
     this.applyFrequencyBandMovement(p5, distanceMultiplier)
 
-    // Limit velocity based on audio reactivity and distance from spawn - much more dramatic variation
+    // Limit velocity based on audio reactivity and distance from spawn - much more conservative
     const maxVelocity =
-      (0.5 + this.audioReactivity * 4.0) * distanceMultiplier * 0.75 // Much more dramatic speed variation with audio
-    this.vel.limit(maxVelocity)
+      (0.2 + this.audioReactivity * 1.5) * // Reduced from 0.5 + 4.0 for much slower movement
+      distanceMultiplier *
+      0.5 * // Reduced from 0.75 for slower movement
+      movementMultiplier // Apply visual style movement modifier
+
+    // Apply absolute maximum velocity limit to prevent excessive speed
+    const absoluteMaxVelocity = Particle.MAX_VELOCITY // Maximum velocity regardless of audio reactivity
+    const finalMaxVelocity = Math.min(maxVelocity, absoluteMaxVelocity)
+
+    this.vel.limit(finalMaxVelocity)
+
+    // Enforce minimum velocity to keep particles visibly moving
+    const allowedMinVelocity = Math.min(Particle.MIN_VELOCITY, finalMaxVelocity)
+    const currentSpeed = Math.sqrt(
+      this.vel.x * this.vel.x + this.vel.y * this.vel.y
+    )
+    if (allowedMinVelocity > 0 && currentSpeed < allowedMinVelocity) {
+      if (currentSpeed === 0) {
+        // Nudge in a small random direction if completely still
+        const angle = p5.random
+          ? p5.random(0, p5.TWO_PI)
+          : Math.random() * Math.PI * 2
+        this.vel.x = Math.cos(angle) * allowedMinVelocity
+        this.vel.y = Math.sin(angle) * allowedMinVelocity
+      } else {
+        const scaleUp = allowedMinVelocity / Math.max(currentSpeed, 1e-6)
+        this.vel.x *= scaleUp
+        this.vel.y *= scaleUp
+      }
+    }
 
     // Constrain particle position to stay close to spawn position
     this.constrainToSpawnArea(p5)
@@ -365,6 +650,11 @@ export class Particle {
 
   applyFrequencyBandMovement(p, distanceMultiplier = 1.0) {
     const p5 = p || this.p
+
+    // Apply visual style movement modifiers
+    const movementMultiplier = this.visualStyle?.movementSpeed ?? 1.0
+    const rotationMultiplier = this.visualStyle?.rotationSpeed ?? 0.0
+    const spawnPattern = this.visualStyle?.spawnPattern ?? 0
 
     switch (this.frequencyBand) {
       case 0: // Sub-bass - much more controlled pulsing movement
@@ -375,14 +665,14 @@ export class Particle {
           center.y - this.pos.y
         )
 
-        // Much more dramatic pulsing effect - directly tied to audio level
-        const pulseStrength = 2.0 * this.audioReactivity // Increased from 0.8 to 2.0 (much more dramatic)
+        // Much more subtle pulsing effect - directly tied to audio level
+        const pulseStrength = 0.8 * this.audioReactivity * movementMultiplier // Reduced from 1.5 for much slower movement
         // Use audio reactivity to control the frequency and intensity of pulsing
-        const audioFrequency = 0.1 + this.audioReactivity * 0.3 // Audio affects pulse frequency
+        const audioFrequency = 0.08 + this.audioReactivity * 0.15 // Reduced from 0.1 for less dramatic frequency
         const pulseDirection =
           p5.sin(p5.frameCount * audioFrequency + this.individualSeed) *
           pulseStrength *
-          (1 + this.audioReactivity * 2)
+          (1 + this.audioReactivity * 0.8) // Reduced from 1.5 for much less dramatic effect
 
         if (pulseDirection > 0) {
           // Expand outward - controlled dramatic effect with audio-reactive variation
@@ -415,32 +705,44 @@ export class Particle {
         }
 
         // Much more responsive velocity limit for sub-bass - varies dramatically with audio
-        this.vel.limit((0.3 + this.audioReactivity * 1.5) * 0.75) // Much more dramatic speed variation with audio
+        const subBassMaxVel =
+          (0.3 + this.audioReactivity * 1.5) * 0.75 * movementMultiplier
+        const absoluteSubBassMax = Particle.MAX_VELOCITY * 0.67 // 67% of global max for sub-bass
+        this.vel.limit(Math.min(subBassMaxVel, absoluteSubBassMax))
         break
       case 1: // Bass - much more dramatic spiral movement directly tied to audio
         // Audio affects both rotation speed and adds chaotic variation
         const audioRotationSpeed =
-          this.rotationSpeed * this.audioReactivity * 5.0
-        const chaoticVariation =
-          p5.sin(p5.frameCount * (0.2 + this.audioReactivity * 0.5)) *
+          (this.rotationSpeed + rotationMultiplier) *
           this.audioReactivity *
-          2.0
+          2.0 * // Reduced from 7.0 for much slower rotation
+          movementMultiplier // Apply visual style modifiers
+        const chaoticVariation =
+          p5.sin(p5.frameCount * (0.15 + this.audioReactivity * 0.3)) * // Reduced from 0.25 for less dramatic frequency
+          this.audioReactivity *
+          1.0 // Reduced from 3.0 for much less dramatic effect
         this.vel.rotate(audioRotationSpeed + chaoticVariation)
 
         // Much more responsive velocity limit for bass - varies dramatically with audio
-        this.vel.limit((0.5 + this.audioReactivity * 2.0) * 0.75) // Much more dramatic speed variation with audio
+        const bassMaxVel =
+          (0.5 + this.audioReactivity * 2.0) * 0.75 * movementMultiplier
+        const absoluteBassMax = Particle.MAX_VELOCITY * 0.83 // 83% of global max for bass
+        this.vel.limit(Math.min(bassMaxVel, absoluteBassMax))
         break
       case 2: // Low Mid - much more dramatic bouncing with audio-reactive bounciness
         if (this.pos.x < 0 || this.pos.x > p5.width)
-          this.vel.x *= -(0.8 + this.audioReactivity * 2.5) // Increased from 1.2 to 2.5 (much more dramatic)
+          this.vel.x *= -(0.8 + this.audioReactivity * 2.5) * movementMultiplier // Apply visual style movement modifier
         if (this.pos.y < 0 || this.pos.y > p5.height)
-          this.vel.y *= -(0.8 + this.audioReactivity * 2.5) // Increased from 1.2 to 2.5 (much more dramatic)
+          this.vel.y *= -(0.8 + this.audioReactivity * 2.5) * movementMultiplier // Apply visual style movement modifier
         break
       case 3: // Mid - much more dramatic wavey movement directly tied to audio
-        // Audio affects both frequency and amplitude of wavey movement
-        const audioWaveFreq = 0.2 + this.audioReactivity * 0.4 // Audio affects wave frequency
+        // Audio affects both frequency and amplitude of wavey movement - reduced for more natural movement
+        const audioWaveFreq = 0.1 + this.audioReactivity * 0.2 // Reduced from 0.15 for less dramatic frequency
         const audioWaveAmp =
-          0.8 * this.audioReactivity * (1 + this.audioReactivity * 3) // Audio affects wave amplitude
+          0.3 * // Reduced from 0.6 for much less dramatic amplitude
+          this.audioReactivity *
+          (1 + this.audioReactivity * 1.2) * // Reduced from 2 for much less dramatic effect
+          movementMultiplier // Apply visual style movement modifier
 
         this.vel.x +=
           p5.sin(p5.frameCount * audioWaveFreq + this.individualSeed) *
@@ -448,6 +750,10 @@ export class Particle {
         this.vel.y +=
           p5.cos(p5.frameCount * audioWaveFreq + this.individualSeed) *
           audioWaveAmp
+
+        // Add velocity limit for mid frequencies
+        const midMaxVel = Particle.MAX_VELOCITY // 100% of global max for mid
+        this.vel.limit(midMaxVel)
         break
       case 4: // High Mid - much more dramatic expanding/contracting movement
         const expansionForce = p5.createVector(
@@ -455,21 +761,32 @@ export class Particle {
           this.pos.y - p5.height / 2
         )
         expansionForce.normalize()
-        expansionForce.mult(1.5 * this.audioReactivity) // Increased from 0.8 to 1.5 (much more dramatic)
+        expansionForce.mult(0.6 * this.audioReactivity * movementMultiplier) // Reduced from 1.5 for much slower movement
         this.vel.add(expansionForce)
+
+        // Add velocity limit for high mid frequencies
+        const highMidMaxVel = Particle.MAX_VELOCITY * 0.92 // 92% of global max for high mid
+        this.vel.limit(highMidMaxVel)
         break
       case 5: // Presence - much more dramatic chaotic movement
         this.vel.add(
           p5
-            .createVector(p5.random(-1.0, 1.0), p5.random(-1.0, 1.0)) // Increased from 0.6 to 1.0 (much more dramatic)
-            .mult(this.audioReactivity)
+            .createVector(p5.random(-0.5, 0.5), p5.random(-0.5, 0.5)) // Reduced from -1.0 to 1.0 for slower movement
+            .mult(this.audioReactivity * movementMultiplier) // Apply visual style movement modifier
         )
+
+        // Add velocity limit for presence frequencies
+        const presenceMaxVel = Particle.MAX_VELOCITY * 0.83 // 83% of global max for presence
+        this.vel.limit(presenceMaxVel)
         break
       case 6: // Brilliance - much more dramatic rapid oscillation directly tied to audio
-        // Audio affects both oscillation frequency and creates chaotic patterns
-        const audioOscFreq = 0.4 + this.audioReactivity * 0.8 // Audio affects oscillation frequency
+        // Audio affects both oscillation frequency and creates chaotic patterns - reduced for more natural movement
+        const audioOscFreq = 0.3 + this.audioReactivity * 0.5 // Reduced from 0.5 for less dramatic frequency
         const audioOscAmp =
-          1.2 * this.audioReactivity * (1 + this.audioReactivity * 4) // Audio affects oscillation amplitude
+          0.8 * // Reduced from 1.5 for less dramatic amplitude
+          this.audioReactivity *
+          (1 + this.audioReactivity * 2.5) * // Reduced from 5 for less dramatic effect
+          movementMultiplier // Apply visual style movement modifier
 
         // Add chaotic variation based on audio level
         const chaoticX =
@@ -488,15 +805,23 @@ export class Particle {
             audioOscAmp +
           chaoticX
         this.vel.y +=
-          p5.sin(p5.frameCount * audioOscFreq + this.individualSeed) *
+          p5.cos(p5.frameCount * audioOscFreq + this.individualSeed) *
             audioOscAmp +
           chaoticY
+
+        // Add velocity limit for brilliance frequencies
+        const brillianceMaxVel = Particle.MAX_VELOCITY * 0.75 // 75% of global max for brilliance
+        this.vel.limit(brillianceMaxVel)
         break
       case 7: // Air - much more dramatic random direction changes
         if (p5.random() < 0.5 * this.audioReactivity) {
           // Increased from 0.3 to 0.5 (much more frequent)
-          this.vel.rotate(p5.random(-p5.PI, p5.PI)) // Increased from PI/2 to PI (much more dramatic)
+          this.vel.rotate(p5.random(-p5.PI, p5.PI) * movementMultiplier) // Apply visual style movement modifier
         }
+
+        // Add velocity limit for air frequencies
+        const airMaxVel = Particle.MAX_VELOCITY * 0.67 // 67% of global max for air
+        this.vel.limit(airMaxVel)
         break
     }
   }
@@ -577,12 +902,21 @@ export class Particle {
     const p = this.p
     p.noStroke()
 
-    // Dynamic color shifting
+    // Apply visual style color modifiers
+    const colorShiftSpeed = this.visualStyle?.enablePulse
+      ? this.colorShiftSpeed * 1.5
+      : this.colorShiftSpeed
+    const enableTrails = this.visualStyle?.enableTrails ?? false
+    const enableRipple = this.visualStyle?.enableRipple ?? false
+    const enableGlow = this.visualStyle?.enableGlow ?? false
+    const enableSparkle = this.visualStyle?.enableSparkle ?? false
+    const trailLength = this.visualStyle?.trailLength ?? 1
+    const glowRadius = this.visualStyle?.glowRadius ?? 1.2
+    const sparkleFrequency = this.visualStyle?.sparkleFrequency ?? 0.1
+
+    // Dynamic color shifting with visual style modifier
     this.colorHue +=
-      this.colorShiftSpeed *
-      0.2 *
-      this.colorShiftDirection *
-      this.audioReactivity
+      colorShiftSpeed * 0.2 * this.colorShiftDirection * this.audioReactivity
     if (this.colorHue > 360) this.colorHue -= 360
     if (this.colorHue < 0) this.colorHue += 360
 
@@ -605,40 +939,313 @@ export class Particle {
       this.alpha / 255
     )
 
-    // Much more dramatic size pulsing based on frequency band and audio reactivity
+    // Much more subtle size pulsing based on frequency band and audio reactivity
     let pulseSize = this.size
 
     // Use audio reactivity to control the intensity of the pulse
-    const audioMultiplier = Math.max(0.1, this.audioReactivity) // Minimum 0.1, maximum 1.0
+    const audioMultiplier = Math.max(0.1, this.audioReactivity) // Increased minimum for less dramatic contrast
 
     if (this.frequencyBand === 0) {
-      // Sub-bass pulses much more dramatically - very obvious difference
-      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 0.4) // 0 to 1 range
-      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
-      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
+      // Sub-bass pulses subtly
+      const pulseFactor = 0.8 + 0.2 * p.sin(p.frameCount * 0.3) // Reduced from 0.4-1.0 to 0.8-1.0 range
+      const sizeMultiplier = 0.8 + pulseFactor * 0.2 // Scale from 0.8x to 1.0x (much more subtle)
+      pulseSize = this.size * sizeMultiplier * (0.7 + audioMultiplier * 0.6) // Less dramatic audio scaling
     } else if (this.frequencyBand === 1) {
-      // Bass pulses more dramatically
-      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 0.3) // 0 to 1 range
-      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
-      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
+      // Bass pulses subtly
+      const pulseFactor = 0.8 + 0.2 * p.sin(p.frameCount * 0.25) // Reduced range and frequency
+      const sizeMultiplier = 0.8 + pulseFactor * 0.2 // Scale from 0.8x to 1.0x (much more subtle)
+      pulseSize = this.size * sizeMultiplier * (0.7 + audioMultiplier * 0.6) // Less dramatic audio scaling
     } else if (this.frequencyBand >= 6) {
-      // High frequencies vibrate much more rapidly
-      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 1.0) // 0 to 1 range
-      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
-      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
+      // High frequencies vibrate subtly
+      const pulseFactor = 0.8 + 0.2 * p.sin(p.frameCount * 0.6) // Reduced range and frequency
+      const sizeMultiplier = 0.8 + pulseFactor * 0.2 // Scale from 0.8x to 1.0x (much more subtle)
+      pulseSize = this.size * sizeMultiplier * (0.7 + audioMultiplier * 0.6) // Less dramatic audio scaling
     } else {
-      // Mid frequencies have much more dramatic pulsing
-      const pulseFactor = 0.5 + 0.5 * p.sin(p.frameCount * 0.2) // 0 to 1 range
-      const sizeMultiplier = 0.6 + pulseFactor * 0.8 // Scale from 0.6x to 1.4x (never below 60%)
-      pulseSize = this.size * sizeMultiplier * (0.5 + audioMultiplier * 1.0) // Audio affects overall size much more dramatically
+      // Mid frequencies have subtle pulsing
+      const pulseFactor = 0.8 + 0.2 * p.sin(p.frameCount * 0.2) // Reduced range and frequency
+      const sizeMultiplier = 0.8 + pulseFactor * 0.2 // Scale from 0.8x to 1.0x (much more subtle)
+      pulseSize = this.size * sizeMultiplier * (0.7 + audioMultiplier * 0.6) // Less dramatic audio scaling
     }
 
-    // Safety check - ensure size never goes below 50% of original size
-    const absoluteMinSize = this.size * 0.5
+    // Safety check - ensure size never goes below 80% of original size (increased from 40%)
+    const absoluteMinSize = this.size * 0.8
     pulseSize = Math.max(pulseSize, absoluteMinSize)
 
-    p.fill(currentColor)
+    // Apply visual style effects in order (back to front)
+
+    // 1. Glow effect (drawn first, behind everything)
+    if (enableGlow) {
+      let glowHue = this.colorHue
+      let glowSaturation = this.colorSaturation
+      let glowBrightness = this.colorBrightness
+
+      if (this.visualStyle) {
+        // Alternate between different visual style colors for glow
+        const glowColorIndex = Math.floor(p.random(0, 4))
+        switch (glowColorIndex) {
+          case 0: // Primary color
+            glowHue = this.visualStyle.primaryHue
+            glowSaturation = (this.visualStyle.primarySaturation || 85) * 0.8
+            glowBrightness = (this.visualStyle.primaryBrightness || 85) * 1.3
+            break
+          case 1: // Secondary color
+            glowHue = this.visualStyle.secondaryHue
+            glowSaturation = (this.visualStyle.secondarySaturation || 80) * 0.8
+            glowBrightness = (this.visualStyle.secondaryBrightness || 80) * 1.3
+            break
+          case 2: // Accent color
+            glowHue = this.visualStyle.accentHue
+            glowSaturation = (this.visualStyle.accentSaturation || 75) * 0.8
+            glowBrightness = (this.visualStyle.accentBrightness || 75) * 1.3
+            break
+          case 3: // Tertiary color
+            glowHue = this.visualStyle.tertiaryHue
+            glowSaturation = (this.visualStyle.tertiarySaturation || 70) * 0.8
+            glowBrightness = (this.visualStyle.tertiaryBrightness || 70) * 1.3
+            break
+        }
+      }
+
+      // Apply blur effect if enabled
+      if (this.visualStyle?.enableBlur) {
+        p.drawingContext.filter = `blur(${this.visualStyle.blurIntensity || 1}px)`
+      }
+
+      // Apply distortion effect if enabled
+      if (this.visualStyle?.enableDistortion) {
+        const distortionX =
+          Math.sin(p.frameCount * 0.1 + this.individualSeed) *
+          (this.visualStyle.distortionStrength || 2)
+        const distortionY =
+          Math.cos(p.frameCount * 0.1 + this.individualSeed) *
+          (this.visualStyle.distortionStrength || 2)
+        p.push()
+        p.translate(distortionX, distortionY)
+      }
+
+      // Apply polar distortion if enabled
+      if (this.visualStyle?.enablePolarDistortion) {
+        const polarRadius = this.visualStyle.polarDistortionRadius || 1.5
+        const polarAngle = Math.atan2(
+          this.pos.y - p.height / 2,
+          this.pos.x - p.width / 2
+        )
+        const polarDistortion =
+          Math.sin(polarAngle * 3 + p.frameCount * 0.05) * polarRadius
+        p.push()
+        p.translate(
+          Math.cos(polarAngle) * polarDistortion,
+          Math.sin(polarAngle) * polarDistortion
+        )
+      }
+
+      // Apply chromatic aberration if enabled
+      if (this.visualStyle?.chromaticAberration) {
+        // Draw multiple colored versions with slight offsets
+        const aberrationOffset = 2
+        for (let i = 0; i < 3; i++) {
+          const offsetX = (i - 1) * aberrationOffset
+          const offsetY = (i - 1) * aberrationOffset
+          const aberrationHue = (glowHue + i * 30) % 360
+          p.fill(
+            aberrationHue,
+            glowSaturation,
+            glowBrightness,
+            (this.alpha / 255) * 0.3
+          )
+          p.ellipse(
+            this.pos.x + offsetX,
+            this.pos.y + offsetY,
+            pulseSize * glowRadius
+          )
+        }
+      } else {
+        // Standard glow without aberration
+        p.fill(
+          glowHue,
+          glowSaturation,
+          glowBrightness,
+          (this.alpha / 255) * 0.3
+        )
+        p.ellipse(this.pos.x, this.pos.y, pulseSize * glowRadius)
+      }
+
+      // Reset distortion effects
+      if (
+        this.visualStyle?.enableDistortion ||
+        this.visualStyle?.enablePolarDistortion
+      ) {
+        p.pop()
+      }
+
+      // Reset blur effect
+      if (this.visualStyle?.enableBlur) {
+        p.drawingContext.filter = 'none'
+      }
+    }
+
+    // 2. Trail effects (drawn next, behind main particle)
+    if (enableTrails) {
+      for (let i = 1; i <= trailLength; i++) {
+        const trailAlpha =
+          (this.alpha / 255) * (0.3 / i) * (1 - i / (trailLength + 1))
+        const trailSize = pulseSize * (1 + i * 0.2)
+
+        let trailHue = this.colorHue
+        let trailSaturation = adjustedColors.saturation
+        let trailBrightness = adjustedColors.brightness
+
+        // Use visual style colors for trails if available
+        if (this.visualStyle) {
+          // Use different colors for different trail layers
+          switch (i % 3) {
+            case 0: // First trail layer
+              trailHue = this.visualStyle.primaryHue
+              trailSaturation = this.visualStyle.primarySaturation || 85
+              trailBrightness = this.visualStyle.primaryBrightness || 85
+              break
+            case 1: // Second trail layer
+              trailHue = this.visualStyle.secondaryHue
+              trailSaturation = this.visualStyle.secondarySaturation || 80
+              trailBrightness = this.visualStyle.secondaryBrightness || 80
+              break
+            case 2: // Third trail layer
+              trailHue = this.visualStyle.accentHue
+              trailSaturation = this.visualStyle.accentSaturation || 75
+              trailBrightness = this.visualStyle.accentBrightness || 75
+              break
+          }
+        }
+
+        p.fill(trailHue, trailSaturation, trailBrightness, trailAlpha)
+        p.ellipse(this.pos.x, this.pos.y, trailSize)
+      }
+    }
+
+    // 3. Ripple effect
+    if (enableRipple) {
+      const rippleSize = pulseSize * (1 + p.sin(p.frameCount * 0.1) * 0.3)
+
+      let rippleHue = this.colorHue
+      let rippleSaturation = adjustedColors.saturation
+      let rippleBrightness = adjustedColors.brightness
+
+      // Use visual style colors for ripple if available
+      if (this.visualStyle) {
+        // Use tertiary color for ripple effect
+        rippleHue = this.visualStyle.tertiaryHue
+        rippleSaturation = this.visualStyle.tertiarySaturation || 70
+        rippleBrightness = this.visualStyle.tertiaryBrightness || 70
+      }
+
+      p.fill(
+        rippleHue,
+        rippleSaturation,
+        rippleBrightness,
+        (this.alpha / 255) * 0.2
+      )
+      p.ellipse(this.pos.x, this.pos.y, rippleSize * 1.8)
+    }
+
+    // 4. Main particle (drawn on top of glow)
+    // Apply motion blur if enabled
+    if (this.visualStyle?.motionBlur) {
+      const motionBlurLength = 3
+      const motionBlurAlpha = this.alpha / 255 / motionBlurLength
+
+      for (let i = 0; i < motionBlurLength; i++) {
+        const blurOffset = i * 0.5
+        const blurAlpha =
+          (motionBlurAlpha * (motionBlurLength - i)) / motionBlurLength
+
+        p.fill(
+          this.colorHue,
+          adjustedColors.saturation,
+          adjustedColors.brightness,
+          blurAlpha
+        )
+        p.ellipse(
+          this.pos.x - this.vel.x * blurOffset,
+          this.pos.y - this.vel.y * blurOffset,
+          pulseSize * (1 - blurOffset * 0.1)
+        )
+      }
+    }
+
+    // Apply depth of field effect if enabled
+    if (this.visualStyle?.depthOfField) {
+      const centerX = p.width / 2
+      const centerY = p.height / 2
+      const distanceFromCenter = Math.sqrt(
+        Math.pow(this.pos.x - centerX, 2) + Math.pow(this.pos.y - centerY, 2)
+      )
+      const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY)
+      const focusDistance = maxDistance * 0.3 // Focus on center 30% of canvas
+
+      if (Math.abs(distanceFromCenter - focusDistance) > maxDistance * 0.2) {
+        // Apply blur to out-of-focus particles
+        p.drawingContext.filter = `blur(${(Math.abs(distanceFromCenter - focusDistance) / maxDistance) * 3}px)`
+      }
+    }
+
+    // Draw main particle
+    p.fill(
+      this.colorHue,
+      adjustedColors.saturation,
+      adjustedColors.brightness,
+      this.alpha / 255
+    )
     p.ellipse(this.pos.x, this.pos.y, pulseSize)
+
+    // Reset depth of field blur
+    if (this.visualStyle?.depthOfField) {
+      p.drawingContext.filter = 'none'
+    }
+
+    // 5. Sparkle effect (drawn last, on top)
+    if (enableSparkle && p.random() < sparkleFrequency) {
+      const sparkleSize = pulseSize * 0.3
+      const sparkleAlpha = (this.alpha / 255) * 0.8
+
+      let sparkleHue = 0 // Default to white
+      let sparkleSaturation = 0
+      let sparkleBrightness = 100
+
+      // Use visual style colors for sparkle if available
+      if (this.visualStyle) {
+        // Alternate between different visual style colors for sparkles
+        const sparkleColorIndex = Math.floor(p.random(0, 4))
+        switch (sparkleColorIndex) {
+          case 0: // Primary color
+            sparkleHue = this.visualStyle.primaryHue
+            sparkleSaturation = this.visualStyle.primarySaturation || 85
+            sparkleBrightness = this.visualStyle.primaryBrightness || 85
+            break
+          case 1: // Secondary color
+            sparkleHue = this.visualStyle.secondaryHue
+            sparkleSaturation = this.visualStyle.secondarySaturation || 80
+            sparkleBrightness = this.visualStyle.secondaryBrightness || 80
+            break
+          case 2: // Accent color
+            sparkleHue = this.visualStyle.accentHue
+            sparkleSaturation = this.visualStyle.accentSaturation || 75
+            sparkleBrightness = this.visualStyle.accentBrightness || 75
+            break
+          case 3: // Tertiary color
+            sparkleHue = this.visualStyle.tertiaryHue
+            sparkleSaturation = this.visualStyle.tertiarySaturation || 70
+            sparkleBrightness = this.visualStyle.tertiaryBrightness || 70
+            break
+        }
+      }
+
+      p.fill(sparkleHue, sparkleSaturation, sparkleBrightness, sparkleAlpha)
+      p.ellipse(
+        this.pos.x + p.random(-pulseSize / 2, pulseSize / 2),
+        this.pos.y + p.random(-pulseSize / 2, pulseSize / 2),
+        sparkleSize
+      )
+    }
 
     // Reset color mode
     p.colorMode(p.RGB, 255, 255, 255, 255)
@@ -654,9 +1261,18 @@ export class Particle {
  * @param {number} band - Frequency band index (0-7)
  * @param {number} exponentialAmp - Exponential amplitude value
  * @param {number} canvasScale - Canvas size scaling factor
+ * @param {Object} visualStyle - Visual style parameters
  * @returns {number} Number of particles to spawn
  */
-export const calculateParticleCount = (band, exponentialAmp, canvasScale) => {
+export const calculateParticleCount = (
+  band,
+  exponentialAmp,
+  canvasScale,
+  visualStyle = null
+) => {
+  // Apply visual style density modifier
+  const densityMultiplier = visualStyle?.shapeDensity ?? 1.0
+
   let baseParticles
   switch (band) {
     case 0:
@@ -692,30 +1308,36 @@ export const calculateParticleCount = (band, exponentialAmp, canvasScale) => {
 
   if (exponentialAmp < 0.01) {
     // Very quiet - minimal particles
-    audioMultiplier = 0.1
+    audioMultiplier = 0.05 // Reduced from 0.1 for more dramatic contrast
   } else if (exponentialAmp < 0.05) {
     // Quiet - few particles
-    audioMultiplier = 0.5
+    audioMultiplier = 0.3 // Reduced from 0.5 for more dramatic contrast
   } else if (exponentialAmp < 0.1) {
     // Moderate - normal particles
     audioMultiplier = 1.0
   } else if (exponentialAmp < 0.2) {
     // Loud - many particles
-    audioMultiplier = 3.0
+    audioMultiplier = 4.0 // Increased from 3.0 for more dramatic response
   } else if (exponentialAmp < 0.4) {
     // Very loud - lots of particles
-    audioMultiplier = 6.0
+    audioMultiplier = 8.0 // Increased from 6.0 for more dramatic response
   } else {
     // Extremely loud - maximum particles
-    audioMultiplier = 10.0
+    audioMultiplier = 15.0 // Increased from 10.0 for more dramatic response
   }
 
   // Much more sensitive curve for dramatic response
-  const dramaticResponse = Math.pow(exponentialAmp, 0.1) // Even more sensitive than 0.15
+  const dramaticResponse = Math.pow(exponentialAmp, 0.08) // Even more sensitive than 0.1
 
   return Math.max(
     1,
-    Math.floor(baseParticles * canvasScale * dramaticResponse * audioMultiplier)
+    Math.floor(
+      baseParticles *
+        canvasScale *
+        dramaticResponse *
+        audioMultiplier *
+        densityMultiplier
+    )
   )
 }
 
@@ -754,15 +1376,23 @@ export const calculateStaggeredSpawn = (band, frameCount, totalParticles) => {
  * @param {number} canvasWidth - Canvas width
  * @param {number} canvasHeight - Canvas height
  * @param {number} pixelsPerParticle - Pixels per particle ratio
+ * @param {Object} visualStyle - Visual style parameters
  * @returns {number} Maximum total particles
  */
 export const calculateMaxParticles = (
   canvasWidth,
   canvasHeight,
-  pixelsPerParticle = 3000
+  pixelsPerParticle = 3000,
+  visualStyle = null
 ) => {
   const canvasArea = canvasWidth * canvasHeight
-  return Math.floor(canvasArea / pixelsPerParticle)
+  const baseMaxParticles = Math.floor(canvasArea / pixelsPerParticle)
+
+  // Apply visual style particle count modifier
+  const particleCountModifier = visualStyle?.particleCount ?? 200
+  const normalizedModifier = particleCountModifier / 200 // Normalize to base value
+
+  return Math.floor(baseMaxParticles * normalizedModifier)
 }
 
 /**

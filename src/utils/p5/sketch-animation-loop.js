@@ -19,6 +19,7 @@
  * @param {Function} calculateParticleCount - Function to calculate particle count
  * @param {Function} calculateSpawnPosition - Function to calculate spawn position
  * @param {Function} ParticleClass - Particle class constructor
+ * @param {Object} visualStyle - Visual style parameters
  * @returns {Function} Animation loop function
  */
 export const createAudioReactiveAnimationLoop = (
@@ -36,7 +37,8 @@ export const createAudioReactiveAnimationLoop = (
   calculateParticleCount,
   calculateSpawnPosition,
   calculateStaggeredSpawn,
-  ParticleClass
+  ParticleClass,
+  visualStyle = null
 ) => {
   return () => {
     // Verify FFT is properly initialized
@@ -61,8 +63,13 @@ export const createAudioReactiveAnimationLoop = (
     // Create particles for each frequency band with more dramatic mapping
     const frequencyBands = getFrequencyBands(frequencyData)
 
-    // Calculate particle limits and scaling using utilities
-    const maxTotalParticles = calculateMaxParticles(p.width, p.height, 3000)
+    // Calculate particle limits and scaling using utilities with visual style
+    const maxTotalParticles = calculateMaxParticles(
+      p.width,
+      p.height,
+      3000,
+      visualStyle
+    )
     const currentParticleCount = particles.length
     const canvasScale = calculateCanvasScale(p.width, p.height, 400)
 
@@ -71,11 +78,12 @@ export const createAudioReactiveAnimationLoop = (
       const normalizedAmp = band.amp / 255
       const exponentialAmp = Math.pow(normalizedAmp, 0.4) // More sensitive to low values
 
-      // Calculate particle count using utility
+      // Calculate particle count using utility with visual style
       const maxParticles = calculateParticleCount(
         band.band,
         exponentialAmp,
-        canvasScale
+        canvasScale,
+        visualStyle
       )
       const count = p.floor(maxParticles)
 
@@ -97,7 +105,8 @@ export const createAudioReactiveAnimationLoop = (
           p.frameCount,
           band.band,
           spawnInfo.spawnIndex,
-          p
+          p,
+          visualStyle // Pass visual style for enhanced spawn patterns
         )
 
         particles.push(
@@ -107,7 +116,8 @@ export const createAudioReactiveAnimationLoop = (
             spawnPosition.y,
             band.amp,
             band.band,
-            markovSeed
+            markovSeed,
+            visualStyle
           )
         )
       }
@@ -116,7 +126,7 @@ export const createAudioReactiveAnimationLoop = (
     // Update and draw particles
     for (let i = particles.length - 1; i >= 0; i--) {
       const pt = particles[i]
-      pt.update()
+      pt.update(p, null, frequencyBands) // Pass frequency data for real-time reactivity
       pt.draw()
       if (pt.isDead()) {
         particles.splice(i, 1)
@@ -130,11 +140,11 @@ export const createAudioReactiveAnimationLoop = (
  * @param {Array} particles - Array of particles
  * @returns {Function} Simple update loop function
  */
-export const createSimpleParticleLoop = (particles) => {
+export const createSimpleParticleLoop = (particles, frequencyBands = null) => {
   return () => {
     for (let i = particles.length - 1; i >= 0; i--) {
       const pt = particles[i]
-      pt.update()
+      pt.update(null, null, frequencyBands) // Pass frequency data if available
       pt.draw()
       if (pt.isDead()) particles.splice(i, 1)
     }
@@ -153,6 +163,7 @@ export const createSimpleParticleLoop = (particles) => {
  * @param {Function} calculateParticleCount - Function to calculate particle count
  * @param {Function} calculateSpawnPosition - Function to calculate spawn position
  * @param {Function} ParticleClass - Particle class constructor
+ * @param {Object} visualStyle - Visual style parameters
  * @returns {Function} Particle spawning loop function
  */
 export const createParticleSpawningLoop = (
@@ -165,11 +176,17 @@ export const createParticleSpawningLoop = (
   calculateCanvasScale,
   calculateParticleCount,
   calculateSpawnPosition,
-  ParticleClass
+  ParticleClass,
+  visualStyle = null
 ) => {
   return () => {
-    // Calculate particle limits and scaling using utilities
-    const maxTotalParticles = calculateMaxParticles(p.width, p.height, 3000)
+    // Calculate particle limits and scaling using utilities with visual style
+    const maxTotalParticles = calculateMaxParticles(
+      p.width,
+      p.height,
+      3000,
+      visualStyle
+    )
     const currentParticleCount = particles.length
     const canvasScale = calculateCanvasScale(p.width, p.height, 400)
 
@@ -178,11 +195,12 @@ export const createParticleSpawningLoop = (
       const normalizedAmp = band.amp / 255
       const exponentialAmp = Math.pow(normalizedAmp, 0.4) // More sensitive to low values
 
-      // Calculate particle count using utility
+      // Calculate particle count using utility with visual style
       const maxParticles = calculateParticleCount(
         band.band,
         exponentialAmp,
-        canvasScale
+        canvasScale,
+        visualStyle
       )
       const count = p.floor(maxParticles)
 
@@ -198,7 +216,8 @@ export const createParticleSpawningLoop = (
             p.frameCount,
             band.band,
             i,
-            p
+            p,
+            visualStyle // Pass visual style for enhanced spawn patterns
           )
 
           particles.push(
@@ -208,7 +227,8 @@ export const createParticleSpawningLoop = (
               spawnPosition.y,
               band.amp,
               band.band,
-              markovSeed
+              markovSeed,
+              visualStyle
             )
           )
         }

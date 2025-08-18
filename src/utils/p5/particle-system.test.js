@@ -355,6 +355,183 @@ describe('Particle', () => {
       expect(particle).toBeDefined()
     })
   })
+
+  describe('frequency sensitivity', () => {
+    it('should update particle properties based on real-time frequency data', () => {
+      const mockP5 = {
+        createVector: jest.fn((x, y) => {
+          const vector = {
+            x,
+            y,
+            mult: jest.fn(() => vector),
+            add: jest.fn(() => vector),
+            limit: jest.fn(() => vector),
+            normalize: jest.fn(() => vector),
+            rotate: jest.fn(() => vector),
+            dot: jest.fn(() => 0),
+            sub: jest.fn(() => vector),
+          }
+          return vector
+        }),
+        random: jest.fn(() => 0.5),
+        cos: jest.fn(() => 0.5),
+        sin: jest.fn(() => 0.5),
+        TWO_PI: Math.PI * 2,
+        map: jest.fn(
+          (value, start1, stop1, start2, stop2) =>
+            start2 + ((value - start1) * (stop2 - start2)) / (stop1 - start1)
+        ),
+        noise: jest.fn(() => 0.5),
+        frameCount: 0,
+        width: 800,
+        height: 600,
+        colorMode: jest.fn(),
+        noStroke: jest.fn(),
+        fill: jest.fn(),
+        ellipse: jest.fn(),
+      }
+
+      const particle = new Particle(mockP5, 100, 100, 128, 1, 0, null)
+
+      // Set spawn position manually for test
+      particle.spawnX = 100
+      particle.spawnY = 100
+
+      const originalSize = particle.size
+      const originalSpeed = particle.speed
+
+      // Mock frequency bands data
+      const frequencyBands = [
+        { band: 0, amp: 64 }, // Low amplitude
+        { band: 1, amp: 255 }, // High amplitude (particle's band)
+        { band: 2, amp: 128 }, // Medium amplitude
+      ]
+
+      // Update particle with frequency data
+      particle.update(mockP5, null, frequencyBands)
+
+      // Verify that audio reactivity was updated
+      expect(particle.audioReactivity).toBeGreaterThan(0)
+
+      // Verify that size and speed were adjusted based on frequency amplitude
+      expect(particle.size).not.toBe(originalSize)
+      expect(particle.speed).not.toBe(originalSpeed)
+    })
+
+    it('should handle missing frequency data gracefully', () => {
+      const mockP5 = {
+        createVector: jest.fn((x, y) => {
+          const vector = {
+            x,
+            y,
+            mult: jest.fn(() => vector),
+            add: jest.fn(() => vector),
+            limit: jest.fn(() => vector),
+            normalize: jest.fn(() => vector),
+            rotate: jest.fn(() => vector),
+            dot: jest.fn(() => 0),
+            sub: jest.fn(() => vector),
+          }
+          return vector
+        }),
+        random: jest.fn(() => 0.5),
+        cos: jest.fn(() => 0.5),
+        sin: jest.fn(() => 0.5),
+        TWO_PI: Math.PI * 2,
+        map: jest.fn(
+          (value, start1, stop1, start2, stop2) =>
+            start2 + ((value - start1) * (stop2 - start2)) / (stop1 - start1)
+        ),
+        noise: jest.fn(() => 0.5),
+        frameCount: 0,
+        width: 800,
+        height: 600,
+        colorMode: jest.fn(),
+        noStroke: jest.fn(),
+        fill: jest.fn(),
+        ellipse: jest.fn(),
+      }
+
+      const particle = new Particle(mockP5, 100, 100, 128, 1, 0, null)
+
+      // Set spawn position manually for test
+      particle.spawnX = 100
+      particle.spawnY = 100
+
+      const originalSize = particle.size
+      const originalSpeed = particle.speed
+
+      // Update particle without frequency data
+      particle.update(mockP5, null, null)
+
+      // Verify that properties remain unchanged
+      expect(particle.size).toBe(originalSize)
+      expect(particle.speed).toBe(originalSpeed)
+    })
+  })
+
+  describe('velocity limits', () => {
+    it('should respect maximum velocity limits', () => {
+      const mockP5 = {
+        createVector: jest.fn((x, y) => {
+          const vector = {
+            x,
+            y,
+            mult: jest.fn(() => vector),
+            add: jest.fn(() => vector),
+            limit: jest.fn(() => vector),
+            normalize: jest.fn(() => vector),
+            rotate: jest.fn(() => vector),
+            dot: jest.fn(() => 0),
+            sub: jest.fn(() => vector),
+          }
+          return vector
+        }),
+        random: jest.fn(() => 0.5),
+        cos: jest.fn(() => 0.5),
+        sin: jest.fn(() => 0.5),
+        TWO_PI: Math.PI * 2,
+        map: jest.fn(
+          (value, start1, stop1, start2, stop2) =>
+            start2 + ((value - start1) * (stop2 - start2)) / (stop1 - start1)
+        ),
+        noise: jest.fn(() => 0.5),
+        frameCount: 0,
+        width: 800,
+        height: 600,
+        colorMode: jest.fn(),
+        noStroke: jest.fn(),
+        fill: jest.fn(),
+        ellipse: jest.fn(),
+      }
+
+      const particle = new Particle(mockP5, 100, 100, 255, 1, 0, null)
+
+      // Set spawn position manually for test
+      particle.spawnX = 100
+      particle.spawnY = 100
+
+      // Test that global constants are defined
+      expect(Particle.MAX_VELOCITY).toBe(2.0)
+      expect(Particle.MAX_SPEED).toBe(3.0)
+
+      // Test that particle respects speed limits
+      const originalSpeed = particle.speed
+      particle.speed = 20.0 // Try to set very high speed
+
+      // Update particle with high frequency data to trigger speed multiplier
+      const frequencyBands = [
+        { band: 0, amp: 64 },
+        { band: 1, amp: 255 }, // High amplitude (particle's band)
+        { band: 2, amp: 128 },
+      ]
+
+      particle.update(mockP5, null, frequencyBands)
+
+      // Speed should be limited to MAX_SPEED
+      expect(particle.speed).toBeLessThanOrEqual(Particle.MAX_SPEED)
+    })
+  })
 })
 
 describe('calculateParticleCount', () => {
