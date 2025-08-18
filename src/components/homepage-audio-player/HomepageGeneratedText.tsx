@@ -1,21 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import TypingNarrative from '../typing-narrative/typing-narrative'
 import MarkovGeneratorAPIClient from '../../utils/markov-generator-api-client'
-
-interface MarkovText {
-  id: string
-  content: string
-  coherencyLevel: string
-}
+import { BlogPost } from '../../pages'
 
 interface HomepageGeneratedTextProps {
-  processedTexts: MarkovText[]
-  currentBlogPostDate: string
+  currentBlogPost: BlogPost | null
 }
 
 export const HomepageGeneratedText: React.FC<HomepageGeneratedTextProps> = ({
-  processedTexts,
-  currentBlogPostDate,
+  currentBlogPost,
 }) => {
   const [texts, setTexts] = useState<string[]>([])
   // Initialize the markov generator API client
@@ -40,20 +33,22 @@ export const HomepageGeneratedText: React.FC<HomepageGeneratedTextProps> = ({
     }
 
     fetchTextsFromGenerator()
-  }, [currentBlogPostDate])
+  }, [currentBlogPost])
 
   return (
     <div className="my-8 px-6">
       <h3 className="text-sm text-gray-400 mb-4 uppercase tracking-wide">
-        {currentBlogPostDate}
+        {currentBlogPost?.date}
       </h3>
       <div className="space-y-4">
-        {processedTexts.length === 0 ? (
+        {(currentBlogPost?.markovTexts ?? []).length === 0 ? (
           <p className="text-gray-400">No thoughts for this day</p>
         ) : (
-          processedTexts.map((text) => (
+          (currentBlogPost?.markovTexts ?? []).map((text) => (
             <div key={text.id} className="text-gray-300 leading-relaxed">
-              <p className="text-gray-300 leading-relaxed">{text.content}</p>
+              <p className="text-gray-300 leading-relaxed">
+                {text.text_content}
+              </p>
             </div>
           ))
         )}

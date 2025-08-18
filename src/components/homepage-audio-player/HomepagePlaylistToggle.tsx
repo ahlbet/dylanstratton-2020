@@ -1,13 +1,12 @@
 import React from 'react'
+import { BlogPost } from '../../pages'
 
 interface HomepagePlaylistToggleProps {
-  currentBlogPost: string | null
-  posts: any[]
+  currentBlogPost: BlogPost | null
 }
 
 export const HomepagePlaylistToggle: React.FC<HomepagePlaylistToggleProps> = ({
   currentBlogPost,
-  posts,
 }) => {
   return (
     <div className="p-4 border-b border-gray-800">
@@ -16,9 +15,7 @@ export const HomepagePlaylistToggle: React.FC<HomepagePlaylistToggleProps> = ({
           <span className="text-sm text-gray-400">Playlist</span>
           {currentBlogPost && (
             <span className="text-xs text-gray-500">
-              {posts.find(
-                (p) => p.node.frontmatter.daily_id === currentBlogPost
-              )?.node.frontmatter.title || currentBlogPost}
+              {currentBlogPost.title}
             </span>
           )}
         </div>

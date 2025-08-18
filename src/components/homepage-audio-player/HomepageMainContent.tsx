@@ -1,26 +1,12 @@
 import React from 'react'
 import { AllPostsTable } from './AllPostsTable'
 import AudioFFT from '../audio-fft/AudioFFT'
-
-interface BlogPost {
-  id: string
-  title: string
-  date: string
-  content: string
-  daily_id?: string
-}
-
-interface MarkovText {
-  id: string
-  content: string
-  coherency_level?: string
-}
+import { BlogPost } from '../../pages'
 
 interface HomepageMainContentProps {
   posts: any[]
-  currentBlogPost: string | null
+  currentBlogPost: BlogPost | null
   onPostClick: (post: BlogPost) => void
-  markovTexts: MarkovText[]
   searchTerm: string
   onSearchChange: (value: string) => void
   sortDirection: 'asc' | 'desc'
@@ -37,7 +23,6 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
   posts,
   currentBlogPost,
   onPostClick,
-  markovTexts,
   searchTerm,
   onSearchChange,
   sortDirection,
@@ -57,7 +42,9 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
           {/* Placeholder for P5 sketch - replace with your actual sketch */}
           <div className="w-full h-128 bg-gradient-to-br from-purple-900/20 to-blue-900/20 relative">
             <AudioFFT
-              markovText={markovTexts.map((text) => text.content).join(' ')}
+              markovText={(currentBlogPost?.markovTexts ?? [])
+                .map((text) => text.text_content)
+                .join(' ')}
             />
           </div>
         </div>

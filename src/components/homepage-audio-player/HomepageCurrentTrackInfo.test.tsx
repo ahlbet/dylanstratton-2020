@@ -7,10 +7,10 @@ describe('HomepageCurrentTrackInfo', () => {
     currentTrackInfo: {
       title: 'Test Track Title',
       date: '2025-01-15',
+      coverArt: '',
     },
     error: null,
     supabaseError: null,
-    coverArt: null,
   }
 
   describe('Rendering', () => {
@@ -183,7 +183,10 @@ describe('HomepageCurrentTrackInfo', () => {
     it('displays cover art when provided', () => {
       const propsWithCoverArt = {
         ...defaultProps,
-        coverArt: 'https://example.com/cover-art.jpg',
+        currentTrackInfo: {
+          ...defaultProps.currentTrackInfo,
+          coverArt: 'https://example.com/cover-art.jpg',
+        },
       }
 
       render(<HomepageCurrentTrackInfo {...propsWithCoverArt} />)
@@ -198,7 +201,14 @@ describe('HomepageCurrentTrackInfo', () => {
     })
 
     it('displays placeholder when no cover art is provided', () => {
-      render(<HomepageCurrentTrackInfo {...defaultProps} />)
+      const propsWithNoCoverArt = {
+        ...defaultProps,
+        currentTrackInfo: {
+          ...defaultProps.currentTrackInfo,
+          coverArt: '',
+        },
+      }
+      render(<HomepageCurrentTrackInfo {...propsWithNoCoverArt} />)
 
       expect(screen.getByText('No Art')).toBeInTheDocument()
       expect(screen.queryByTestId('daily-cover-art')).not.toBeInTheDocument()
@@ -207,7 +217,10 @@ describe('HomepageCurrentTrackInfo', () => {
     it('displays placeholder when cover art is null', () => {
       const propsWithNullCoverArt = {
         ...defaultProps,
-        coverArt: null,
+        currentTrackInfo: {
+          ...defaultProps.currentTrackInfo,
+          coverArt: null,
+        },
       }
 
       render(<HomepageCurrentTrackInfo {...propsWithNullCoverArt} />)
@@ -219,7 +232,10 @@ describe('HomepageCurrentTrackInfo', () => {
     it('displays placeholder when cover art is empty string', () => {
       const propsWithEmptyCoverArt = {
         ...defaultProps,
-        coverArt: '',
+        currentTrackInfo: {
+          ...defaultProps.currentTrackInfo,
+          coverArt: '',
+        },
       }
 
       render(<HomepageCurrentTrackInfo {...propsWithEmptyCoverArt} />)
@@ -231,7 +247,10 @@ describe('HomepageCurrentTrackInfo', () => {
     it('processes storage path URLs correctly', () => {
       const propsWithStoragePath = {
         ...defaultProps,
-        coverArt: 'cover-art/25jul16.png',
+        currentTrackInfo: {
+          ...defaultProps.currentTrackInfo,
+          coverArt: 'cover-art/25jul16.png',
+        },
       }
 
       render(<HomepageCurrentTrackInfo {...propsWithStoragePath} />)
@@ -245,7 +264,10 @@ describe('HomepageCurrentTrackInfo', () => {
     it('extracts correct filename from storage path for local development', () => {
       const propsWithStoragePath = {
         ...defaultProps,
-        coverArt: 'cover-art/25aug12.png',
+        currentTrackInfo: {
+          ...defaultProps.currentTrackInfo,
+          coverArt: 'cover-art/25aug12.png',
+        },
       }
 
       render(<HomepageCurrentTrackInfo {...propsWithStoragePath} />)

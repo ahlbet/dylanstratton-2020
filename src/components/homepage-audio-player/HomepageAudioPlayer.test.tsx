@@ -91,18 +91,64 @@ describe('HomepageAudioPlayer', () => {
   })
 
   const defaultProps = {
-    currentBlogPostTracks: [
-      {
-        id: '1',
-        title: 'Test Track 1',
-        date: '2025-01-01',
-        duration: '2:00',
-        storage_path: 'audio/test1.wav',
-        daily_id: 'test-daily-1',
-      },
-    ],
-    currentBlogPost: 'test-daily-1',
-    posts: [],
+    currentBlogPost: {
+      content: '',
+      daily_id: 'test-daily-1',
+      id: 'test-daily-1',
+      title: 'Test Daily 1',
+      date: '2025-01-01',
+      created_at: '2025-01-01T00:00:00Z',
+      audio: [
+        {
+          id: '1',
+          title: 'Test Track 1',
+          date: '2025-01-01',
+          duration: '2:00',
+          storage_path: 'audio/test1.wav',
+          daily_id: 'test-daily-1',
+          durationSeconds: 120,
+        },
+        {
+          id: '2',
+          title: 'Test Track 2',
+          date: '2025-01-02',
+          duration: '2:00',
+          storage_path: 'audio/test2.wav',
+          daily_id: 'test-daily-1',
+          durationSeconds: 120,
+        },
+        {
+          id: '3',
+          title: 'Test Track 3',
+          date: '2025-01-03',
+          duration: '2:00',
+          storage_path: 'audio/test3.wav',
+          daily_id: 'test-daily-1',
+          durationSeconds: 120,
+        },
+      ],
+      markovTexts: [
+        {
+          id: '1',
+          text_content: 'Test Text 1',
+          daily_id: 'test-daily-1',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+        {
+          id: '2',
+          text_content: 'Test Text 2',
+          daily_id: 'test-daily-1',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+        {
+          id: '3',
+          text_content: 'Test Text 3',
+          daily_id: 'test-daily-1',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+      cover_art: '',
+    },
     supabaseLoading: false,
     supabaseError: null,
     onTrackSelect: jest.fn(),
@@ -131,7 +177,7 @@ describe('HomepageAudioPlayer', () => {
     fireEvent.click(trackElement)
 
     expect(onTrackSelect).toHaveBeenCalledWith(
-      defaultProps.currentBlogPostTracks[0]
+      defaultProps.currentBlogPost.audio[0]
     )
   })
 
