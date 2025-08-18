@@ -276,7 +276,7 @@ Generated markov text here`)
 
   describe('createBlogPost', () => {
     it('should create blog post directory and file', () => {
-      const mockMkdirSync = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {})
+      const mockMkdirSync = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => 'mocked-dir-path')
       const mockWriteFileSync = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {})
 
       const result = TemplateProcessor.createBlogPost('test-post', 'Test content')

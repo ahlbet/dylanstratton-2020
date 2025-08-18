@@ -137,7 +137,7 @@ export const AudioPlayerProvider: React.FC<AudioPlayerProviderProps> = ({
 
       // Track song play with Plausible Analytics
       if (trackToPlay) {
-        const postName = getPostName(trackToPlay)
+        const postName = getPostName(trackToPlay, null)
         trackAudioEvent.songPlay(
           trackToPlay,
           postName,

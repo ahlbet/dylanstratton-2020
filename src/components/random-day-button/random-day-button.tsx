@@ -78,10 +78,10 @@ const RandomDayButton: React.FC = () => {
         zIndex: 1000,
       }}
       onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
-        e.target.style.backgroundColor = '#c02a56'
+        ;(e.target as HTMLAnchorElement).style.backgroundColor = '#c02a56'
       }}
       onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
-        e.target.style.backgroundColor = '#DE3163'
+        ;(e.target as HTMLAnchorElement).style.backgroundColor = '#DE3163'
       }}
       className="random-day-button"
     >

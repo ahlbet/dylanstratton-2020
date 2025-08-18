@@ -147,7 +147,7 @@ const CalendarComponent: React.FC = () => {
         editable={false}
         eventDisplay="block"
         aspectRatio={1.35}
-        ariaLabel="Blog posts calendar"
+        // ariaLabel removed - not supported in this FullCalendar version
         // Event handlers for state management
         datesSet={handleDateChange}
         viewDidMount={handleViewChange}

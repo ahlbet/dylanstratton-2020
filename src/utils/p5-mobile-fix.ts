@@ -4,9 +4,12 @@
  */
 
 // Debounce function to limit how often windowResized is called
-function debounce(func, wait) {
-  let timeout
-  return function executedFunction(...args) {
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout
+  return function executedFunction(...args: Parameters<T>) {
     const later = () => {
       clearTimeout(timeout)
       func(...args)
@@ -17,7 +20,7 @@ function debounce(func, wait) {
 }
 
 // Check if we're on a mobile device
-function isMobileDevice() {
+function isMobileDevice(): boolean {
   if (typeof window === 'undefined') return false
 
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
@@ -26,7 +29,10 @@ function isMobileDevice() {
 }
 
 // Create a mobile-friendly windowResized wrapper
-function createMobileFriendlyWindowResized(originalWindowResized, p5Instance) {
+function createMobileFriendlyWindowResized(
+  originalWindowResized: () => void,
+  p5Instance: any
+): () => void {
   if (!isMobileDevice()) {
     // On desktop, use the original function without debouncing
     return originalWindowResized
@@ -52,7 +58,7 @@ function createMobileFriendlyWindowResized(originalWindowResized, p5Instance) {
 }
 
 // Apply the fix to a p5 instance
-function applyMobileFix(p5Instance) {
+function applyMobileFix(p5Instance: any): void {
   if (!p5Instance || !p5Instance.windowResized) return
 
   // Store the original windowResized function
@@ -65,7 +71,7 @@ function applyMobileFix(p5Instance) {
   )
 }
 
-module.exports = {
+export {
   debounce,
   isMobileDevice,
   createMobileFriendlyWindowResized,

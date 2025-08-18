@@ -5,7 +5,7 @@ import * as path from 'path'
 
 // Mock @supabase/supabase-js
 jest.mock('@supabase/supabase-js')
-const MockCreateClient = createClient as jest.MockedFunction<typeof createClient>
+const MockCreateClient = createClient as any
 
 // Mock fs module
 jest.mock('fs')

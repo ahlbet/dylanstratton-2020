@@ -3,8 +3,27 @@
  * Reusable functions for analyzing audio frequency data
  */
 
+// Define types for frequency ranges and bands
+interface FrequencyRange {
+  start: number
+  end: number
+  name: string
+}
+
+interface FrequencyBand {
+  amp: number
+  band: number
+  name: string
+  spawnArea: string
+}
+
+interface FrequencyAnalysisResult {
+  frequencyData: number[]
+  smoothedData: number[]
+}
+
 // Standard frequency ranges for audio analysis
-export const FREQUENCY_RANGES = [
+export const FREQUENCY_RANGES: FrequencyRange[] = [
   { start: 20, end: 60, name: 'sub-bass' }, // 0
   { start: 60, end: 250, name: 'bass' }, // 1
   { start: 250, end: 500, name: 'low-mid' }, // 2
@@ -17,12 +36,16 @@ export const FREQUENCY_RANGES = [
 
 /**
  * Get energy from custom frequency ranges for more granular control
- * @param {Object} fft - p5.FFT instance
- * @param {number} startFreq - Start frequency in Hz
- * @param {number} endFreq - End frequency in Hz
- * @returns {number} Average energy in the frequency range
+ * @param fft - p5.FFT instance
+ * @param startFreq - Start frequency in Hz
+ * @param endFreq - End frequency in Hz
+ * @returns Average energy in the frequency range
  */
-export const getFrequencyEnergy = (fft, startFreq, endFreq) => {
+export const getFrequencyEnergy = (
+  fft: any,
+  startFreq: number,
+  endFreq: number
+): number => {
   if (!fft || !fft.logAverages || !fft.getOctaveBands) {
     return 0
   }
@@ -48,16 +71,16 @@ export const getFrequencyEnergy = (fft, startFreq, endFreq) => {
 
 /**
  * Apply smoothing to frequency data to reduce jitter
- * @param {Array} currentData - Current smoothed data
- * @param {Array} newData - New raw data
- * @param {number} smoothingFactor - Smoothing factor (0-1, higher = more smoothing)
- * @returns {Array} Smoothed data
+ * @param currentData - Current smoothed data
+ * @param newData - New raw data
+ * @param smoothingFactor - Smoothing factor (0-1, higher = more smoothing)
+ * @returns Smoothed data
  */
 export const smoothFrequencyData = (
-  currentData,
-  newData,
-  smoothingFactor = 0.7
-) => {
+  currentData: number[] | null | undefined,
+  newData: number[] | null | undefined,
+  smoothingFactor: number = 0.7
+): number[] => {
   // Handle null/undefined inputs
   if (!currentData || !newData) {
     return newData || currentData || []
@@ -83,16 +106,16 @@ export const smoothFrequencyData = (
 
 /**
  * Analyze all frequency bands and return processed data
- * @param {Object} fft - p5.FFT instance
- * @param {Array} smoothedData - Previous smoothed data array
- * @param {number} smoothingFactor - Smoothing factor for data
- * @returns {Object} Object containing frequency data and smoothed data
+ * @param fft - p5.FFT instance
+ * @param smoothedData - Previous smoothed data array
+ * @param smoothingFactor - Smoothing factor for data
+ * @returns Object containing frequency data and smoothed data
  */
 export const analyzeFrequencyBands = (
-  fft,
-  smoothedData = [],
-  smoothingFactor = 0.7
-) => {
+  fft: any,
+  smoothedData: number[] = [],
+  smoothingFactor: number = 0.7
+): FrequencyAnalysisResult => {
   if (!fft) {
     return {
       frequencyData: Array(8).fill(0),
@@ -100,7 +123,7 @@ export const analyzeFrequencyBands = (
     }
   }
 
-  const frequencyData = []
+  const frequencyData: number[] = []
 
   // Get energy from each frequency range
   FREQUENCY_RANGES.forEach((range) => {
@@ -123,10 +146,10 @@ export const analyzeFrequencyBands = (
 
 /**
  * Get frequency band configuration with spawn areas
- * @param {Array} frequencyData - Processed frequency data
- * @returns {Array} Array of band objects with amplitude, band index, name, and spawn area
+ * @param frequencyData - Processed frequency data
+ * @returns Array of band objects with amplitude, band index, name, and spawn area
  */
-export const getFrequencyBands = (frequencyData) => {
+export const getFrequencyBands = (frequencyData: number[] | null | undefined): FrequencyBand[] => {
   // Handle null/undefined inputs
   if (!frequencyData) {
     frequencyData = []

@@ -3,18 +3,75 @@
  * Reusable functions for setting up p5.js canvas and audio context
  */
 
+// Define types for p5 instance and canvas
+interface P5Instance {
+  createCanvas: (width: number, height: number) => void
+  canvas: HTMLCanvasElement
+  resizeCanvas: (width: number, height: number) => void
+  windowResized: () => void
+  getAudioContext: () => AudioContext
+}
+
+interface GlobalP5 {
+  FFT: new (smoothing: number, fftSize: number) => any
+}
+
+interface ContainerDimensions {
+  width: number
+  height: number
+}
+
+interface AudioSetupResult {
+  audioCtx: AudioContext
+  sourceNode: MediaElementAudioSourceNode
+}
+
+interface FFTSetupResult {
+  setInput: (source: MediaElementAudioSourceNode) => void
+  analyze: () => number[]
+  [key: string]: any
+}
+
+interface AudioReactiveCanvasOptions {
+  defaultWidth?: number
+  defaultHeight?: number
+  fftSmoothing?: number
+  fftSize?: number
+  onResize?: ((width: number, height: number) => void) | null
+}
+
+interface AudioReactiveCanvasResult {
+  canvas: HTMLCanvasElement
+  audioCtx: AudioContext
+  sourceNode: MediaElementAudioSourceNode
+  fft: FFTSetupResult | null
+  dimensions: ContainerDimensions
+}
+
+interface FrequencyDataResult {
+  frequencyData: number[]
+  smoothedData: number[]
+}
+
+// Extend Window interface for global FFT
+declare global {
+  interface Window {
+    __globalFFTInstance?: FFTSetupResult
+  }
+}
+
 /**
  * Get container dimensions for canvas creation
- * @param {Object} canvas - p5 canvas element
- * @param {number} defaultWidth - Default width if container not found
- * @param {number} defaultHeight - Default height if container not found
- * @returns {Object} Object with width and height
+ * @param canvas - p5 canvas element
+ * @param defaultWidth - Default width if container not found
+ * @param defaultHeight - Default height if container not found
+ * @returns Object with width and height
  */
 export const getContainerDimensions = (
-  canvas,
+  canvas: HTMLCanvasElement | null,
   defaultWidth = 800,
   defaultHeight = 400
-) => {
+): ContainerDimensions => {
   const containerWidth =
     canvas && canvas.parentElement && canvas.parentElement.offsetWidth
       ? canvas.parentElement.offsetWidth
@@ -29,11 +86,11 @@ export const getContainerDimensions = (
 
 /**
  * Setup canvas with proper positioning and dimensions
- * @param {Object} p - p5 instance
- * @param {number} width - Canvas width
- * @param {number} height - Canvas height
+ * @param p - p5 instance
+ * @param width - Canvas width
+ * @param height - Canvas height
  */
-export const setupCanvas = (p, width, height) => {
+export const setupCanvas = (p: P5Instance, width: number, height: number): void => {
   p.createCanvas(width, height)
 
   // Ensure canvas is properly positioned within container
@@ -47,11 +104,11 @@ export const setupCanvas = (p, width, height) => {
 
 /**
  * Setup audio context and connect audio element
- * @param {Object} p - p5 instance
- * @param {HTMLAudioElement} audioElement - Audio element to connect
- * @returns {Object} Object containing audio context and source node
+ * @param p - p5 instance
+ * @param audioElement - Audio element to connect
+ * @returns Object containing audio context and source node
  */
-export const setupAudioContext = (p, audioElement) => {
+export const setupAudioContext = (p: P5Instance, audioElement: HTMLAudioElement): AudioSetupResult => {
   // Get p5.sound's AudioContext
   const audioCtx = p.getAudioContext()
 
@@ -66,13 +123,13 @@ export const setupAudioContext = (p, audioElement) => {
   })
 
   // Guard: only create once per element
-  let sourceNode
-  if (!audioElement.__p5AudioSource) {
+  let sourceNode: MediaElementAudioSourceNode
+  if (!(audioElement as any).__p5AudioSource) {
     sourceNode = audioCtx.createMediaElementSource(audioElement)
     sourceNode.connect(audioCtx.destination)
-    audioElement.__p5AudioSource = sourceNode
+    ;(audioElement as any).__p5AudioSource = sourceNode
   } else {
-    sourceNode = audioElement.__p5AudioSource
+    sourceNode = (audioElement as any).__p5AudioSource
   }
 
   return { audioCtx, sourceNode }
@@ -80,13 +137,18 @@ export const setupAudioContext = (p, audioElement) => {
 
 /**
  * Setup FFT analyzer with custom settings
- * @param {Object} P5 - Global p5 object
- * @param {Object} sourceNode - Audio source node
- * @param {number} smoothing - FFT smoothing factor (0-1)
- * @param {number} fftSize - FFT size (power of 2)
- * @returns {Object} Configured FFT analyzer
+ * @param P5 - Global p5 object
+ * @param sourceNode - Audio source node
+ * @param smoothing - FFT smoothing factor (0-1)
+ * @param fftSize - FFT size (power of 2)
+ * @returns Configured FFT analyzer
  */
-export const setupFFT = (P5, sourceNode, smoothing = 0.9, fftSize = 2048) => {
+export const setupFFT = (
+  P5: GlobalP5,
+  sourceNode: MediaElementAudioSourceNode,
+  smoothing = 0.9,
+  fftSize = 2048
+): FFTSetupResult | null => {
   // Validate inputs
   if (!sourceNode) {
     return null
@@ -119,10 +181,13 @@ export const setupFFT = (P5, sourceNode, smoothing = 0.9, fftSize = 2048) => {
 
 /**
  * Handle window resize for responsive canvas
- * @param {Object} p - p5 instance
- * @param {Function} onResize - Callback function to run after resize
+ * @param p - p5 instance
+ * @param onResize - Callback function to run after resize
  */
-export const handleWindowResize = (p, onResize = null) => {
+export const handleWindowResize = (
+  p: P5Instance,
+  onResize: ((width: number, height: number) => void) | null = null
+): void => {
   const dimensions = getContainerDimensions(p.canvas)
   p.resizeCanvas(dimensions.width, dimensions.height)
 
@@ -133,13 +198,18 @@ export const handleWindowResize = (p, onResize = null) => {
 
 /**
  * Complete canvas and audio setup for audio-reactive sketches
- * @param {Object} p - p5 instance
- * @param {Object} P5 - Global p5 object
- * @param {HTMLAudioElement} audioElement - Audio element to connect
- * @param {Object} options - Setup options
- * @returns {Object} Object containing all setup components
+ * @param p - p5 instance
+ * @param P5 - Global p5 object
+ * @param audioElement - Audio element to connect
+ * @param options - Setup options
+ * @returns Object containing all setup components
  */
-export const setupAudioReactiveCanvas = (p, P5, audioElement, options = {}) => {
+export const setupAudioReactiveCanvas = (
+  p: P5Instance,
+  P5: GlobalP5,
+  audioElement: HTMLAudioElement,
+  options: AudioReactiveCanvasOptions = {}
+): AudioReactiveCanvasResult => {
   const {
     defaultWidth = 800,
     defaultHeight = 400,
@@ -178,10 +248,10 @@ export const setupAudioReactiveCanvas = (p, P5, audioElement, options = {}) => {
 
 /**
  * Initialize frequency data arrays
- * @param {number} bandCount - Number of frequency bands
- * @returns {Object} Object containing frequency and smoothed data arrays
+ * @param bandCount - Number of frequency bands
+ * @returns Object containing frequency and smoothed data arrays
  */
-export const initializeFrequencyData = (bandCount = 8) => {
+export const initializeFrequencyData = (bandCount = 8): FrequencyDataResult => {
   const frequencyData = new Array(bandCount).fill(0)
   const smoothedData = new Array(bandCount).fill(0)
 

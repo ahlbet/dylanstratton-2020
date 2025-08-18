@@ -6,8 +6,8 @@
  * @param {string} html - The processed HTML content from markdown
  * @returns {string[]} - Array of audio URLs
  */
-export const extractAudioUrls = (html) => {
-  const audioUrls = []
+export const extractAudioUrls = (html: string): string[] => {
+  const audioUrls: string[] = []
 
   if (!html || typeof html !== 'string') {
     return audioUrls
@@ -17,7 +17,7 @@ export const extractAudioUrls = (html) => {
   // Handle both quoted and unquoted src attributes, including fragments
   const audioElementRegex =
     /<audio[^>]+src=(?:["']([^"']+)["']|([^\s>]+))[^>]*>/gi
-  let match
+  let match: RegExpExecArray | null
   while ((match = audioElementRegex.exec(html)) !== null) {
     const url = match[1] || match[2] // match[1] for quoted, match[2] for unquoted
     if (url && !audioUrls.includes(url)) {
@@ -45,7 +45,7 @@ export const extractAudioUrls = (html) => {
   }
 
   // Filter and validate URLs
-  return audioUrls.filter((url) => {
+  return audioUrls.filter((url: string) => {
     try {
       const parsedUrl = new URL(url)
       // Only allow HTTP and HTTPS protocols
@@ -66,7 +66,7 @@ export const extractAudioUrls = (html) => {
  * @param {string} html - The HTML content
  * @returns {string} - HTML with audio elements removed
  */
-export const removeAudioFromHtml = (html) => {
+export const removeAudioFromHtml = (html: string): string => {
   if (!html || typeof html !== 'string') {
     return html
   }

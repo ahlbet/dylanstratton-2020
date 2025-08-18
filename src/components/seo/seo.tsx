@@ -30,11 +30,11 @@ interface SEOQueryData {
   }
 }
 
-const SEO: React.FC<SEOProps> = ({ 
-  description = '', 
-  lang = 'en', 
-  meta = [], 
-  title 
+const SEO: React.FC<SEOProps> = ({
+  description = '',
+  lang = 'en',
+  meta = [],
+  title,
 }) => {
   const { site }: SEOQueryData = useStaticQuery(graphql`
     query {
@@ -90,7 +90,8 @@ const SEO: React.FC<SEOProps> = ({
           name: `twitter:description`,
           content: metaDescription,
         },
-      ].concat(meta)}
+        ...meta,
+      ]}
     />
   )
 }

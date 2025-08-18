@@ -185,20 +185,21 @@ describe('RandomDayButton', () => {
   test('random post selection works correctly', () => {
     // Mock Math.random to return predictable values for testing
     const originalRandom = Math.random
-    Math.random = jest.fn()
+    const mockRandom = jest.fn()
+    Math.random = mockRandom
 
     // Test with different random values
-    Math.random.mockReturnValue(0.1) // Should select first post
+    mockRandom.mockReturnValue(0.1) // Should select first post
     const { rerender } = render(<RandomDayButton />)
     let button = screen.getByRole('link')
     expect(button.getAttribute('href')).toBe('/blog/25may05')
 
-    Math.random.mockReturnValue(0.5) // Should select second post
+    mockRandom.mockReturnValue(0.5) // Should select second post
     rerender(<RandomDayButton />)
     button = screen.getByRole('link')
     expect(button.getAttribute('href')).toBe('/blog/24jun19')
 
-    Math.random.mockReturnValue(0.9) // Should select third post
+    mockRandom.mockReturnValue(0.9) // Should select third post
     rerender(<RandomDayButton />)
     button = screen.getByRole('link')
     expect(button.getAttribute('href')).toBe('/blog/25jul01')

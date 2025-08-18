@@ -12,13 +12,37 @@
  * since songPlay already captures when users select and play tracks.
  */
 
+// Define types for track objects
+interface Track {
+  title?: string
+  artist?: string
+  album?: string
+}
+
+// Define types for tracking properties
+interface TrackProperties {
+  track_title: string
+  track_artist: string
+  track_album: string
+  post_name: string
+  track_index: number
+  total_tracks: number
+}
+
+// Extend window interface for Plausible
+declare global {
+  interface Window {
+    plausible: (eventName: string, options?: { props: Record<string, any> }) => void
+  }
+}
+
 // Check if Plausible is available
-const isPlausibleAvailable = () => {
-  return typeof window !== 'undefined' && window.plausible
+const isPlausibleAvailable = (): boolean => {
+  return typeof window !== 'undefined' && !!window.plausible
 }
 
 // Base function to track events with Plausible
-const trackEvent = (eventName, properties = {}) => {
+const trackEvent = (eventName: string, properties: Record<string, any> = {}): void => {
   if (!isPlausibleAvailable()) return
 
   window.plausible(eventName, {
@@ -30,12 +54,12 @@ const trackEvent = (eventName, properties = {}) => {
 export const trackAudioEvent = {
   // Track song play events
   songPlay: (
-    track,
-    postName,
-    trackIndex,
-    totalTracks,
-    playerType = 'unknown'
-  ) => {
+    track: Track | null | undefined,
+    postName: string | null | undefined,
+    trackIndex: number | null | undefined,
+    totalTracks: number | null | undefined,
+    playerType: string = 'unknown'
+  ): void => {
     trackEvent('song-play', {
       track_title: track?.title || 'Unknown Track',
       track_artist: track?.artist || 'Unknown Artist',
@@ -49,12 +73,12 @@ export const trackAudioEvent = {
 
   // Track song pause events
   songPause: (
-    track,
-    postName,
-    trackIndex,
-    totalTracks,
-    playerType = 'unknown'
-  ) => {
+    track: Track | null | undefined,
+    postName: string | null | undefined,
+    trackIndex: number | null | undefined,
+    totalTracks: number | null | undefined,
+    playerType: string = 'unknown'
+  ): void => {
     trackEvent('song-pause', {
       track_title: track?.title || 'Unknown Track',
       track_artist: track?.artist || 'Unknown Artist',
@@ -68,13 +92,13 @@ export const trackAudioEvent = {
 
   // Track track navigation (next/previous buttons)
   trackNavigate: (
-    track,
-    postName,
-    trackIndex,
-    totalTracks,
-    direction,
-    playerType = 'unknown'
-  ) => {
+    track: Track | null | undefined,
+    postName: string | null | undefined,
+    trackIndex: number | null | undefined,
+    totalTracks: number | null | undefined,
+    direction: string,
+    playerType: string = 'unknown'
+  ): void => {
     trackEvent('track-navigate', {
       direction: direction, // 'next' or 'previous'
       track_title: track?.title || 'Unknown Track',
@@ -88,7 +112,7 @@ export const trackAudioEvent = {
   },
 
   // Track individual audio file downloads
-  audioDownload: (filename, postName) => {
+  audioDownload: (filename: string, postName: string | null | undefined): void => {
     trackEvent('audio-download', {
       filename: filename,
       post_name: postName || 'Unknown Post',
@@ -98,7 +122,7 @@ export const trackAudioEvent = {
   },
 
   // Track failed audio downloads
-  audioDownloadFailed: (filename, postName, errorType = 'network_error') => {
+  audioDownloadFailed: (filename: string, postName: string | null | undefined, errorType: string = 'network_error'): void => {
     trackEvent('audio-download-failed', {
       filename: filename,
       post_name: postName || 'Unknown Post',
@@ -107,7 +131,7 @@ export const trackAudioEvent = {
   },
 
   // Track ZIP downloads
-  audioZipDownload: (postName, numFiles, zipFilename) => {
+  audioZipDownload: (postName: string | null | undefined, numFiles: number | null | undefined, zipFilename: string | null | undefined): void => {
     trackEvent('audio-zip-download', {
       post_name: postName || 'Unknown Post',
       num_files: numFiles || 0,
@@ -116,7 +140,7 @@ export const trackAudioEvent = {
   },
 
   // Track ZIP download failures
-  audioZipDownloadFailed: (postName, errorType = 'network_error') => {
+  audioZipDownloadFailed: (postName: string | null | undefined, errorType: string = 'network_error'): void => {
     trackEvent('audio-zip-download-failed', {
       post_name: postName || 'Unknown Post',
       error_type: errorType,
@@ -126,11 +150,11 @@ export const trackAudioEvent = {
 
 // Helper function to get track properties consistently
 export const getTrackProperties = (
-  track,
-  postName,
-  trackIndex,
-  totalTracks
-) => {
+  track: Track | null | undefined,
+  postName: string | null | undefined,
+  trackIndex: number | null | undefined,
+  totalTracks: number | null | undefined
+): TrackProperties => {
   return {
     track_title: track?.title || 'Unknown Track',
     track_artist: track?.artist || 'Unknown Artist',
@@ -142,6 +166,6 @@ export const getTrackProperties = (
 }
 
 // Helper function to get post name from track (fallback logic)
-export const getPostName = (track, fallbackPostName) => {
+export const getPostName = (track: Track | null | undefined, fallbackPostName: string | null | undefined): string => {
   return track?.artist || fallbackPostName || 'Unknown Post'
 }

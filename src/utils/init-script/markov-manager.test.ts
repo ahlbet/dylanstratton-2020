@@ -1,4 +1,5 @@
 import { MarkovManager } from './markov-manager'
+import type { EditTextFunction, GetCoherencyFunction } from './markov-manager'
 import { MarkovGenerator } from '../markov-generator'
 
 // Mock MarkovGenerator

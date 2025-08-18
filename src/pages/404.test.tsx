@@ -16,12 +16,14 @@ beforeEach(() => {
 
 // Mock the Layout component
 jest.mock('../components/layout/layout', () => {
-  return ({ children }) => <div data-testid="layout">{children}</div>
+  return ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="layout">{children}</div>
+  )
 })
 
 // Mock the SEO component
 jest.mock('../components/seo/seo', () => {
-  return ({ title }) => <div data-testid="seo">{title}</div>
+  return ({ title }: { title: string }) => <div data-testid="seo">{title}</div>
 })
 
 describe('NotFoundPage', () => {
@@ -42,13 +44,11 @@ describe('NotFoundPage', () => {
 
     // Check for heading
     expect(
-      screen.getByRole('heading', { name: /not found/i })
+      screen.getByRole('heading', { name: /day not found/i })
     ).toBeInTheDocument()
 
     // Check for error message
-    expect(
-      screen.getByText(/you just hit a route that doesn't exist/i)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/day not found/i)).toBeInTheDocument()
   })
 
   test('passes correct title to SEO component', () => {
