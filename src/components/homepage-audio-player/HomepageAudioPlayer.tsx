@@ -12,6 +12,7 @@ import {
   getNextTrackIndex,
   getPreviousTrackIndex,
 } from '../../utils/audio-utils'
+import { BlogPost } from '../../pages'
 
 // Types
 
@@ -25,25 +26,19 @@ interface ProcessedAudioTrack {
 }
 
 interface HomepageAudioPlayerProps {
-  currentBlogPostTracks: ProcessedAudioTrack[]
-  currentBlogPost: string | null
-  posts: any[]
+  currentBlogPost: BlogPost | null
   supabaseLoading: boolean
   supabaseError: string | null
   onTrackSelect: (track: ProcessedAudioTrack) => void
   parentError?: string | null
-  coverArt?: string | null
 }
 
 export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
-  currentBlogPostTracks,
   currentBlogPost,
-  posts,
   supabaseLoading,
   supabaseError,
   onTrackSelect,
   parentError,
-  coverArt,
 }) => {
   const {
     playlist,
@@ -71,7 +66,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   useEffect(() => {
     // When currentBlogPostTracks changes (switching blog posts), reset the currentIndex
     // to prevent accessing invalid playlist indices
-    if (currentBlogPostTracks.length === 0) {
+    if (currentBlogPost?.audio.length === 0) {
       // No tracks available, reset to no selection
       if (currentIndex !== null) {
         // Reset the currentIndex in the audio player context
@@ -81,17 +76,17 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
       }
     } else if (
       currentIndex !== null &&
-      currentIndex >= currentBlogPostTracks.length
+      currentIndex >= currentBlogPost?.audio.length
     ) {
       // Current index is out of bounds for the new blog post, reset it
       console.warn(
-        `Current index ${currentIndex} is out of bounds for blog post with ${currentBlogPostTracks.length} tracks. Resetting.`
+        `Current index ${currentIndex} is out of bounds for blog post with ${currentBlogPost?.audio.length} tracks. Resetting.`
       )
       resetCurrentIndex()
       setCurrentAudioUrl('')
       setError(null)
     }
-  }, [currentBlogPostTracks, currentIndex, resetCurrentIndex])
+  }, [currentBlogPost?.audio, currentIndex, resetCurrentIndex])
 
   // Generate presigned URL when current track changes
   useEffect(() => {
@@ -214,15 +209,15 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
 
   // Auto-select first track when tracks become available
   useEffect(() => {
-    if (currentBlogPostTracks.length > 0 && currentIndex === null) {
+    if (currentBlogPost?.audio.length > 0 && currentIndex === null) {
       // Auto-select the first track but don't auto-play
-      const firstTrack = currentBlogPostTracks[0]
+      const firstTrack = currentBlogPost?.audio[0]
       // Use playTrack to set the current index without starting playback
       playTrack(0)
       // Ensure playback is stopped
       setIsPlaying(false)
     }
-  }, [currentBlogPostTracks, currentIndex, playTrack])
+  }, [currentBlogPost?.audio, currentIndex, playTrack])
 
   // Handle initial state setup
   useEffect(() => {
@@ -495,7 +490,7 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
   const currentTrackInfo = useMemo(() => {
     if (currentIndex === null || playlist.length === 0) {
       // Don't show "No track selected" if we have tracks available but none selected yet
-      if (currentBlogPostTracks.length > 0) {
+      if (currentBlogPost?.audio.length > 0) {
         return { title: 'Select a track to play', date: '' }
       }
       return { title: 'No tracks available', date: '' }
@@ -515,15 +510,16 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
     }
 
     // Find the corresponding track in currentBlogPostTracks to get the date
-    const correspondingTrack = currentBlogPostTracks.find(
+    const correspondingTrack = currentBlogPost?.audio.find(
       (processedTrack) => processedTrack.id === track.id
     )
 
     return {
       title: track.title || track.displayFilename || 'Unknown Track',
       date: correspondingTrack?.date || '',
+      coverArt: currentBlogPost?.cover_art || '',
     }
-  }, [currentIndex, playlist, currentBlogPostTracks])
+  }, [currentIndex, playlist, currentBlogPost?.audio])
 
   return (
     <div className="border-r border-gray-800 flex flex-col">
@@ -532,7 +528,6 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
         currentTrackInfo={currentTrackInfo}
         error={error || parentError}
         supabaseError={supabaseError}
-        coverArt={coverArt}
       />
 
       {/* Audio Controls */}
@@ -556,11 +551,11 @@ export const HomepageAudioPlayer: React.FC<HomepageAudioPlayerProps> = ({
       />
 
       {/* Playlist View Toggle */}
-      <HomepagePlaylistToggle currentBlogPost={currentBlogPost} posts={posts} />
+      <HomepagePlaylistToggle currentBlogPost={currentBlogPost} />
 
       {/* Playlist */}
       <HomepagePlaylist
-        tracks={currentBlogPostTracks}
+        tracks={currentBlogPost?.audio || []}
         currentIndex={currentIndex}
         supabaseLoading={supabaseLoading}
         supabaseError={supabaseError}

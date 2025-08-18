@@ -10,19 +10,11 @@ import {
   SortAsc,
   SortDesc,
 } from 'lucide-react'
-import { Link } from 'gatsby'
-
-interface BlogPost {
-  id: string
-  title: string
-  date: string
-  content: string
-  daily_id?: string
-}
+import { BlogPost } from '../../pages'
 
 interface AllPostsTableProps {
   posts: BlogPost[]
-  currentBlogPost: string | null
+  currentBlogPost: BlogPost | null
   onPostClick: (post: BlogPost) => void
   searchTerm: string
   onSearchChange: (value: string) => void
@@ -55,7 +47,7 @@ export const AllPostsTable: React.FC<AllPostsTableProps> = ({
   const endIndex = startIndex + postsPerPage
 
   const isCurrentBlogPost = (post: BlogPost) => {
-    return post.daily_id === currentBlogPost
+    return post.id === currentBlogPost?.id
   }
 
   const getSortIcon = () => {

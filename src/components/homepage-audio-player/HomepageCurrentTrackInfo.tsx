@@ -8,18 +8,18 @@ import { isLocalDev } from '../../utils/local-dev-utils'
 interface CurrentTrackInfo {
   title: string
   date: string
+  coverArt?: string
 }
 
 interface HomepageCurrentTrackInfoProps {
   currentTrackInfo: CurrentTrackInfo
   error: string | null
   supabaseError: string | null
-  coverArt?: string | null
 }
 
 export const HomepageCurrentTrackInfo: React.FC<
   HomepageCurrentTrackInfoProps
-> = ({ currentTrackInfo, error, supabaseError, coverArt }) => {
+> = ({ currentTrackInfo, error, supabaseError }) => {
   return (
     <div
       className="p-6 border-b border-gray-800"
@@ -27,26 +27,30 @@ export const HomepageCurrentTrackInfo: React.FC<
     >
       <div className="flex items-center space-x-4">
         <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-800 flex-shrink-0">
-          {coverArt ? (
+          {currentTrackInfo.coverArt ? (
             <img
               src={(() => {
                 // Process cover art URL using the same logic as blog post template
-                const coverArtSource = coverArt.startsWith('http')
-                  ? coverArt
-                  : getCoverArtUrl(coverArt)
+                const coverArtSource = currentTrackInfo.coverArt.startsWith(
+                  'http'
+                )
+                  ? currentTrackInfo.coverArt
+                  : getCoverArtUrl(currentTrackInfo.coverArt)
 
                 // Only convert to local URLs in development mode
                 if (isLocalDev()) {
                   // Extract the actual filename from the cover art path for local development
                   let filename = 'daily-cover'
-                  if (coverArt.includes('/')) {
+                  if (currentTrackInfo.coverArt.includes('/')) {
                     // Handle storage path like "cover-art/25aug12.png"
                     filename =
-                      coverArt.split('/').pop()?.replace('.png', '') ||
-                      'daily-cover'
-                  } else if (coverArt.startsWith('http')) {
+                      currentTrackInfo.coverArt
+                        .split('/')
+                        .pop()
+                        ?.replace('.png', '') || 'daily-cover'
+                  } else if (currentTrackInfo.coverArt.startsWith('http')) {
                     // Handle full URLs
-                    const urlParts = coverArt.split('/')
+                    const urlParts = currentTrackInfo.coverArt.split('/')
                     filename = urlParts[urlParts.length - 1]
                       .replace('.png', '')
                       .split('?')[0]

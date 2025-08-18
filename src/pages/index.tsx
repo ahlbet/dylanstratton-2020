@@ -18,7 +18,6 @@ import {
 import { isLocalDev } from '../utils/local-dev-utils'
 
 // Types
-
 interface AudioItem {
   id: string
   storagePath?: string
@@ -49,6 +48,17 @@ interface ProcessedAudioTrack {
   durationSeconds: number
   storage_path: string
   daily_id: string
+}
+
+export interface BlogPost {
+  id: string
+  title: string
+  date: string
+  content: string
+  daily_id: string
+  cover_art: string
+  audio: ProcessedAudioTrack[]
+  markovTexts: MarkovText[]
 }
 
 interface IndexPageData {
@@ -82,10 +92,7 @@ const BlogIndex = ({
   location: any
 }) => {
   const [error, setError] = useState<string | null>(null)
-  const [currentBlogPost, setCurrentBlogPost] = useState<string | null>(null)
-  const [currentBlogPostTracks, setCurrentBlogPostTracks] = useState<
-    ProcessedAudioTrack[]
-  >([])
+  const [currentBlogPost, setCurrentBlogPost] = useState<BlogPost | null>(null)
 
   // Filter and sort state
   const [searchTerm, setSearchTerm] = useState('')
@@ -160,68 +167,58 @@ const BlogIndex = ({
         date: daily.date,
         content,
         daily_id: daily.id,
+        cover_art: daily.cover_art || '',
       }
     })
 
     return processed
   }, [supabaseData?.daily, posts])
 
-  const currentBlogPostDate = useMemo(() => {
-    if (!currentBlogPost) return ''
-    const post = processedPosts.find((p) => p.daily_id === currentBlogPost)
-    return post?.date || ''
-  }, [currentBlogPost, processedPosts])
+  console.log('processedPosts', processedPosts)
 
-  // Set current blog post and tracks when data changes
   useEffect(() => {
-    // Check if we have posts but no audio data yet
-    if (processedPosts.length > 0) {
-      const mostRecentPost = processedPosts[0]
-      const mostRecentDailyId = mostRecentPost.daily_id
-
-      if (mostRecentDailyId) {
-        setCurrentBlogPost(mostRecentDailyId)
-
-        // Only process tracks if we have audio data
-        if (supabaseData?.audio && supabaseData.audio.length > 0) {
-          // Filter tracks for the current blog post
-          const tracks = supabaseData.audio
-            .filter(
-              (track): track is AudioItem =>
-                Boolean(track.storage_path) &&
-                Boolean(track.daily_id) &&
-                track.daily_id === mostRecentDailyId
-            )
-            .map((track) => ({
-              id: track.id,
-              title: generateTrackTitle(track),
-              date: new Date(track.created_at || '').toLocaleDateString(),
-              duration: formatDuration(track.duration || 0),
-              durationSeconds: track.duration || 0,
-              storage_path: track.storage_path,
-              daily_id: track.daily_id,
-            }))
-            .sort(
-              (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-            )
-
-          setCurrentBlogPostTracks(tracks)
-        } else {
-          setCurrentBlogPostTracks([])
-        }
-      }
+    if (processedPosts.length > 0 && !currentBlogPost) {
+      const post = processedPosts[0]
+      const postMarkovTexts = supabaseData?.markovTexts.filter(
+        (text) => text.daily_id === post.id
+      )
+      // Filter tracks for the selected blog post
+      const tracks = supabaseData.audio
+        .filter(
+          (track): track is AudioItem =>
+            Boolean(track.storage_path) &&
+            Boolean(track.daily_id) &&
+            track.daily_id === post.id
+        )
+        .map((track) => ({
+          id: track.id,
+          title: generateTrackTitle(track),
+          date: new Date(track.created_at || '').toLocaleDateString(),
+          duration: formatDuration(track.duration || 0),
+          durationSeconds: track.duration || 0,
+          storage_path: track.storage_path,
+          daily_id: track.daily_id,
+        }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      changeBlogPost({
+        ...post,
+        audio: tracks || [],
+        markovTexts: postMarkovTexts,
+      })
     }
-  }, [processedPosts, supabaseData?.audio])
+  }, [processedPosts, currentBlogPost])
 
   // Function to change the current blog post
-  const changeBlogPost = (dailyId: string) => {
+  const changeBlogPost = (blogPost: BlogPost) => {
     if (supabaseData?.audio) {
       // Stop current audio playback before changing posts
       if (isPlaying) {
         setIsPlaying(false)
       }
 
-      setCurrentBlogPost(dailyId)
+      const postMarkovTexts = supabaseData?.markovTexts.filter(
+        (text) => text.daily_id === blogPost.id
+      )
 
       // Filter tracks for the selected blog post
       const tracks = supabaseData.audio
@@ -229,7 +226,7 @@ const BlogIndex = ({
           (track): track is AudioItem =>
             Boolean(track.storage_path) &&
             Boolean(track.daily_id) &&
-            track.daily_id === dailyId
+            track.daily_id === blogPost.id
         )
         .map((track) => ({
           id: track.id,
@@ -242,27 +239,23 @@ const BlogIndex = ({
         }))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
-      setCurrentBlogPostTracks(tracks)
+      setCurrentBlogPost({
+        ...blogPost,
+        audio: tracks,
+        markovTexts: postMarkovTexts || [],
+      })
     }
   }
 
   // Function to handle post click and change current blog post
-  const handlePostClick = (post: {
-    id: string
-    title: string
-    date: string
-    content: string
-    daily_id: string
-  }) => {
-    if (post.daily_id) {
-      changeBlogPost(post.daily_id)
-    }
+  const handlePostClick = (post: BlogPost) => {
+    changeBlogPost(post)
   }
 
   // Convert current blog post tracks to audio tracks for the player
   useEffect(() => {
-    if (currentBlogPostTracks.length > 0) {
-      const audioTracks = currentBlogPostTracks.map((track) => ({
+    if (currentBlogPost?.audio.length > 0) {
+      const audioTracks = currentBlogPost?.audio.map((track) => ({
         url: '', // Will be populated when track is played
         title: track.title,
         storagePath: track.storage_path,
@@ -274,23 +267,7 @@ const BlogIndex = ({
       // Always set the playlist to ensure it's populated on refresh/navigation
       setPlaylist(audioTracks)
     }
-  }, [currentBlogPostTracks, setPlaylist])
-
-  // Get cover art for the current blog post
-  const currentCoverArt = useMemo(() => {
-    if (!supabaseData?.daily || !currentBlogPost) return null
-
-    // Find the daily data that matches the current blog post
-    const dailyEntry = supabaseData.daily.find(
-      (daily) => daily.id === currentBlogPost
-    )
-    if (dailyEntry && dailyEntry.cover_art) {
-      // Return the raw cover art data (storage path or URL) for the component to process
-      return dailyEntry.cover_art
-    }
-
-    return null
-  }, [supabaseData?.daily, currentBlogPost])
+  }, [currentBlogPost?.audio, setPlaylist])
 
   // Process markov texts from Supabase data for the current blog post
   const processedTexts = useMemo(() => {
@@ -301,7 +278,7 @@ const BlogIndex = ({
         (text): text is MarkovText =>
           text.text_content !== undefined &&
           text.text_content !== null &&
-          text.daily_id === currentBlogPost
+          text.daily_id === currentBlogPost.id
       )
       .map((text) => ({
         id: text.id,
@@ -390,25 +367,18 @@ const BlogIndex = ({
         <div className="lg:w-1/3 border-r border-gray-800 flex flex-col">
           {/* Left Sidebar - Audio Player */}
           <HomepageAudioPlayer
-            currentBlogPostTracks={currentBlogPostTracks}
             currentBlogPost={currentBlogPost}
-            posts={posts}
             supabaseLoading={supabaseLoading}
             supabaseError={supabaseError}
             onTrackSelect={handleTrackSelect}
             parentError={error}
-            coverArt={currentCoverArt}
           />
 
           {/* Generated Text Section */}
-          <HomepageGeneratedText
-            processedTexts={processedTexts}
-            currentBlogPostDate={currentBlogPostDate || ''}
-          />
+          <HomepageGeneratedText currentBlogPost={currentBlogPost} />
         </div>
         {/* Main Content Area */}
         <HomepageMainContent
-          markovTexts={processedTexts}
           posts={processedPosts}
           currentBlogPost={currentBlogPost}
           onPostClick={handlePostClick}
