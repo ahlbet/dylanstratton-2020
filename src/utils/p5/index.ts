@@ -10,6 +10,8 @@ import * as sketchAnimationLoop from './sketch-animation-loop'
 export {
   generateSeedFromText,
   generateTatShapePositions,
+  generateSpawnPositions,
+  generateEnhancedSpawnPositions,
 } from './shape-generator'
 
 export {

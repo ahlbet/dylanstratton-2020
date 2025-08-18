@@ -16,9 +16,18 @@ interface MarkovText {
   coherency_level?: string
 }
 
+interface BlogPostMetadata {
+  title?: string
+  date?: string
+  daily_id?: string | number
+  markovText?: string
+  cover_art?: string
+}
+
 interface HomepageMainContentProps {
   posts: any[]
   currentBlogPost: string | null
+  currentBlogPostMetadata: BlogPostMetadata | null
   onPostClick: (post: BlogPost) => void
   markovTexts: MarkovText[]
   searchTerm: string
@@ -36,6 +45,7 @@ interface HomepageMainContentProps {
 export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
   posts,
   currentBlogPost,
+  currentBlogPostMetadata,
   onPostClick,
   markovTexts,
   searchTerm,
@@ -58,6 +68,7 @@ export const HomepageMainContent: React.FC<HomepageMainContentProps> = ({
           <div className="w-full h-128 bg-gradient-to-br from-purple-900/20 to-blue-900/20 relative">
             <AudioFFT
               markovText={markovTexts.map((text) => text.content).join(' ')}
+              blogPostMetadata={currentBlogPostMetadata}
             />
           </div>
         </div>

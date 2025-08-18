@@ -20,8 +20,17 @@ import {
   createAudioReactiveAnimationLoop,
 } from '../../utils/p5'
 
+interface BlogPostMetadata {
+  title?: string
+  date?: string
+  daily_id?: string | number
+  markovText?: string
+  cover_art?: string
+}
+
 interface AudioFFTProps {
   markovText?: string
+  blogPostMetadata?: BlogPostMetadata
 }
 
 // Extend Window interface to include p5
@@ -31,8 +40,86 @@ declare global {
   }
 }
 
+// Generate a comprehensive seed from blog post metadata
+const generateBlogPostSeed = (metadata: BlogPostMetadata): number => {
+  let seed = 0
+
+  // Use title (most important for visual identity)
+  if (metadata.title) {
+    for (let i = 0; i < metadata.title.length; i++) {
+      seed += metadata.title.charCodeAt(i) * (i + 1) * 3
+    }
+  }
+
+  // Use daily_id if available
+  if (metadata.daily_id) {
+    seed += Number(metadata.daily_id) * 1000
+  }
+
+  // Use date components
+  if (metadata.date) {
+    const date = new Date(metadata.date)
+    seed += date.getFullYear() * 10000
+    seed += (date.getMonth() + 1) * 100
+    seed += date.getDate()
+  }
+
+  // Use markov text length and content
+  if (metadata.markovText) {
+    seed += metadata.markovText.length * 7
+    for (let i = 0; i < Math.min(metadata.markovText.length, 50); i++) {
+      seed += metadata.markovText.charCodeAt(i) * (i + 1)
+    }
+  }
+
+  // Use cover art URL if available
+  if (metadata.cover_art) {
+    for (let i = 0; i < Math.min(metadata.cover_art.length, 30); i++) {
+      seed += metadata.cover_art.charCodeAt(i) * (i + 1)
+    }
+  }
+
+  return Math.abs(seed) % 1000000
+}
+
+// Generate visual style parameters based on blog post metadata
+const generateVisualStyle = (seed: number) => {
+  const p5 = window.p5
+
+  return {
+    // Color palette variations
+    primaryHue: seed % 360,
+    secondaryHue: (seed * 137) % 360,
+    accentHue: (seed * 73) % 360,
+
+    // Shape and pattern variations
+    shapeDensity: 0.5 + ((seed % 100) / 100) * 1.5, // 0.5 to 2.0
+    particleCount: 100 + (seed % 200), // 100 to 300
+    maxParticleSize: 3 + (seed % 8), // 3 to 10
+
+    // Movement and animation variations
+    movementSpeed: 0.5 + ((seed % 100) / 100) * 2.0, // 0.5 to 2.5
+    oscillationStrength: 5 + (seed % 20), // 5 to 25
+    rotationSpeed: -0.2 + ((seed % 100) / 100) * 0.4, // -0.2 to 0.2
+
+    // Audio reactivity variations
+    frequencySensitivity: 0.5 + ((seed % 100) / 100) * 1.5, // 0.5 to 2.0
+    amplitudeScaling: 0.1 + ((seed % 100) / 100) * 0.3, // 0.1 to 0.4
+
+    // Layout variations
+    spawnPattern: seed % 4, // 0: random, 1: grid, 2: spiral, 3: wave
+    symmetryLevel: seed % 3, // 0: none, 1: horizontal, 2: both axes
+
+    // Special effects
+    enableTrails: seed % 3 === 0, // 33% chance
+    enablePulse: seed % 2 === 0, // 50% chance
+    enableRipple: seed % 4 === 0, // 25% chance
+  }
+}
+
 export default function AudioFFT({
   markovText = '',
+  blogPostMetadata = {},
 }: AudioFFTProps): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const p5InstanceRef = useRef<any>(null)
@@ -80,8 +167,14 @@ export default function AudioFFT({
       let smoothedData: number[] = []
       let isInitialized = false
 
-      // Generate seed from markov text
+      // Generate comprehensive seed from blog post metadata
+      const blogPostSeed = generateBlogPostSeed(blogPostMetadata)
       const markovSeed = generateSeedFromText(markovText)
+      const combinedSeed = blogPostSeed + markovSeed
+
+      // Generate visual style parameters
+      const visualStyle = generateVisualStyle(combinedSeed)
+
       let tatShapePositions: any[] = []
 
       p.setup = async () => {
@@ -104,7 +197,7 @@ export default function AudioFFT({
 
                 // Regenerate Tat shape positions for new canvas size
                 tatShapePositions = generateTatShapePositions(
-                  markovSeed,
+                  combinedSeed,
                   width,
                   height,
                   5
@@ -145,9 +238,9 @@ export default function AudioFFT({
           frequencyData = frequencyDataInit.frequencyData
           smoothedData = frequencyDataInit.smoothedData
 
-          // Generate Tat shape positions for particle spawning
+          // Generate Tat shape positions for particle spawning with visual style
           tatShapePositions = generateTatShapePositions(
-            markovSeed,
+            combinedSeed,
             containerWidth,
             containerHeight,
             5
@@ -178,7 +271,7 @@ export default function AudioFFT({
             particles,
             smoothedData,
             tatShapePositions,
-            markovSeed,
+            combinedSeed,
             updateSpawnPositions,
             analyzeFrequencyBands,
             getFrequencyBands,
@@ -216,7 +309,7 @@ export default function AudioFFT({
         p5InstanceRef.current = null
       }
     }
-  }, [audioRef, markovText]) // Add markovText to dependencies
+  }, [audioRef, markovText, blogPostMetadata]) // Add blogPostMetadata to dependencies
 
   return (
     <div
