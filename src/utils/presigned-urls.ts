@@ -121,7 +121,8 @@ async function generatePresignedUrl(
   }
 
   if (urlCache.has(cacheKey)) {
-    const cached = urlCache.get(cacheKey)!
+    const cached = urlCache.get(cacheKey)
+    if (!cached) return
     // Check if cached URL is still valid (with buffer time)
     if (cached.expiresAt > now + CACHE_CONFIG.bufferTime) {
       return cached.url
