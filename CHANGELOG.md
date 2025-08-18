@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.3](https://github.com/gatsbyjs/gatsby-starter-blog/compare/v0.1.2...v0.1.3) (2025-08-18)
+
+
+### Features
+
+* 25aug15 ([5063805](https://github.com/gatsbyjs/gatsby-starter-blog/commit/50638056b4ddff603b4a97611784e5a28e59191a))
+
+
+### Bug Fixes
+
+* attempt ([bd63814](https://github.com/gatsbyjs/gatsby-starter-blog/commit/bd63814e7bf27d60367ce8990190f0a9b850ce34))
+* audio processor ([3b83dbc](https://github.com/gatsbyjs/gatsby-starter-blog/commit/3b83dbc4806ba80fa6345c060beac1d89d4613f4))
+* avoid promises when not needed ([1a4ac25](https://github.com/gatsbyjs/gatsby-starter-blog/commit/1a4ac253c45303206f63592cfd0dcfb5055d410d))
+* cover art ([058ea5d](https://github.com/gatsbyjs/gatsby-starter-blog/commit/058ea5df3a1427b8b449949555c82c6c75e65814))
+* crash track id ([7b4e8ab](https://github.com/gatsbyjs/gatsby-starter-blog/commit/7b4e8ab7e3ed31e17911c3c47f15206ec59f89e4))
+* fix ([a7567cc](https://github.com/gatsbyjs/gatsby-starter-blog/commit/a7567ccc16da1864e6562c38ab368c5dd3d7a76f))
+* hopefully ([bc81afc](https://github.com/gatsbyjs/gatsby-starter-blog/commit/bc81afc9b09af9d18c78952be4b09915db76cbb0))
+* import ([a739640](https://github.com/gatsbyjs/gatsby-starter-blog/commit/a739640fca65db668bb901685242ad8626b39470))
+* import ([a034836](https://github.com/gatsbyjs/gatsby-starter-blog/commit/a034836d491fa6d8c6dc764980533b19599e1e89))
+* local data manager ([5345b8b](https://github.com/gatsbyjs/gatsby-starter-blog/commit/5345b8bf55e82d90f9b8a3dd1123e8ccf1487e3e))
+* markdown fix ([72ee858](https://github.com/gatsbyjs/gatsby-starter-blog/commit/72ee858d3ee90aacd545bae9ad09635f0b6d742b))
+* markov upload ([64b29a9](https://github.com/gatsbyjs/gatsby-starter-blog/commit/64b29a9906de9edfc824c1b974dc2ae589d80757))
+* pagination ([fad8d6f](https://github.com/gatsbyjs/gatsby-starter-blog/commit/fad8d6f3a395ccc83e88cdebdebe4ba6106a9a9f))
+* please ([b366e22](https://github.com/gatsbyjs/gatsby-starter-blog/commit/b366e228ff80984a3548f191b16b04418add5698))
+* prevent sql injection ([8f7e4ab](https://github.com/gatsbyjs/gatsby-starter-blog/commit/8f7e4ab59db27b1d961f2eeb814662e245f134a1))
+* regen ([b061eef](https://github.com/gatsbyjs/gatsby-starter-blog/commit/b061eefb9360b7d6f5003abeb88524df5a3fc00b))
+* script init ([3360d43](https://github.com/gatsbyjs/gatsby-starter-blog/commit/3360d43383c676ad4b29ebeb9cdbe62a128f3993))
+* template-processor ([bc101a5](https://github.com/gatsbyjs/gatsby-starter-blog/commit/bc101a5fe466dc7eafd6e09f086fec682c6a4b87))
+* whitespace in search ([db08847](https://github.com/gatsbyjs/gatsby-starter-blog/commit/db0884771b1302d29d6bfa2e3886b8d857869a83))
+
 ### [0.1.2](https://github.com/gatsbyjs/gatsby-starter-blog/compare/v0.1.1...v0.1.2) (2025-08-17)
 
 ### Features
