@@ -24,7 +24,7 @@ async function main(): Promise<void> {
     }
 
     const isDryRun = args.includes('--dry-run')
-    const name = args.find(arg => arg !== '--dry-run')
+    const name = args.filter(arg => arg !== '--dry-run')[0]
     
     if (!name) {
       console.error('Name argument is required')
