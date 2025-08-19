@@ -39,7 +39,8 @@ describe('init.ts', () => {
 
       expect(mockInitOrchestrator).toHaveBeenCalledWith(
         '25dec01',
-        'Test description'
+        "",
+        false
       )
       expect(mockOrchestrator.run).toHaveBeenCalled()
 
