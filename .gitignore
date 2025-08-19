@@ -75,3 +75,7 @@ playwright-report/
 tsconfig.tsbuildinfo
 dist/
 local-dev-data/
+
+scripts/seed-local-db.js
+scripts/upload-seed-files.js
+scripts/migrate-prod-to-local.js
