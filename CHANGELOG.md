@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.5](https://github.com/gatsbyjs/gatsby-starter-blog/compare/v0.1.4...v0.1.5) (2025-08-22)
+
+
+### Features
+
+* hide everything for now ([b3fabb8](https://github.com/gatsbyjs/gatsby-starter-blog/commit/b3fabb83cbfaaa4993f79d971d6c808b7be2852e))
+
+
+### Bug Fixes
+
+* save current blog post audio state refactor ([1e7bdf1](https://github.com/gatsbyjs/gatsby-starter-blog/commit/1e7bdf1c41beeeba06291d4e47c5e11b949c5224))
+
 ### [0.1.4](https://github.com/gatsbyjs/gatsby-starter-blog/compare/v0.1.3...v0.1.4) (2025-08-18)
 
 

@@ -24,6 +24,9 @@ const mockPosts = [
     date: 'January 01, 2024',
     content: 'This is the first post content',
     daily_id: 'daily-1',
+    cover_art: '',
+    audio: [],
+    markovTexts: [],
   },
   {
     id: 'post-2',
@@ -31,6 +34,9 @@ const mockPosts = [
     date: 'January 02, 2024',
     content: 'This is the second post content',
     daily_id: 'daily-2',
+    cover_art: '',
+    audio: [],
+    markovTexts: [],
   },
   {
     id: 'post-3',
@@ -38,6 +44,9 @@ const mockPosts = [
     date: 'January 03, 2024',
     content: 'This is the third post content',
     daily_id: 'daily-3',
+    cover_art: '',
+    audio: [],
+    markovTexts: [],
   },
   {
     id: 'post-4',
@@ -45,6 +54,9 @@ const mockPosts = [
     date: 'January 04, 2024',
     content: 'This is the fourth post content',
     daily_id: 'daily-4',
+    cover_art: '',
+    audio: [],
+    markovTexts: [],
   },
   {
     id: 'post-5',
@@ -52,6 +64,9 @@ const mockPosts = [
     date: 'January 05, 2024',
     content: 'This is the fifth post content',
     daily_id: 'daily-5',
+    cover_art: '',
+    audio: [],
+    markovTexts: [],
   },
 ]
 
@@ -93,7 +108,10 @@ describe('AllPostsTable', () => {
   })
 
   test('highlights current blog post', () => {
-    const propsWithCurrentPost = { ...defaultProps, currentBlogPost: 'daily-2' }
+    const propsWithCurrentPost = {
+      ...defaultProps,
+      currentBlogPost: mockPosts[1],
+    }
     render(<AllPostsTable {...propsWithCurrentPost} />)
 
     const secondPostCard = screen

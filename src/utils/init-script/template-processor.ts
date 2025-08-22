@@ -102,9 +102,10 @@ class TemplateProcessor {
    * Generate cover art for blog post
    * @param postName - Name of the blog post
    * @param supabaseManager - Supabase manager instance
+   * @param dryRun - Whether to run in dry run mode (skip uploads)
    * @returns Promise<Object> Object containing cover art URL and buffer
    */
-  static async generateCoverArt(postName: string, supabaseManager: SupabaseManager): Promise<CoverArtResult> {
+  static async generateCoverArt(postName: string, supabaseManager: SupabaseManager, dryRun: boolean = false): Promise<CoverArtResult> {
     try {
       console.log('Generating cover art for blog post...')
       const coverArtBuffer = await generateCoverArt(postName, 2500)
@@ -112,12 +113,21 @@ class TemplateProcessor {
       const sanitizedName = AudioProcessor.sanitizeFilename(postName)
       const coverArtFileName = `${sanitizedName}.png`
 
-      // Upload to Supabase storage
-      const coverArtUrl = await supabaseManager.uploadToStorage(
-        coverArtBuffer,
-        coverArtFileName,
-        'cover-art'
-      )
+      let coverArtUrl: string
+      
+      if (dryRun) {
+        // In dry run mode, create a mock URL without uploading
+        coverArtUrl = `https://example.supabase.co/storage/v1/object/public/cover-art/${coverArtFileName}`
+        console.log(`✅ Cover art generated (dry run mode - no upload): ${coverArtUrl}`)
+      } else {
+        // Upload to Supabase storage
+        coverArtUrl = await supabaseManager.uploadToStorage(
+          coverArtBuffer,
+          coverArtFileName,
+          'cover-art'
+        )
+        console.log(`✅ Cover art generated and uploaded: ${coverArtUrl}`)
+      }
 
       // Create cover art data
       const coverArtData: CoverArtResult = {
@@ -126,7 +136,6 @@ class TemplateProcessor {
         buffer: coverArtBuffer,
       }
 
-      console.log(`✅ Cover art generated and uploaded: ${coverArtUrl}`)
       return coverArtData
     } catch (error) {
       console.error('Failed to generate cover art:', error instanceof Error ? error.message : String(error))

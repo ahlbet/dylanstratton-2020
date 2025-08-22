@@ -16,9 +16,9 @@ import {
   generateTrackTitle,
 } from '../utils/audio-utils'
 import { isLocalDev } from '../utils/local-dev-utils'
+import { LoaderIcon } from 'lucide-react'
 
 // Types
-
 interface AudioItem {
   id: string
   storagePath?: string
@@ -51,6 +51,17 @@ interface ProcessedAudioTrack {
   daily_id: string
 }
 
+export interface BlogPost {
+  id: string
+  title: string
+  date: string
+  content: string
+  daily_id: string
+  cover_art: string
+  audio: ProcessedAudioTrack[]
+  markovTexts: MarkovText[]
+}
+
 interface IndexPageData {
   site: {
     siteMetadata: {
@@ -81,334 +92,285 @@ const BlogIndex = ({
   data: IndexPageData
   location: any
 }) => {
-  const [error, setError] = useState<string | null>(null)
-  const [currentBlogPost, setCurrentBlogPost] = useState<string | null>(null)
-  const [currentBlogPostTracks, setCurrentBlogPostTracks] = useState<
-    ProcessedAudioTrack[]
-  >([])
+  // const [error, setError] = useState<string | null>(null)
+  // const [currentBlogPost, setCurrentBlogPost] = useState<BlogPost | null>(null)
 
-  // Filter and sort state
-  const [searchTerm, setSearchTerm] = useState('')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [postsPerPage] = useState(10)
+  // // Filter and sort state
+  // const [searchTerm, setSearchTerm] = useState('')
+  // const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  // const [currentPage, setCurrentPage] = useState(1)
+  // const [postsPerPage] = useState(10)
 
-  // Debounce the search term to reduce API calls
-  const debouncedSearchTerm = useDebounce(searchTerm, 500) // 500ms delay
+  // // Debounce the search term to reduce API calls
+  // const debouncedSearchTerm = useDebounce(searchTerm, 500) // 500ms delay
 
-  // Track when search is loading (when searchTerm differs from debouncedSearchTerm)
-  const searchLoading = searchTerm !== debouncedSearchTerm
+  // // Track when search is loading (when searchTerm differs from debouncedSearchTerm)
+  // const searchLoading = searchTerm !== debouncedSearchTerm
 
-  const {
-    playlist,
-    setPlaylist,
-    currentIndex,
-    isPlaying,
-    setIsPlaying,
-    playTrack,
-    audioRef,
-  } = useAudioPlayer()
+  // const {
+  //   playlist,
+  //   setPlaylist,
+  //   currentIndex,
+  //   isPlaying,
+  //   setIsPlaying,
+  //   playTrack,
+  //   audioRef,
+  // } = useAudioPlayer()
 
-  const { getAudioUrl } = usePresignedUrl()
+  // const { getAudioUrl } = usePresignedUrl()
 
-  // Build filter/sort parameters for Supabase
-  const filterSortParams: FilterSortParams = useMemo(
-    () => ({
-      searchTerm: debouncedSearchTerm.trim()
-        ? debouncedSearchTerm.trim()
-        : undefined,
-      sortDirection,
-      currentPage,
-      postsPerPage,
-    }),
-    [debouncedSearchTerm, sortDirection, currentPage, postsPerPage]
-  )
+  // // Build filter/sort parameters for Supabase
+  // const filterSortParams: FilterSortParams = useMemo(
+  //   () => ({
+  //     searchTerm: debouncedSearchTerm.trim()
+  //       ? debouncedSearchTerm.trim()
+  //       : undefined,
+  //     sortDirection,
+  //     currentPage,
+  //     postsPerPage,
+  //   }),
+  //   [debouncedSearchTerm, sortDirection, currentPage, postsPerPage]
+  // )
 
-  // Get data from Supabase hook with filter/sort parameters
-  const supabaseResult = useSupabaseData(filterSortParams)
-  const supabaseData = supabaseResult.data
-  const supabaseLoading = supabaseResult.loading
-  const supabaseError = supabaseResult.error
-  const totalCount = supabaseResult.totalCount || 0
+  // // Get data from Supabase hook with filter/sort parameters
+  // const supabaseResult = useSupabaseData(filterSortParams)
+  // const supabaseData = supabaseResult.data
+  // const supabaseLoading = supabaseResult.loading
+  // const supabaseError = supabaseResult.error
+  // const totalCount = supabaseResult.totalCount || 0
 
-  const siteTitle = data.site.siteMetadata.title
-  const posts = data.allMarkdownRemark.edges
+  // const siteTitle = data.site.siteMetadata.title
+  // const posts = data.allMarkdownRemark.edges
 
-  // Calculate total pages for pagination
-  const totalPages = Math.ceil(totalCount / postsPerPage)
+  // // Calculate total pages for pagination
+  // const totalPages = Math.ceil(totalCount / postsPerPage)
 
-  // Process daily data from Supabase into the format expected by components
-  const processedPosts = useMemo(() => {
-    if (!supabaseData?.daily) {
-      return []
-    }
+  // // Helper function to filter and process tracks for a blog post
+  // const processTracksForBlogPost = (dailyId: string) => {
+  //   if (!supabaseData?.audio) return []
 
-    const processed = supabaseData.daily.map((daily) => {
-      // Find corresponding markdown post for excerpt content
-      const markdownPost = posts.find(
-        (p) => p.node.frontmatter.daily_id === daily.id
-      )
+  //   return supabaseData.audio
+  //     .filter(
+  //       (track): track is AudioItem =>
+  //         Boolean(track.storage_path) &&
+  //         Boolean(track.daily_id) &&
+  //         track.daily_id === dailyId
+  //     )
+  //     .map((track) => ({
+  //       id: track.id,
+  //       title: generateTrackTitle(track),
+  //       date: new Date(track.created_at || '').toLocaleDateString(),
+  //       duration: formatDuration(track.duration || 0),
+  //       durationSeconds: track.duration || 0,
+  //       storage_path: track.storage_path,
+  //       daily_id: track.daily_id,
+  //     }))
+  //     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  // }
 
-      // If we have a markdown post, use its excerpt, otherwise create a fallback
-      const content =
-        markdownPost?.node.excerpt ||
-        (daily.title ? `Content for ${daily.title}` : 'No content available')
+  // // Process daily data from Supabase into the format expected by components
+  // const processedPosts = useMemo(() => {
+  //   if (!supabaseData?.daily) {
+  //     return []
+  //   }
 
-      return {
-        id: daily.id,
-        title: daily.title || 'Untitled',
-        date: daily.date,
-        content,
-        daily_id: daily.id,
-      }
-    })
+  //   const processed = supabaseData.daily.map((daily) => {
+  //     // Find corresponding markdown post for excerpt content
+  //     const markdownPost = posts.find(
+  //       (p) => p.node.frontmatter.daily_id === daily.id
+  //     )
 
-    return processed
-  }, [supabaseData?.daily, posts])
+  //     // If we have a markdown post, use its excerpt, otherwise create a fallback
+  //     const content =
+  //       markdownPost?.node.excerpt ||
+  //       (daily.title ? `Content for ${daily.title}` : 'No content available')
 
-  const currentBlogPostDate = useMemo(() => {
-    if (!currentBlogPost) return ''
-    const post = processedPosts.find((p) => p.daily_id === currentBlogPost)
-    return post?.date || ''
-  }, [currentBlogPost, processedPosts])
+  //     return {
+  //       id: daily.id,
+  //       title: daily.title || 'Untitled',
+  //       date: daily.date,
+  //       content,
+  //       daily_id: daily.id,
+  //       cover_art: daily.cover_art || '',
+  //     }
+  //   })
 
-  // Set current blog post and tracks when data changes
-  useEffect(() => {
-    // Check if we have posts but no audio data yet
-    if (processedPosts.length > 0) {
-      const mostRecentPost = processedPosts[0]
-      const mostRecentDailyId = mostRecentPost.daily_id
+  //   return processed
+  // }, [supabaseData?.daily, posts])
 
-      if (mostRecentDailyId) {
-        setCurrentBlogPost(mostRecentDailyId)
+  // useEffect(() => {
+  //   if (processedPosts.length > 0 && !currentBlogPost) {
+  //     const post = processedPosts[0]
+  //     const postMarkovTexts = (supabaseData?.markovTexts ?? []).filter(
+  //       (text) => text.daily_id === post.daily_id
+  //     )
+  //     // Filter tracks for the selected blog post
+  //     const tracks = processTracksForBlogPost(post.daily_id)
 
-        // Only process tracks if we have audio data
-        if (supabaseData?.audio && supabaseData.audio.length > 0) {
-          // Filter tracks for the current blog post
-          const tracks = supabaseData.audio
-            .filter(
-              (track): track is AudioItem =>
-                Boolean(track.storage_path) &&
-                Boolean(track.daily_id) &&
-                track.daily_id === mostRecentDailyId
-            )
-            .map((track) => ({
-              id: track.id,
-              title: generateTrackTitle(track),
-              date: new Date(track.created_at || '').toLocaleDateString(),
-              duration: formatDuration(track.duration || 0),
-              durationSeconds: track.duration || 0,
-              storage_path: track.storage_path,
-              daily_id: track.daily_id,
-            }))
-            .sort(
-              (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-            )
+  //     changeBlogPost({
+  //       ...post,
+  //       audio: tracks || [],
+  //       markovTexts: postMarkovTexts || [],
+  //     })
+  //   }
+  // }, [processedPosts, supabaseData?.audio, supabaseData?.markovTexts])
 
-          setCurrentBlogPostTracks(tracks)
-        } else {
-          setCurrentBlogPostTracks([])
-        }
-      }
-    }
-  }, [processedPosts, supabaseData?.audio])
+  // // Function to change the current blog post
+  // const changeBlogPost = (blogPost: BlogPost) => {
+  //   if (supabaseData?.audio) {
+  //     // Stop current audio playback before changing posts
+  //     if (isPlaying) {
+  //       setIsPlaying(false)
+  //     }
 
-  // Function to change the current blog post
-  const changeBlogPost = (dailyId: string) => {
-    if (supabaseData?.audio) {
-      // Stop current audio playback before changing posts
-      if (isPlaying) {
-        setIsPlaying(false)
-      }
+  //     const postMarkovTexts = (supabaseData?.markovTexts ?? []).filter(
+  //       (text) => text.daily_id === blogPost.daily_id
+  //     )
 
-      setCurrentBlogPost(dailyId)
+  //     // Filter tracks for the selected blog post
+  //     const tracks = processTracksForBlogPost(blogPost.daily_id)
 
-      // Filter tracks for the selected blog post
-      const tracks = supabaseData.audio
-        .filter(
-          (track): track is AudioItem =>
-            Boolean(track.storage_path) &&
-            Boolean(track.daily_id) &&
-            track.daily_id === dailyId
-        )
-        .map((track) => ({
-          id: track.id,
-          title: generateTrackTitle(track),
-          date: new Date(track.created_at || '').toLocaleDateString(),
-          duration: formatDuration(track.duration || 0),
-          durationSeconds: track.duration || 0,
-          storage_path: track.storage_path,
-          daily_id: track.daily_id,
-        }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  //     setCurrentBlogPost({
+  //       ...blogPost,
+  //       audio: tracks || [],
+  //       markovTexts: postMarkovTexts || [],
+  //     })
+  //   }
+  // }
 
-      setCurrentBlogPostTracks(tracks)
-    }
-  }
+  // // Function to handle post click and change current blog post
+  // const handlePostClick = (post: BlogPost) => {
+  //   changeBlogPost(post)
+  // }
 
-  // Function to handle post click and change current blog post
-  const handlePostClick = (post: {
-    id: string
-    title: string
-    date: string
-    content: string
-    daily_id: string
-  }) => {
-    if (post.daily_id) {
-      changeBlogPost(post.daily_id)
-    }
-  }
+  // // Convert current blog post tracks to audio tracks for the player
+  // useEffect(() => {
+  //   if (currentBlogPost?.audio.length > 0) {
+  //     const audioTracks = currentBlogPost?.audio.map((track) => ({
+  //       url: '', // Will be populated when track is played
+  //       title: track.title,
+  //       storagePath: track.storage_path,
+  //       daily_id: track.daily_id,
+  //       duration: track.durationSeconds || 0,
+  //       id: track.id,
+  //     }))
 
-  // Convert current blog post tracks to audio tracks for the player
-  useEffect(() => {
-    if (currentBlogPostTracks.length > 0) {
-      const audioTracks = currentBlogPostTracks.map((track) => ({
-        url: '', // Will be populated when track is played
-        title: track.title,
-        storagePath: track.storage_path,
-        daily_id: track.daily_id,
-        duration: track.durationSeconds || 0,
-        id: track.id,
-      }))
+  //     // Always set the playlist to ensure it's populated on refresh/navigation
+  //     setPlaylist(audioTracks)
+  //   }
+  // }, [currentBlogPost?.audio, setPlaylist])
 
-      // Always set the playlist to ensure it's populated on refresh/navigation
-      setPlaylist(audioTracks)
-    }
-  }, [currentBlogPostTracks, setPlaylist])
+  // // Process markov texts from Supabase data for the current blog post
+  // const processedTexts = useMemo(() => {
+  //   if (!supabaseData?.markovTexts || !currentBlogPost) return []
 
-  // Get cover art for the current blog post
-  const currentCoverArt = useMemo(() => {
-    if (!supabaseData?.daily || !currentBlogPost) return null
+  //   return supabaseData.markovTexts
+  //     .filter(
+  //       (text): text is MarkovText =>
+  //         text.text_content !== undefined &&
+  //         text.text_content !== null &&
+  //         text.daily_id === currentBlogPost?.daily_id
+  //     )
+  //     .map((text) => ({
+  //       id: text.id,
+  //       content: text.text_content,
+  //       coherencyLevel: text.coherency_level || '50',
+  //     }))
+  //     .slice(0, 5) // Show only first 5 texts for the current post
+  // }, [supabaseData?.markovTexts, currentBlogPost])
 
-    // Find the daily data that matches the current blog post
-    const dailyEntry = supabaseData.daily.find(
-      (daily) => daily.id === currentBlogPost
-    )
-    if (dailyEntry && dailyEntry.cover_art) {
-      // Return the raw cover art data (storage path or URL) for the component to process
-      return dailyEntry.cover_art
-    }
+  // // Handle track selection
+  // const handleTrackSelect = async (track: ProcessedAudioTrack) => {
+  //   // Find the track in the current playlist
+  //   const playlistIndex = playlist.findIndex((p) => p.id === track.id)
+  //   if (playlistIndex !== -1) {
+  //     // Check if this track is already playing
+  //     if (currentIndex === playlistIndex && isPlaying) {
+  //       // Track is already playing, pause it
+  //       if (audioRef.current) {
+  //         audioRef.current.pause()
+  //         setIsPlaying(false)
+  //       }
+  //       return
+  //     }
 
-    return null
-  }, [supabaseData?.daily, currentBlogPost])
+  //     // Get the presigned URL for the track
+  //     const trackToGetUrlFor = playlist[playlistIndex]
 
-  // Process markov texts from Supabase data for the current blog post
-  const processedTexts = useMemo(() => {
-    if (!supabaseData?.markovTexts || !currentBlogPost) return []
+  //     try {
+  //       // Check if we should use local audio files for development
 
-    return supabaseData.markovTexts
-      .filter(
-        (text): text is MarkovText =>
-          text.text_content !== undefined &&
-          text.text_content !== null &&
-          text.daily_id === currentBlogPost
-      )
-      .map((text) => ({
-        id: text.id,
-        content: text.text_content,
-        coherencyLevel: text.coherency_level || '50',
-      }))
-      .slice(0, 5) // Show only first 5 texts for the current post
-  }, [supabaseData?.markovTexts, currentBlogPost])
+  //       let audioUrl: string | null = null
 
-  // Handle track selection
-  const handleTrackSelect = async (track: ProcessedAudioTrack) => {
-    // Find the track in the current playlist
-    const playlistIndex = playlist.findIndex((p) => p.id === track.id)
-    if (playlistIndex !== -1) {
-      // Check if this track is already playing
-      if (currentIndex === playlistIndex && isPlaying) {
-        // Track is already playing, pause it
-        if (audioRef.current) {
-          audioRef.current.pause()
-          setIsPlaying(false)
-        }
-        return
-      }
+  //       if (isLocalDev()) {
+  //         // Use local audio files for development
+  //         const filename = extractFilenameFromStoragePath(
+  //           trackToGetUrlFor.storagePath
+  //         )
+  //         audioUrl = `/local-audio/${filename}.wav`
+  //       } else {
+  //         // Production mode: generate presigned URL on-demand
+  //         audioUrl = await getAudioUrl({
+  //           storagePath: trackToGetUrlFor.storagePath,
+  //         })
+  //       }
 
-      // Get the presigned URL for the track
-      const trackToGetUrlFor = playlist[playlistIndex]
+  //       if (audioUrl) {
+  //         // Update the playlist with the URL and play the track
+  //         const updatedPlaylist = [...playlist]
+  //         updatedPlaylist[playlistIndex] = {
+  //           ...updatedPlaylist[playlistIndex],
+  //           url: audioUrl,
+  //         }
 
-      try {
-        // Check if we should use local audio files for development
+  //         setPlaylist(updatedPlaylist)
+  //         playTrack(playlistIndex, updatedPlaylist)
+  //       } else {
+  //         setError('Failed to get audio URL for track')
+  //       }
+  //     } catch (error) {
+  //       setError('Failed to get audio URL for track')
+  //     }
+  //   }
+  // }
 
-        let audioUrl: string | null = null
+  // // Handle search change
+  // const handleSearchChange = (value: string) => {
+  //   setSearchTerm(value)
+  //   setCurrentPage(1) // Reset to first page when searching
+  // }
 
-        if (isLocalDev()) {
-          // Use local audio files for development
-          const filename = extractFilenameFromStoragePath(
-            trackToGetUrlFor.storagePath
-          )
-          audioUrl = `/local-audio/${filename}.wav`
-        } else {
-          // Production mode: generate presigned URL on-demand
-          audioUrl = await getAudioUrl({
-            storagePath: trackToGetUrlFor.storagePath,
-          })
-        }
+  // // Handle sort change
+  // const handleSortChange = () => {
+  //   setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+  //   setCurrentPage(1) // Reset to first page when sorting
+  // }
 
-        if (audioUrl) {
-          // Update the playlist with the URL and play the track
-          const updatedPlaylist = [...playlist]
-          updatedPlaylist[playlistIndex] = {
-            ...updatedPlaylist[playlistIndex],
-            url: audioUrl,
-          }
-
-          setPlaylist(updatedPlaylist)
-          playTrack(playlistIndex, updatedPlaylist)
-        } else {
-          setError('Failed to get audio URL for track')
-        }
-      } catch (error) {
-        setError('Failed to get audio URL for track')
-      }
-    }
-  }
-
-  // Handle search change
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value)
-    setCurrentPage(1) // Reset to first page when searching
-  }
-
-  // Handle sort change
-  const handleSortChange = () => {
-    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-    setCurrentPage(1) // Reset to first page when sorting
-  }
-
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-  }
+  // // Handle page change
+  // const handlePageChange = (page: number) => {
+  //   setCurrentPage(page)
+  // }
 
   return (
-    <Layout location={location} title={siteTitle}>
+    <Layout location={location} title="Home">
       <SEO title="All posts" />
-      <div className="flex flex-col lg:flex-row min-h-screen bg-black">
+
+      {/* <div className="flex flex-col lg:flex-row min-h-screen bg-black">
         <div className="lg:w-1/3 border-r border-gray-800 flex flex-col">
           {/* Left Sidebar - Audio Player */}
-          <HomepageAudioPlayer
-            currentBlogPostTracks={currentBlogPostTracks}
+      {/* <HomepageAudioPlayer
             currentBlogPost={currentBlogPost}
-            posts={posts}
             supabaseLoading={supabaseLoading}
             supabaseError={supabaseError}
             onTrackSelect={handleTrackSelect}
             parentError={error}
-            coverArt={currentCoverArt}
-          />
+          /> */}
 
-          {/* Generated Text Section */}
-          <HomepageGeneratedText
-            processedTexts={processedTexts}
-            currentBlogPostDate={currentBlogPostDate || ''}
-          />
-        </div>
-        {/* Main Content Area */}
-        <HomepageMainContent
-          markovTexts={processedTexts}
+      {/* Generated Text Section */}
+      {/* <HomepageGeneratedText currentBlogPost={currentBlogPost} /> */}
+      {/* </div> */}
+      {/* Main Content Area */}
+      {/* <HomepageMainContent
           posts={processedPosts}
           currentBlogPost={currentBlogPost}
           onPostClick={handlePostClick}
@@ -423,7 +385,7 @@ const BlogIndex = ({
           postsPerPage={postsPerPage}
           searchLoading={searchLoading}
         />
-      </div>
+      </div> */}
     </Layout>
   )
 }

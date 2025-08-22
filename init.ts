@@ -15,13 +15,21 @@ async function main(): Promise<void> {
     const args = process.argv.slice(2)
     
     if (args.length === 0) {
-      console.log('Usage: node init.js <name> [description]')
-      console.log('Example: node init.js 25dec01 "December 1st, 2025"')
+      console.log('Usage: node init.js <name> [--dry-run]')
+      console.log('Example: node init.js 25dec01')
+      console.log('Example: node init.js 25dec01 --dry-run')
+      console.log('\nFlags:')
+      console.log('  --dry-run    Run in dry-run mode (no actual changes, just reports)')
       process.exit(1)
     }
 
-    const name = args[0]
-    const description = args[1] || ''
+    const isDryRun = args.includes('--dry-run')
+    const name = args.filter(arg => arg !== '--dry-run')[0]
+    
+    if (!name) {
+      console.error('Name argument is required')
+      process.exit(1)
+    }
 
     // Validate name format
     if (!isValidNameFormat(name)) {
@@ -29,18 +37,27 @@ async function main(): Promise<void> {
       process.exit(1)
     }
 
-    console.log(`🚀 Starting initialization for: ${name}`)
-    if (description) {
-      console.log(`📝 Description: ${description}`)
+    if (isDryRun) {
+      console.log(`🔍 DRY RUN MODE - No actual changes will be made`)
+      console.log(`🚀 Starting initialization analysis for: ${name}`)
+    } else {
+      console.log(`🚀 Starting initialization for: ${name}`)
     }
 
-    // Create and run orchestrator
-    const orchestrator = new InitOrchestrator(name, description)
+    // Create and run orchestrator with dry run flag
+    const orchestrator = new InitOrchestrator(name, '', isDryRun)
     await orchestrator.run()
 
-    console.log('🎉 All done! Your blog post has been created successfully.')
-    console.log(`📁 Check the content/blog/${name} directory for your new post.`)
-    console.log(`🌐 Don't forget to commit and push your changes!`)
+    if (isDryRun) {
+      console.log('\n🎉 DRY RUN COMPLETED SUCCESSFULLY!')
+      console.log('📊 All operations were analyzed but no changes were made.')
+      console.log('\n💡 To run the actual init script, remove the --dry-run flag:')
+      console.log(`  node init.js ${name}`)
+    } else {
+      console.log('🎉 All done! Your blog post has been created successfully.')
+      console.log(`📁 Check the content/blog/${name} directory for your new post.`)
+      console.log(`🌐 Don't forget to commit and push your changes!`)
+    }
 
   } catch (error) {
     console.error('❌ Script failed:', error instanceof Error ? error.message : String(error))
