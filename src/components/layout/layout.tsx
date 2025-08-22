@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'gatsby'
+import { LoaderIcon } from 'lucide-react'
 
 interface LayoutProps {
   location: {
@@ -33,8 +34,11 @@ const Layout: React.FC<LayoutProps> = ({ location, title, children }) => {
           </label>
         )}
       </ThemeToggler> */}
-      <header className="pr-18 p-6 border-b border-gray-800">{header}</header>
-      <main>{children}</main>
+      {/* <header className="pr-18 p-6 border-b border-gray-800">{header}</header> */}
+      <main className="h-screen w-screen flex items-center justify-center">
+        <LoaderIcon className="w-10 h-10 text-white animate-spin [animation-duration:2000ms]" />
+      </main>
+      {/* <main>{children}</main> */}
       {/* <footer>{new Date().getFullYear()}</footer> */}
       {/* <RandomDayButton /> */}
     </div>
