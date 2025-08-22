@@ -16,6 +16,7 @@ import {
   generateTrackTitle,
 } from '../utils/audio-utils'
 import { isLocalDev } from '../utils/local-dev-utils'
+import { LoaderIcon } from 'lucide-react'
 
 // Types
 interface AudioItem {
@@ -353,22 +354,23 @@ const BlogIndex = ({
   return (
     <Layout location={location} title={siteTitle}>
       <SEO title="All posts" />
-      <div className="flex flex-col lg:flex-row min-h-screen bg-black">
+
+      {/* <div className="flex flex-col lg:flex-row min-h-screen bg-black">
         <div className="lg:w-1/3 border-r border-gray-800 flex flex-col">
           {/* Left Sidebar - Audio Player */}
-          <HomepageAudioPlayer
+      {/* <HomepageAudioPlayer
             currentBlogPost={currentBlogPost}
             supabaseLoading={supabaseLoading}
             supabaseError={supabaseError}
             onTrackSelect={handleTrackSelect}
             parentError={error}
-          />
+          /> */}
 
-          {/* Generated Text Section */}
-          <HomepageGeneratedText currentBlogPost={currentBlogPost} />
-        </div>
-        {/* Main Content Area */}
-        <HomepageMainContent
+      {/* Generated Text Section */}
+      {/* <HomepageGeneratedText currentBlogPost={currentBlogPost} /> */}
+      {/* </div> */}
+      {/* Main Content Area */}
+      {/* <HomepageMainContent
           posts={processedPosts}
           currentBlogPost={currentBlogPost}
           onPostClick={handlePostClick}
@@ -383,7 +385,7 @@ const BlogIndex = ({
           postsPerPage={postsPerPage}
           searchLoading={searchLoading}
         />
-      </div>
+      </div> */}
     </Layout>
   )
 }
