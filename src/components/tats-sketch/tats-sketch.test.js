@@ -496,8 +496,8 @@ describe('TatsSketch', () => {
       const filePath = path.join(__dirname, 'tats-sketch.js')
       const fileContent = fs.readFileSync(filePath, 'utf8')
 
-      expect(fileContent).toContain('const border = 50')
-      expect(fileContent).toContain('const spacing = 100')
+      expect(fileContent).toContain('const border = 100')
+      expect(fileContent).toContain('const spacing = 50')
     })
 
     test('sketch function handles tat array management', () => {
