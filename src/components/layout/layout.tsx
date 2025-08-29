@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'gatsby'
 import { LoaderIcon } from 'lucide-react'
+import TatsSketch from '../tats-sketch/tats-sketch'
 
 interface LayoutProps {
   location: {
@@ -36,7 +37,8 @@ const Layout: React.FC<LayoutProps> = ({ location, title, children }) => {
       </ThemeToggler> */}
       {/* <header className="pr-18 p-6 border-b border-gray-800">{header}</header> */}
       <main className="h-screen w-screen flex items-center justify-center">
-        <LoaderIcon className="w-10 h-10 text-white animate-spin [animation-duration:2000ms]" />
+        {/* <LoaderIcon className="w-10 h-10 text-white animate-spin [animation-duration:2000ms]" /> */}
+        <TatsSketch />
       </main>
       {/* <main>{children}</main> */}
       {/* <footer>{new Date().getFullYear()}</footer> */}

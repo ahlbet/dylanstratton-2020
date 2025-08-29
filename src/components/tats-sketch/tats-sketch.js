@@ -4,24 +4,28 @@ import P5Sketch from '../p5-sketch/p5-sketch'
 // Converted from standalone p5.js sketch
 const TatsSketchSketch = (p) => {
   // Global variables converted to local scope
-  const tats = []
-  const border = 50
-  const spacing = 100
+  let tats = []
+  const border = 100
+  const spacing = 50
   const shapes = [
     'horizontalLine',
     'verticalLine',
     'circle',
     'triangle',
     'square',
+    'bezier',
   ]
+
+  const rMin = spacing / 5
+  const rMax = spacing / 2
 
   class Tat {
     constructor(x, y) {
       this.x = x
       this.y = y
-      this.typesCount = p.floor(p.random(1, 6))
+      this.typesCount = p.floor(p.random(1, 3))
       this.shapes = []
-      this.n = 2
+      this.n = 4
     }
 
     chooseShapes() {
@@ -38,7 +42,7 @@ const TatsSketchSketch = (p) => {
             this.drawHorizontalLine(
               this.x,
               this.y,
-              p.random(spacing / 4, spacing / 2),
+              p.random(rMin, rMax),
               p.floor(p.random(this.n))
             )
             break
@@ -46,7 +50,7 @@ const TatsSketchSketch = (p) => {
             this.drawVerticalLine(
               this.x,
               this.y,
-              p.random(spacing / 4, spacing / 2),
+              p.random(rMin, rMax),
               p.floor(p.random(this.n))
             )
             break
@@ -54,7 +58,7 @@ const TatsSketchSketch = (p) => {
             this.drawCircle(
               this.x,
               this.y,
-              p.random(spacing / 4, spacing / 2),
+              p.random(rMin, rMax),
               p.floor(p.random(this.n))
             )
             break
@@ -62,7 +66,7 @@ const TatsSketchSketch = (p) => {
             this.drawTriangle(
               this.x,
               this.y,
-              p.random(spacing / 4, spacing / 2),
+              p.random(rMin, rMax),
               p.floor(p.random(this.n))
             )
             break
@@ -70,7 +74,15 @@ const TatsSketchSketch = (p) => {
             this.drawSquare(
               this.x,
               this.y,
-              p.random(spacing / 4, spacing / 2),
+              p.random(rMin, rMax),
+              p.floor(p.random(this.n))
+            )
+            break
+          case 'bezier':
+            this.drawConnectedBezier(
+              this.x,
+              this.y,
+              p.random(rMin, rMax),
               p.floor(p.random(this.n))
             )
             break
@@ -132,27 +144,71 @@ const TatsSketchSketch = (p) => {
       p.rect(x, y, r, r)
     }
 
+    drawConnectedBezier(x, y, r, n) {
+      // Draw additional bezier curves with shifts
+      for (let i = 0; i < n; i++) {
+        if (this.repeatAndShift()) {
+          let xShift = p.noise(x, y, n) * (r / 3)
+          let yShift = p.noise(x, y, n) * (r / 3)
+          if (p.random() < 0.5) xShift = -xShift
+          if (p.random() < 0.5) yShift = -yShift
+          this.drawConnectedBezierShape(x + xShift, y + yShift, r)
+        }
+      }
+      this.drawConnectedBezierShape(x, y, r)
+    }
+
+    drawConnectedBezierShape(x, y, r) {
+      // Start point is the current position (where previous shape ended)
+      const startX = x
+      const startY = y
+
+      // Generate end point at distance r from start
+      const endAngle = p.random(0, Math.PI * 2)
+      const endX = x + Math.cos(endAngle) * r
+      const endY = y + Math.sin(endAngle) * r
+
+      // Control points - create interesting curves
+      const cp1Distance = p.random(r * 0.3, r * 0.8)
+      const cp2Distance = p.random(r * 0.3, r * 0.8)
+      const cp1Angle = p.random(0, Math.PI * 2)
+      const cp2Angle = p.random(0, Math.PI * 2)
+
+      const cp1X = x + Math.cos(cp1Angle) * cp1Distance
+      const cp1Y = y + Math.sin(cp1Angle) * cp1Distance
+      const cp2X = x + Math.cos(cp2Angle) * cp2Distance
+      const cp2Y = y + Math.sin(cp2Angle) * cp2Distance
+
+      // Draw the bezier curve
+      p.bezier(startX, startY, cp1X, cp1Y, cp2X, cp2Y, endX, endY)
+    }
+
     repeatAndShift() {
       return p.random() < 0.25 ? true : false
     }
   }
 
   p.setup = () => {
-    p.createCanvas(600, 600)
-    p.background(230)
+    p.createCanvas(p.windowWidth, p.windowHeight)
+    p.background(0)
     p.noFill()
-    p.strokeWeight(2.5)
+    p.strokeWeight(1.5)
+    p.stroke(255)
     p.rectMode(p.CENTER)
     p.seedGrid()
     p.drawTats()
-
-    // p.ellipse(p.width / 2, p.height / 2, spacing, spacing)
-    // p.rect(p.width / 2, p.height / 2, spacing, spacing)
   }
 
-  p.draw = () => {
-    // No draw function found
+  p.windowResized = () => {
+    tats = []
+    p.clear()
+    p.resizeCanvas(p.windowWidth, p.windowHeight)
+    p.background(0)
+    p.seedGrid()
+    p.drawTats()
   }
+
+  p.draw = () => {}
 
   p.drawTats = () => {
     for (let i = 0; i < tats.length; i++) {
