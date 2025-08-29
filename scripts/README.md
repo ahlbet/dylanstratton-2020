@@ -1,6 +1,48 @@
 # Scripts
 
-This directory contains utility scripts for the project.
+This directory contains various utility scripts for managing the blog.
+
+## Cover Art Generation
+
+### `generate-cover-art.ts`
+
+Generates cover art for blog posts using the existing cover art generator and saves the PNG to your downloads folder.
+
+**Usage:**
+```bash
+# Using the compiled version (recommended)
+yarn generate-cover-art:compiled "Post Name"        # Generate 1 image
+yarn generate-cover-art:compiled "Post Name" 5     # Generate 5 images
+
+# Using ts-node directly (requires ts-node setup)
+yarn generate-cover-art "Post Name"                # Generate 1 image
+yarn generate-cover-art "Post Name" 5              # Generate 5 images
+```
+
+**Features:**
+- Generates 2500x2500 PNG cover art based on the post name
+- Uses seeded random generation for consistent results
+- Automatically sanitizes filenames for safe saving
+- Saves directly to your Downloads folder
+- Creates organized folder structure for multiple images
+- Provides detailed output including file size and location
+
+**Examples:**
+```bash
+# Generate 1 image
+yarn generate-cover-art:compiled "My Amazing Blog Post"
+# Output: /Users/username/Downloads/my-amazing-blog-post-cover-art.png
+
+# Generate 3 images
+yarn generate-cover-art:compiled "My Amazing Blog Post" 3
+# Output: 
+# /Users/username/Downloads/my-amazing-blog-post-cover-art/
+# ├── cover-art-1.png
+# ├── cover-art-2.png
+# └── cover-art-3.png
+```
+
+**Note:** The script uses the existing `cover-art-generator.ts` from `src/utils/` which generates abstract, artistic designs based on the post name.
 
 ## setup-cover-art-bucket.js
 
